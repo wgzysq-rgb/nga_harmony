@@ -1,16 +1,9 @@
-/**
- * 嵌入式用户资料面板 - 用于 md/lg 布局的右侧列
- * 从 ProfilePage.ets 提取, 去掉 @Entry 和 router 依赖
- * 自身 profile: 显示私信/通知/收藏/签到/设置操作列表
- * 其他用户: 显示发私信/查看帖子/加黑操作按钮
- */
-
 import router from '@ohos.router'
 import { appStore } from '../store/AppStore'
 import { getUserProfile, getNotifications, checkin } from '../service/NgaApi'
-import { ProfileData } from '../model/User'
+import { ProfileData, ReputationData } from '../model/User'
 import { AppColors } from '../common/Constants'
-import { fmtNum, escHtml } from '../common/Utils'
+import { formatTime, fmtNum, escHtml } from '../common/Utils'
 import { Avatar } from '../common/Avatar'
 
 @Component
@@ -61,7 +54,6 @@ export struct ProfilePanel {
         this.unreadNotifications = notifications.length
       }
     } catch (e) {
-      // ignore
     }
   }
 
@@ -78,7 +70,39 @@ export struct ProfilePanel {
       this.checkinResult = '签到失败'
     }
     this.checkinLoading = false
+    appStore.showToast(this.checkinResult)
     setTimeout(() => { this.checkinResult = '' }, 3000)
+  }
+
+  private formatBadge(count: number): string {
+    if (count <= 0) return ''
+    if (count > 99) return '99+'
+    return String(count)
+  }
+
+  private dispatchAction(actionType: number): void {
+    switch (actionType) {
+      case 0:
+        router.pushUrl({ url: 'pages/MessageListPage' })
+        break
+      case 1:
+        router.pushUrl({ url: 'pages/NotificationPage' })
+        break
+      case 2:
+        router.pushUrl({ url: 'pages/TopicListPage', params: { fid: '__favorites__', favor: '1', name: '我的收藏' } })
+        break
+      case 3:
+        router.pushUrl({ url: 'pages/BrowseHistoryPage' })
+        break
+      case 4:
+        this.handleCheckin()
+        break
+      case 5:
+        router.pushUrl({ url: 'pages/SettingsPage' })
+        break
+      default:
+        break
+    }
   }
 
   @Builder
@@ -103,7 +127,7 @@ export struct ProfilePanel {
   }
 
   @Builder
-  ActionRow(icon: string, iconColor: string, label: string, badge: string, action: () => void) {
+  ActionRow(icon: string, iconColor: string, label: string, badge: string, actionType: number) {
     Row() {
       Stack() {
         Text(icon)
@@ -139,7 +163,7 @@ export struct ProfilePanel {
     .height(44)
     .padding({ left: 16, right: 16 })
     .alignItems(VerticalAlign.Center)
-    .onClick(action)
+    .onClick(() => this.dispatchAction(actionType))
   }
 
   build() {
@@ -176,7 +200,6 @@ export struct ProfilePanel {
       } else if (this.profile) {
         Scroll() {
           Column() {
-            // 用户头像区
             Column() {
               Avatar({ avatar: this.profile!.avatarUrl, uid: String(this.profile!.uid), name: this.profile!.userName, avatarSize: 80 })
 
@@ -227,7 +250,6 @@ export struct ProfilePanel {
             .alignItems(HorizontalAlign.Center)
             .backgroundColor(AppColors.bgTertiary)
 
-            // 统计信息
             Column() {
               this.StatRow('💬', '发帖数', fmtNum(this.profile!.posts))
               Divider().margin({ left: 60 }).color(AppColors.separator)
@@ -235,7 +257,7 @@ export struct ProfilePanel {
               Divider().margin({ left: 60 }).color(AppColors.separator)
               this.StatRow('🏅', '威望', fmtNum(this.profile!.rvrc))
               Divider().margin({ left: 60 }).color(AppColors.separator)
-              this.StatRow('📅', '注册日期', this.profile!.regdate || '未知')
+              this.StatRow('📅', '注册日期', this.profile!.regdate ? formatTime(Number(this.profile!.regdate)) : '未知')
               Divider().margin({ left: 60 }).color(AppColors.separator)
               this.StatRow('👥', '会员组', this.profile!.group || '普通会员')
               if (Number(this.profile!.fame) > 0) {
@@ -252,7 +274,6 @@ export struct ProfilePanel {
             .borderRadius(12)
             .margin({ top: 16 })
 
-            // 勋章
             if (this.profile!.medal) {
               Column() {
                 Text('勋章')
@@ -270,7 +291,6 @@ export struct ProfilePanel {
               .alignItems(HorizontalAlign.Start)
             }
 
-            // 签名
             if (this.profile!.sign) {
               Column() {
                 Text('签名')
@@ -288,34 +308,122 @@ export struct ProfilePanel {
               .alignItems(HorizontalAlign.Start)
             }
 
-            // 操作按钮区域
+            if (this.profile!.reputationEntryList && this.profile!.reputationEntryList.length > 0) {
+              Column() {
+                Text('威望记录')
+                  .fontSize(13)
+                  .fontWeight(FontWeight.Bold)
+                  .fontColor(AppColors.textSecondary)
+                  .padding({ top: 12, bottom: 4, left: 16, right: 16 })
+
+                ForEach(this.profile!.reputationEntryList, (entry: ReputationData, index: number) => {
+                  Column() {
+                    Row() {
+                      Text(entry.reputation > 0 ? `+${entry.reputation}` : `${entry.reputation}`)
+                        .fontSize(13)
+                        .fontWeight(FontWeight.Medium)
+                        .fontColor(entry.reputation > 0 ? AppColors.success : entry.reputation < 0 ? AppColors.destructive : AppColors.textTertiary)
+                      Text(entry.time ? formatTime(entry.time) : '')
+                        .fontSize(12)
+                        .fontColor(AppColors.textTertiary)
+                        .layoutWeight(1)
+                        .textAlign(TextAlign.End)
+                    }
+                    .width('100%')
+                    if (entry.topicSubject) {
+                      Text(escHtml(entry.topicSubject))
+                        .fontSize(13)
+                        .fontColor(AppColors.textPrimary)
+                        .maxLines(1)
+                        .textOverflow({ overflow: TextOverflow.Ellipsis })
+                        .margin({ top: 2 })
+                        .width('100%')
+                    }
+                    if (entry.postContent) {
+                      Text(escHtml(entry.postContent))
+                        .fontSize(12)
+                        .fontColor(AppColors.textTertiary)
+                        .maxLines(2)
+                        .textOverflow({ overflow: TextOverflow.Ellipsis })
+                        .margin({ top: 2 })
+                        .width('100%')
+                    }
+                    Text(`来自: ${escHtml(entry.author ?? '')}`)
+                      .fontSize(12)
+                      .fontColor(AppColors.textTertiary)
+                      .margin({ top: 2 })
+                      .width('100%')
+                  }
+                  .width('100%')
+                  .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+                  .border({ width: { top: index === 0 ? 0 : 0.5 }, color: AppColors.separator })
+                  .alignItems(HorizontalAlign.Start)
+                }, (entry: ReputationData, index: number) => `${index}`)
+              }
+              .width('92%')
+              .backgroundColor(AppColors.bgTertiary)
+              .borderRadius(12)
+              .margin({ top: 16 })
+              .alignItems(HorizontalAlign.Start)
+              .clip(true)
+            }
+
             if (this.isOwnProfile) {
               Column() {
-                this.ActionRow('📩', '#007AFF', '私信',
-                  this.unreadMessages > 0 ? `${this.unreadMessages}` : '', () => {
-                    router.pushUrl({ url: 'pages/MessageListPage' })
-                  })
+                this.ActionRow('📩', '#007AFF', '私信', this.formatBadge(this.unreadMessages), 0)
                 Divider().margin({ left: 60 }).color(AppColors.separator)
-                this.ActionRow('🔔', '#FF3B30', '通知',
-                  this.unreadNotifications > 0 ? `${this.unreadNotifications}` : '', () => {
-                    router.pushUrl({ url: 'pages/NotificationPage' })
-                  })
+                this.ActionRow('🔔', '#FF3B30', '通知', this.formatBadge(this.unreadNotifications), 1)
                 Divider().margin({ left: 60 }).color(AppColors.separator)
-                this.ActionRow('⭐', '#FF9500', '收藏主题', '', () => {
-                  router.pushUrl({
-                    url: 'pages/TopicListPage',
-                    params: { fid: '__favorites__', favor: '1', name: '我的收藏' }
+                this.ActionRow('⭐', '#FF9500', '收藏主题', '', 2)
+                Divider().margin({ left: 60 }).color(AppColors.separator)
+                this.ActionRow('🕐', '#8E8E93', '浏览历史', '', 3)
+                Divider().margin({ left: 60 }).color(AppColors.separator)
+
+                // 签到行 - 内联，不使用 @Builder
+                Row() {
+                  Stack() {
+                    Text('✅')
+                      .fontSize(17)
+                      .fontColor(Color.White)
+                  }
+                  .width(29)
+                  .height(29)
+                  .borderRadius(6)
+                  .backgroundColor('#34C759')
+                  .margin({ right: 12 })
+
+                  Text(this.checkinLoading ? '签到中...' : this.checkinResult || '每日签到')
+                    .fontSize(17)
+                    .layoutWeight(1)
+
+                  Text('>')
+                    .fontSize(16)
+                    .fontColor('#C7C7CC')
+                }
+                .width('100%')
+                .height(44)
+                .padding({ left: 16, right: 16 })
+                .alignItems(VerticalAlign.Center)
+                .onClick(() => {
+                  this.checkinLoading = true
+                  checkin(appStore.auth.token).then((result) => {
+                    if (result.ok) {
+                      this.checkinResult = '签到成功'
+                    } else {
+                      this.checkinResult = result.error || '签到失败'
+                    }
+                    this.checkinLoading = false
+                    appStore.showToast(this.checkinResult)
+                    setTimeout(() => { this.checkinResult = '' }, 3000)
+                  }).catch(() => {
+                    this.checkinResult = '签到失败'
+                    this.checkinLoading = false
+                    appStore.showToast(this.checkinResult)
                   })
                 })
+
                 Divider().margin({ left: 60 }).color(AppColors.separator)
-                this.ActionRow('✅', '#34C759',
-                  this.checkinLoading ? '签到中...' : this.checkinResult || '每日签到', '', () => {
-                    this.handleCheckin()
-                  })
-                Divider().margin({ left: 60 }).color(AppColors.separator)
-                this.ActionRow('⚙️', '#5856D6', '设置', '', () => {
-                  router.pushUrl({ url: 'pages/SettingsPage' })
-                })
+                this.ActionRow('⚙️', '#5856D6', '设置', '', 5)
               }
               .width('92%')
               .backgroundColor(AppColors.bgTertiary)
@@ -337,7 +445,7 @@ export struct ProfilePanel {
                     })
                   })
 
-                Button('查看帖子')
+                Button('主题')
                   .fontSize(15)
                   .fontColor(AppColors.textPrimary)
                   .backgroundColor(AppColors.bgTertiary)
@@ -351,7 +459,27 @@ export struct ProfilePanel {
                       params: {
                         fid: '-1',
                         authorid: this.profile!.uid,
-                        name: this.profile!.userName + '的帖子'
+                        name: this.profile!.userName + '的主题'
+                      }
+                    })
+                  })
+
+                Button('回帖')
+                  .fontSize(15)
+                  .fontColor(AppColors.textPrimary)
+                  .backgroundColor(AppColors.bgTertiary)
+                  .borderRadius(12)
+                  .layoutWeight(1)
+                  .height(44)
+                  .margin({ left: 12 })
+                  .onClick(() => {
+                    router.pushUrl({
+                      url: 'pages/TopicListPage',
+                      params: {
+                        fid: '-1',
+                        authorid: this.profile!.uid,
+                        searchpost: '1',
+                        name: this.profile!.userName + '的回帖'
                       }
                     })
                   })

@@ -52,7 +52,7 @@ struct ThreadReplyDialog {
 
 @Component
 export struct ThreadPanel {
-  @Prop threadTid: string = ''
+  @Prop @Watch('onThreadChanged') threadTid: string = ''
   @State isLoading: boolean = true
   @State hasError: boolean = false
   @State errorMsg: string = ''
@@ -73,22 +73,25 @@ export struct ThreadPanel {
   private scroller: Scroller = new Scroller()
   private replyDialogCtrl?: CustomDialogController
   private replyTargetPid: number = 0
-  private loadedTid: string = ''
 
   aboutToAppear(): void {
     this.loadPage(1)
   }
 
-  aboutToUpdate(): void {
-    if (this.threadTid !== this.loadedTid && this.threadTid.length > 0) {
-      this.allPosts = []
-      this.loadPage(1)
-    }
+  private onThreadChanged(): void {
+    this.allPosts = []
+    this.currentPage = 1
+    this.totalPages = 0
+    this.hasError = false
+    this.authorOnly = false
+    this.favDone = false
+    this.expandedSigs = new Set()
+    this.expandedComments = new Set()
+    this.expandedAttachs = new Set()
+    this.loadPage(1)
   }
 
   private async loadPage(page: number): Promise<void> {
-    this.loadedTid = this.threadTid
-
     if (page === 1) {
       this.isLoading = true
       this.hasError = false

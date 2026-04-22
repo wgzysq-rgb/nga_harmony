@@ -13,7 +13,7 @@ import router from '@ohos.router'
 
 @Component
 export struct TopicListPanel {
-  @Prop boardFid: number = 0
+  @Prop @Watch('onBoardChanged') boardFid: number = 0
   @Prop boardName: string = ''
   @Prop boardStid: string = ''
   @Prop isFavorites: boolean = false
@@ -28,23 +28,21 @@ export struct TopicListPanel {
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'sm'
 
   private scroller: Scroller = new Scroller()
-  private loadedFid: number = -1
 
   aboutToAppear(): void {
     this.loadTopics(1)
   }
 
-  aboutToUpdate(): void {
-    // 当 fid 变化时重新加载
-    const targetFid = this.isFavorites ? -9999 : this.boardFid
-    if (targetFid !== this.loadedFid) {
-      this.loadTopics(1)
-    }
+  private onBoardChanged(): void {
+    this.threads = []
+    this.currentPage = 1
+    this.totalPages = 0
+    this.hasError = false
+    this.sortMode = 'latest'
+    this.loadTopics(1)
   }
 
   private async loadTopics(page: number): Promise<void> {
-    this.loadedFid = this.isFavorites ? -9999 : this.boardFid
-
     if (page === 1) {
       this.isLoading = true
       this.hasError = false

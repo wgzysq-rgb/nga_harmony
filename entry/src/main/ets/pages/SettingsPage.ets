@@ -51,7 +51,7 @@ struct SettingsPage {
           .width('92%')
           .backgroundColor(AppColors.bgTertiary)
           .borderRadius(12)
-          .margin({ top: 20 })
+          .margin({ top: 16 })
 
           // 其他
           Column() {
@@ -91,14 +91,14 @@ struct SettingsPage {
           .width('92%')
           .backgroundColor(AppColors.bgTertiary)
           .borderRadius(12)
-          .margin({ top: 20 })
+          .margin({ top: 16 })
         }
         .width('100%')
-        .padding({ bottom: 30 })
         .alignItems(HorizontalAlign.Center)
       }
       .layoutWeight(1)
       .scrollBar(BarState.Off)
+      .align(Alignment.Top)
     }
     .width('100%')
     .height('100%')

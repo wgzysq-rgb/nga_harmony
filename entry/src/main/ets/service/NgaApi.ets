@@ -1,4 +1,4 @@
-﻿/**
+/**
  * NGA API 业务逻辑层 - 鸿蒙端
  * 所有返回类型必须使用显式 interface/class
  */
@@ -916,7 +916,6 @@ export async function getUserProfile(token: string, uid: string): Promise<UserPr
     const rawInner = (raw?.['data'] ?? {}) as Record<string, Object>;
     const d = (rawInner['0'] ?? rawInner) as Record<string, Object>;
     const regTimestamp = Number(d['regdate']) || 0;
-    const regDateStr = regTimestamp > 0 ? new Date(regTimestamp * 1000).toISOString().slice(0, 10) : '';
     const muteTime = Number(d['muteTime']) || 0;
     const medalStr = String(d['medal'] ?? '0');
     const hasMedal = medalStr !== '0' && medalStr !== '';
@@ -931,7 +930,12 @@ export async function getUserProfile(token: string, uid: string): Promise<UserPr
           const arr = entry as Object[];
           const repItem = new ReputationData();
           repItem.name = String(arr[0] ?? '');
-          repItem.data = String(arr[1] ?? '');
+          repItem.value = String(arr[1] ?? '');
+          repItem.reputation = Number(arr[2] ?? 0);
+          repItem.topicSubject = String(arr[3] ?? '');
+          repItem.postContent = String(arr[4] ?? '');
+          repItem.author = String(arr[5] ?? '');
+          repItem.time = Number(arr[6] ?? 0);
           repList.push(repItem);
         }
       }
@@ -964,7 +968,7 @@ export async function getUserProfile(token: string, uid: string): Promise<UserPr
     profile.fame = String(d['fame'] ?? '');
     profile.rvrc = String(d['rvrc'] ?? '');
     profile.posts = String(d['posts'] ?? '');
-    profile.regdate = regDateStr;
+    profile.regdate = regTimestamp > 0 ? String(regTimestamp) : '';
     profile.sign = String(d['sign'] ?? '');
     profile.ipLoc = String(d['ipLoc'] ?? '');
     profile.medal = hasMedal ? medalStr : '';

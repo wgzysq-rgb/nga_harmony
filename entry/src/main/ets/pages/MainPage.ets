@@ -13,7 +13,7 @@
  */
 
 import { appStore } from '../store/AppStore'
-import { routerStore, type BoardSlot, type NavEntry, Screen, ScreenType } from '../store/RouterStore'
+import { routerStore, type BoardSlot, type NavEntry, Screen } from '../store/RouterStore'
 import { getCurrentUser, getForumCategories } from '../service/NgaApi'
 import { AppColors } from '../common/Constants'
 import { TopicListPanel } from './TopicListPanel'
@@ -143,9 +143,9 @@ struct MainPage {
       // 右侧内容区: 二选一显示 (activity > board > 空提示)
       Column() {
         if (this.topActivity) {
-          this.ActivityPanel(this.topActivity!)
+          this.ActivityPanel()
         } else if (this.boardSlot) {
-          this.BoardPanel(this.boardSlot!, false)
+          this.BoardPanel()
         } else {
           this.EmptyHint()
         }
@@ -178,7 +178,7 @@ struct MainPage {
       if (this.boardSlot || !this.topActivity) {
         Column() {
           if (this.boardSlot) {
-            this.BoardPanel(this.boardSlot!, true)
+            this.BoardPanel()
           } else {
             this.EmptyHint()
           }
@@ -191,7 +191,7 @@ struct MainPage {
       // 第3列: Activity (帖子详情等)
       if (this.topActivity) {
         Column() {
-          this.ActivityPanel(this.topActivity!)
+          this.ActivityPanel()
         }
         .layoutWeight(1)
         .height('100%')
@@ -204,47 +204,43 @@ struct MainPage {
   // ============== 内容面板 ==============
 
   @Builder
-  BoardPanel(board: BoardSlot, threeCol: boolean) {
+  BoardPanel() {
     TopicListPanel({
-      boardFid: board.fid,
-      boardName: board.name,
-      boardStid: board.stid,
-      isFavorites: board.fid === -9999
+      boardFid: this.boardSlot!.fid,
+      boardName: this.boardSlot!.name,
+      boardStid: this.boardSlot!.stid,
+      isFavorites: this.boardSlot!.fid === -9999
     })
   }
 
   @Builder
-  ActivityPanel(entry: NavEntry) {
-    // 根据活动类型渲染对应面板
-    // 在桌面模式下, 大部分活动类型仍通过 router.pushUrl 打开独立页面
-    // 只有 thread 和部分页面在面板内嵌入显示
-    if (entry.screen.type === 'thread') {
-      ThreadPanel({ threadTid: entry.screen.tid })
-    } else if (entry.screen.type === 'profile') {
+  ActivityPanel() {
+    if (this.topActivity!.screen.type === 'thread') {
+      ThreadPanel({ threadTid: this.topActivity!.screen.tid })
+    } else if (this.topActivity!.screen.type === 'profile') {
       Column() {
         Row() {
           Text('←').fontSize(22).fontColor(AppColors.primary)
             .onClick(() => routerStore.back()).padding({ left: 8, right: 8 })
-          Text(entry.screen.getTitle()).fontSize(17).fontWeight(FontWeight.Bold).layoutWeight(1)
+          Text(this.topActivity!.screen.getTitle()).fontSize(17).fontWeight(FontWeight.Bold).layoutWeight(1)
             .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         }
         .width('100%').height(44).backgroundColor(AppColors.bgTertiary)
         .border({ width: { bottom: 0.5 }, color: AppColors.separator }).alignItems(VerticalAlign.Center)
 
         Column() {
-          ProfilePanel({ uid: entry.screen.uid })
+          ProfilePanel({ uid: this.topActivity!.screen.uid })
         }
         .layoutWeight(1)
         .width('100%')
       }
       .width('100%').height('100%')
     } else {
-      // 其他类型: 仍使用独立页面路由, 在面板内显示提示
       Column() {
         Row() {
           Text('←').fontSize(22).fontColor(AppColors.primary)
             .onClick(() => routerStore.back()).padding({ left: 8, right: 8 })
-          Text(entry.screen.getTitle()).fontSize(17).fontWeight(FontWeight.Bold).layoutWeight(1)
+          Text(this.topActivity!.screen.getTitle()).fontSize(17).fontWeight(FontWeight.Bold).layoutWeight(1)
             .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         }
         .width('100%').height(44).backgroundColor(AppColors.bgTertiary)
@@ -257,7 +253,7 @@ struct MainPage {
           Button('打开页面')
             .fontSize(14).fontColor(Color.White).backgroundColor(AppColors.primary).borderRadius(10)
             .onClick(() => {
-              this.openActivityAsPage(entry.screen)
+              this.openActivityAsPage(this.topActivity!.screen)
             })
         }
         .width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
