@@ -11,7 +11,7 @@ import { AppColors } from '../common/Constants'
 import { formatTime, escHtml } from '../common/Utils'
 import router from '@ohos.router'
 import { Avatar } from '../common/Avatar'
-import { parseNgaContent } from '../service/ContentParser'
+import { parseNgaContent, extractContentImages, stripBbCode } from '../service/ContentParser'
 
 @CustomDialog
 struct ThreadReplyDialog {
@@ -20,6 +20,7 @@ struct ThreadReplyDialog {
   @State sending: boolean = false
   dialogTitle: string = '回复'
   onSend?: (text: string) => void
+  onClose?: () => void
 
   build() {
     Column() {
@@ -27,7 +28,7 @@ struct ThreadReplyDialog {
       Row() {
         Text(this.dialogTitle).fontSize(17).fontWeight(FontWeight.Bold).layoutWeight(1)
         Button('取消').fontSize(15).fontColor(AppColors.textTertiary).backgroundColor(Color.Transparent)
-          .onClick(() => { this.controller.close() })
+          .onClick(() => { if (this.onClose) { this.onClose() } else { this.controller.close() } })
       }.width('100%').padding({ left: 16, right: 16 })
 
       TextArea({ text: this.replyText, placeholder: '写回复...' })
@@ -75,8 +76,8 @@ export struct ThreadPanel {
   @State imageViewerCurrentIndex: number = 0
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'sm'
 
+  @State showReplyDialog: boolean = false
   private scroller: Scroller = new Scroller()
-  private replyDialogCtrl?: CustomDialogController
   private replyTargetPid: number = 0
 
   aboutToAppear(): void {
@@ -165,7 +166,7 @@ export struct ThreadPanel {
     } catch (e) {
       appStore.showToast((e as Error).message || '操作失败')
     }
-    this.replyDialogCtrl?.close()
+    this.showReplyDialog = false
   }
 
   private async handleFavorite(): Promise<void> {
@@ -248,18 +249,18 @@ export struct ThreadPanel {
       }
 
       // 浮动回复按钮 (复刻 React: floating reply FAB)
-      Stack() {
-        Text('💬').fontSize(22).fontColor(Color.White)
-      }
-      .width(48).height(48).borderRadius(24)
-      .backgroundColor(AppColors.primary)
-      .shadow({ radius: 8, color: '#40007AFF', offsetY: 2 })
-      .position({ x: '100%', y: '100%' })
-      .translate({ x: '-68vp', y: '-76vp' })
-      .onClick(() => { this.replyTargetPid = 0; this.replyDialogCtrl?.open() })
+      Row() {
+        Stack() {
+          Text('💬').fontSize(22).fontColor(Color.White)
+        }
+        .width(48).height(48).borderRadius(24)
+        .backgroundColor(AppColors.primary)
+        .shadow({ radius: 8, color: '#40007AFF', offsetY: 2 })
+        .onClick(() => { this.replyTargetPid = 0; this.showReplyDialog = true })
+      }.width('100%').justifyContent(FlexAlign.End).padding({ right: 20, bottom: 20 })
     }
     .width('100%').height('100%').backgroundColor(AppColors.bg)
-    .bindContentCover(this.replyDialogCtrl !== undefined, this.ReplyDialogBuilder())
+    .bindContentCover(this.showReplyDialog, this.ReplyDialogBuilder())
 
       if (this.imageViewerVisible) {
         this.ImageViewerBuilder()
@@ -272,7 +273,8 @@ export struct ThreadPanel {
   ReplyDialogBuilder() {
     ThreadReplyDialog({
       dialogTitle: this.replyTargetPid > 0 ? '评论' : '回复',
-      onSend: (text: string) => this.handleReplySend(text)
+      onSend: (text: string) => this.handleReplySend(text),
+      onClose: () => { this.showReplyDialog = false }
     })
   }
 
@@ -301,8 +303,25 @@ export struct ThreadPanel {
           Text('该用户已被屏蔽').fontSize(14).fontColor(AppColors.textTertiary)
             .margin({ top: 12 }).width('100%').textAlign(TextAlign.Center).padding({ top: 16, bottom: 16 })
         } else {
-          RichText(parseNgaContent(post.content))
-            .width('100%').margin({ top: 8 })
+          Text(stripBbCode(post.content)).fontSize(15).fontColor(AppColors.textPrimary)
+            .width('100%').margin({ top: 8 }).lineHeight(22)
+
+          // 帖子内图片
+          if (extractContentImages(post.content).length > 0) {
+            Column() {
+              ForEach(extractContentImages(post.content), (url: string, index: number) => {
+                Image(url).width('100%').objectFit(ImageFit.Contain)
+                  .borderRadius(8).backgroundColor(AppColors.bgSecondary)
+                  .margin({ top: 6 }).onError(() => {})
+                  .onClick(() => {
+                    this.imageViewerUrls = extractContentImages(post.content)
+                    this.imageViewerInitialIndex = index
+                    this.imageViewerCurrentIndex = index
+                    this.imageViewerVisible = true
+                  })
+              })
+            }.margin({ top: 4 })
+          }
 
           if (post.attachs.length > 0) {
             Row() {
@@ -371,7 +390,7 @@ export struct ThreadPanel {
             Text('回复').fontSize(13).fontColor(AppColors.textTertiary)
               .onClick(() => {
                 this.replyTargetPid = post.pid
-                this.replyDialogCtrl?.open()
+                this.showReplyDialog = true
               })
           }.width('100%').justifyContent(FlexAlign.End).margin({ top: 8 })
 
@@ -400,5 +419,37 @@ export struct ThreadPanel {
       }
       .width('100%').padding({ left: 16, right: 16, top: 12, bottom: 12 }).alignItems(HorizontalAlign.Start)
     }
+  }
+
+  @Builder
+  ImageViewerBuilder() {
+    Column() {
+      Row() {
+        Blank().layoutWeight(1)
+        Text('✕').fontSize(24).fontColor(Color.White).padding({ right: 16, top: 16 })
+          .onClick(() => { this.imageViewerVisible = false })
+      }.width('100%')
+
+      Swiper() {
+        ForEach(this.imageViewerUrls, (url: string) => {
+          Image(url).objectFit(ImageFit.Contain).width('100%').onError(() => {})
+        })
+      }
+      .index(this.imageViewerInitialIndex)
+      .indicator(this.imageViewerUrls.length > 1)
+      .loop(false)
+      .onChange((index: number) => { this.imageViewerCurrentIndex = index })
+      .layoutWeight(1)
+      .width('100%')
+
+      if (this.imageViewerUrls.length > 1) {
+        Text(`${this.imageViewerCurrentIndex + 1} / ${this.imageViewerUrls.length}`)
+          .fontSize(16).fontColor(Color.White).margin({ top: 12, bottom: 32 })
+      } else {
+        Blank().height(32)
+      }
+    }
+    .width('100%').height('100%')
+    .backgroundColor(Color.Black)
   }
 }

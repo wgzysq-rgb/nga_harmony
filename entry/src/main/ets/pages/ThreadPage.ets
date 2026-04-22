@@ -10,7 +10,7 @@ import { AppColors } from '../common/Constants'
 import { formatTime, escHtml } from '../common/Utils'
 import { BreakpointType } from '../common/Constants'
 import { Avatar } from '../common/Avatar'
-import { parseNgaContent } from '../service/ContentParser'
+import { parseNgaContent, extractContentImages, stripBbCode } from '../service/ContentParser'
 
 @CustomDialog
 struct ReplyDialog {
@@ -290,8 +290,25 @@ struct ThreadPage {
           Text('该用户已被屏蔽').fontSize(14).fontColor(AppColors.textTertiary)
             .margin({ top: 12 }).width('100%').textAlign(TextAlign.Center).padding({ top: 16, bottom: 16 })
         } else {
-          RichText(parseNgaContent(post.content))
-            .width('100%').margin({ top: 8 })
+          Text(stripBbCode(post.content)).fontSize(15).fontColor(AppColors.textPrimary)
+            .width('100%').margin({ top: 8 }).lineHeight(22)
+
+          // 帖子内图片
+          if (extractContentImages(post.content).length > 0) {
+            Column() {
+              ForEach(extractContentImages(post.content), (url: string, index: number) => {
+                Image(url).width('100%').objectFit(ImageFit.Contain)
+                  .borderRadius(8).backgroundColor(AppColors.bgSecondary)
+                  .margin({ top: 6 }).onError(() => {})
+                  .onClick(() => {
+                    this.imageViewerUrls = extractContentImages(post.content)
+                    this.imageViewerInitialIndex = index
+                    this.imageViewerCurrentIndex = index
+                    this.imageViewerVisible = true
+                  })
+              })
+            }.margin({ top: 4 })
+          }
 
           // 附件
           if (post.attachs.length > 0) {

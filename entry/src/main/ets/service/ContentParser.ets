@@ -181,3 +181,35 @@ export function parseNgaContent(content: string): string {
 
   return html;
 }
+
+export function extractContentImages(content: string): string[] {
+  if (!content) return [];
+  const urls: string[] = [];
+  const pattern = /\[img\](.*?)\[\/img\]/g;
+  let match = pattern.exec(content);
+  while (match !== null) {
+    const rawUrl = match[1];
+    if (rawUrl.startsWith('.')) {
+      const cleanPath = stripThumbnailSuffix(rawUrl.substring(1));
+      urls.push(`https://img.nga.178.com/attachments${cleanPath}`);
+    } else {
+      urls.push(stripThumbnailSuffix(rawUrl));
+    }
+    match = pattern.exec(content);
+  }
+  return urls;
+}
+
+export function stripBbCode(content: string): string {
+  if (!content) return '';
+  let text = content;
+  text = text.replace(/\[img\][^\[]*?\[\/img\]/gi, '');
+  text = text.replace(/\[s:\w+:[^\]]+\]/g, '');
+  text = text.replace(/\[s:\d+\]/g, '');
+  text = text.replace(/\[\/?(?:pid|uid|tid|quote|collapse|code|b|i|u|del|h|item|l|r|color|size|font|url|list|align|table|tr|td|style|flash|lessernuke|album|hip|comment|randomblock|dice)[^\]]*\]/gi, '');
+  text = text.replace(/\[@\d+\]/g, '');
+  text = text.replace(/<[^>]+>/g, '');
+  text = text.replace(/&\w+;/g, ' ');
+  text = text.replace(/\s+/g, ' ').trim();
+  return text;
+}

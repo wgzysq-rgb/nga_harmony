@@ -199,15 +199,15 @@ export struct TopicListPanel {
       }
 
       // 浮动刷新按钮 (复刻 React: floating RefreshCw FAB)
-      Stack() {
-        Text('🔄').fontSize(20).fontColor(AppColors.primary)
-      }
-      .width(44).height(44).borderRadius(22)
-      .backgroundColor(AppColors.bgTertiary)
-      .shadow({ radius: 6, color: '#20000000', offsetY: 2 })
-      .position({ x: '100%', y: '100%' })
-      .translate({ x: '-60vp', y: '-60vp' })
-      .onClick(() => this.loadTopics(1))
+      Row() {
+        Stack() {
+          Text('🔄').fontSize(20).fontColor(AppColors.primary)
+        }
+        .width(44).height(44).borderRadius(22)
+        .backgroundColor(AppColors.bgTertiary)
+        .shadow({ radius: 6, color: '#20000000', offsetY: 2 })
+        .onClick(() => this.loadTopics(1))
+      }.width('100%').justifyContent(FlexAlign.End).padding({ right: 16, bottom: 16 })
     }
     .width('100%').height('100%').backgroundColor(AppColors.bg)
   }
