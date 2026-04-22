@@ -1,0 +1,107 @@
+import type { ThreadData, ThreadRowInfo, Attachment, ThreadPagination } from '../model/Thread';
+
+export function parseThreadData(raw: object | null, blacklist: Set<string> = new Set()): ThreadData {
+  const rowList: ThreadRowInfo[] = [];
+  const rawObj = raw as Record<string, Object>;
+  const dataObj = rawObj?.['data'] as Record<string, Object> | undefined;
+  const rawRows = dataObj?.['__R'] as Record<string, Object> ?? {};
+  const totalRows = Number(dataObj?.['__ROWS'] ?? 0);
+  const rowsPerPage = Number(dataObj?.['__R__ROWS_PAGE'] ?? 20);
+
+  const keys = Object.keys(rawRows);
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    const r = rawRows[key] as Record<string, Object>;
+    if (!r || r['pid'] === undefined || r['pid'] === null) continue;
+    if (blacklist.has(String(r['authorid']))) continue;
+    rowList.push(mapRow(r, blacklist));
+  }
+
+  const pagination: ThreadPagination = {
+    page: 1,
+    totalPages: Math.ceil(totalRows / rowsPerPage),
+    totalRows,
+  };
+  const result: ThreadData = {
+    rowList,
+    threadInfo: null,
+    __F: (dataObj?.['__F'] ?? {}) as Record<string, string>,
+    __ROWS: totalRows,
+    rowNum: totalRows,
+    pagination,
+  };
+  return result;
+}
+
+function mapRow(raw: Record<string, Object>, blacklist: Set<string>): ThreadRowInfo {
+  const attachs: Attachment[] = [];
+  const rawAttachs = raw['attachs'];
+  if (rawAttachs && typeof rawAttachs === 'object') {
+    const attachMap = rawAttachs as Record<string, Object>;
+    const attachKeys = Object.keys(attachMap);
+    for (let j = 0; j < attachKeys.length; j++) {
+      const a = attachMap[attachKeys[j]] as Record<string, Object>;
+      const att: Attachment = {
+        aid: String(a['aid'] ?? ''),
+        attachurl: String(a['attachurl'] ?? ''),
+        url_utf8_org_name: String(a['url_utf8_org_name'] ?? ''),
+        name: String(a['name'] ?? ''),
+        ext: String(a['ext'] ?? ''),
+        type: String(a['type'] ?? ''),
+        size: Number(a['size']) || 0,
+        thumb: String(a['thumb'] ?? ''),
+        dscp: String(a['dscp'] ?? ''),
+        subid: Number(a['subid']) || 0,
+      };
+      attachs.push(att);
+    }
+  }
+
+  const comments: ThreadRowInfo[] = [];
+  if (raw['comments'] && Array.isArray(raw['comments'])) {
+    const commentArr = raw['comments'] as Array<Object>;
+    for (let j = 0; j < commentArr.length; j++) {
+      const c = commentArr[j] as Record<string, Object>;
+      if (!blacklist.has(String(c['authorid']))) {
+        comments.push(mapRow(c, blacklist));
+      }
+    }
+  }
+
+  const result: ThreadRowInfo = {
+    tid: Number(raw['tid'] ?? 0),
+    fid: Number(raw['fid'] ?? 0),
+    pid: Number(raw['pid'] ?? 0),
+    lou: Number(raw['lou'] ?? 0),
+    authorid: Number(raw['authorid']) || 0,
+    author: String(raw['author'] ?? ''),
+    subject: String(raw['subject'] ?? ''),
+    content: String(raw['content'] ?? ''),
+    vote: String(raw['vote'] ?? ''),
+    postdate: String(raw['postdate'] ?? ''),
+    attachs,
+    level: String(raw['level'] ?? ''),
+    yz: String(raw['yz'] ?? ''),
+    js_escap_avatar: String(raw['js_escap_avatar'] ?? ''),
+    muteTime: String(raw['mute_time'] ?? ''),
+    aurvrc: Number(raw['aurvrc'] ?? 0),
+    signature: String(raw['signature'] ?? ''),
+    comments,
+    hotReplies: (raw['hotReplies'] as string[]) ?? [],
+    from_client: String(raw['from_client'] ?? ''),
+    from_client_model: String(raw['from_client_model'] ?? ''),
+    isanonymous: !!raw['isanonymous'],
+    alterinfo: String(raw['alterinfo'] ?? ''),
+    score: Number(raw['score'] ?? 0),
+    score_2: Number(raw['score_2'] ?? 0),
+    isInBlackList: false,
+    userNote: '',
+    imageUrlList: (raw['imageUrlList'] as string[]) ?? [],
+    formattedHtmlData: String(raw['formattedHtmlData'] ?? ''),
+    isMuted: !!raw['mute_time'],
+    postCount: String(raw['postCount'] ?? ''),
+    reputation: Number(raw['reputation'] ?? 0),
+    memberGroup: String(raw['memberGroup'] ?? ''),
+  };
+  return result;
+}

@@ -1,0 +1,280 @@
+/**
+ * 搜索页 - 4标签搜索
+ */
+
+import router from '@ohos.router'
+import { appStore } from '../store/AppStore'
+import { getTopicList, createTopicListParams, searchForum, TopicListParams, TopicListResult, SearchForumResult } from '../service/NgaApi'
+import { NavBar } from '../common/NavBar'
+import { AppColors } from '../common/Constants'
+import { formatTime, escHtml } from '../common/Utils'
+import { BreakpointType } from '../common/Constants'
+import { preferences } from '@kit.ArkData'
+import { Context } from '@kit.AbilityKit'
+
+@Entry
+@Component
+struct SearchPage {
+  @State keyword: string = ''
+  @State submitted: string = ''
+  @State currentTab: number = 0
+  @State history: string[] = []
+  @State isLoading: boolean = false
+  @State threads: object[] = []
+  @State forums: object[] = []
+  @State currentPage: number = 1
+  @State totalPages: number = 0
+  @State isLoadingMore: boolean = false
+  @State showEmpty: boolean = false
+  @StorageProp('currentBreakpoint') currentBreakpoint: string = 'sm'
+
+  private scroller: Scroller = new Scroller()
+
+  aboutToAppear(): void {
+    this.loadHistory()
+  }
+
+  private async loadHistory(): Promise<void> {
+    try {
+      const ctx = getContext(this) as Context
+      const pref = await preferences.getPreferences(ctx, 'nga_app_store')
+      const raw = (await pref.get('search_history', '[]')) as string
+      this.history = JSON.parse(raw) as string[]
+    } catch (e) {
+      this.history = []
+    }
+  }
+
+  private async saveHistory(kw: string): Promise<void> {
+    try {
+      const list = this.history.filter((k: string) => k !== kw)
+      list.unshift(kw)
+      if (list.length > 20) list.length = 20
+      this.history = [...list]
+      const ctx = getContext(this) as Context
+      const pref = await preferences.getPreferences(ctx, 'nga_app_store')
+      await pref.put('search_history', JSON.stringify(list))
+      await pref.flush()
+    } catch (e) { /* ignore */ }
+  }
+
+  private async removeHistory(kw: string): Promise<void> {
+    this.history = this.history.filter((k: string) => k !== kw)
+    try {
+      const ctx = getContext(this) as Context
+      const pref = await preferences.getPreferences(ctx, 'nga_app_store')
+      await pref.put('search_history', JSON.stringify(this.history))
+      await pref.flush()
+    } catch (e) { /* ignore */ }
+  }
+
+  private async clearHistoryAll(): Promise<void> {
+    this.history = []
+    try {
+      const ctx = getContext(this) as Context
+      const pref = await preferences.getPreferences(ctx, 'nga_app_store')
+      await pref.put('search_history', '[]')
+      await pref.flush()
+    } catch (e) { /* ignore */ }
+  }
+
+  private handleSubmit(): void {
+    const kw = this.keyword.trim()
+    if (!kw) return
+    this.submitted = kw
+    this.saveHistory(kw)
+    this.threads = []
+    this.forums = []
+    this.currentPage = 1
+    this.doSearch(1)
+  }
+
+  private handleHistoryClick(kw: string): void {
+    this.keyword = kw
+    this.submitted = kw
+    this.saveHistory(kw)
+    this.threads = []
+    this.forums = []
+    this.currentPage = 1
+    this.doSearch(1)
+  }
+
+  private async doSearch(page: number): Promise<void> {
+    if (page === 1) { this.isLoading = true } else { this.isLoadingMore = true }
+    try {
+      if (this.currentTab === 2) {
+        const result: SearchForumResult = await searchForum(appStore.auth.token, this.submitted)
+        if (result.ok && result.data) { this.forums = result.data as object[] }
+      } else {
+        const params: TopicListParams = createTopicListParams()
+        params.page = String(page)
+        if (this.currentTab === 1) params.searchpost = '1'
+        if (this.currentTab === 3) { params.author = this.submitted } else { params.key = this.submitted }
+        const result: TopicListResult = await getTopicList(appStore.auth.token, params)
+        if (result.ok && result.data) {
+          if (page === 1) { this.threads = result.data.threadPageList }
+          else {
+            const arr: object[] = []
+            for (let i = 0; i < this.threads.length; i++) { arr.push(this.threads[i]) }
+            for (let i = 0; i < result.data.threadPageList.length; i++) { arr.push(result.data.threadPageList[i]) }
+            this.threads = arr
+          }
+          this.currentPage = page
+          this.totalPages = result.data.pagination.totalPages
+        }
+      }
+    } catch (e) { /* ignore */ }
+    this.isLoading = false
+    this.isLoadingMore = false
+    this.showEmpty = this.submitted.length > 0 && !this.isLoading && this.threads.length === 0 && this.forums.length === 0
+  }
+
+  private handleTabChange(index: number): void {
+    if (this.currentTab === index) return
+    this.currentTab = index
+    this.threads = []
+    this.forums = []
+    this.currentPage = 1
+    if (this.submitted) { this.doSearch(1) }
+  }
+
+  build() {
+    Column() {
+      NavBar({ title: '搜索', showBack: true })
+
+      // 搜索栏
+      Row() {
+        Row() {
+          Text('🔍').fontSize(16).margin({ right: 8 })
+          TextInput({ text: this.keyword, placeholder: '搜索板块、主题、内容...' })
+            .layoutWeight(1).fontSize(15).backgroundColor(Color.Transparent).type(InputType.Normal)
+            .onChange((value: string) => { this.keyword = value })
+            .onSubmit(() => this.handleSubmit())
+          if (this.keyword.length > 0) {
+            Text('✕').fontSize(16).fontColor(AppColors.textTertiary).margin({ left: 8 })
+              .onClick(() => { this.keyword = ''; this.submitted = ''; this.threads = []; this.forums = [] })
+          }
+        }.layoutWeight(1).height(40).padding({ left: 12, right: 12 })
+        .backgroundColor(AppColors.bgSecondary).borderRadius(10).alignItems(VerticalAlign.Center)
+        Text('取消').fontSize(15).fontColor(AppColors.primary).margin({ left: 12 }).onClick(() => router.back())
+      }.width('100%').padding({ left: 16, right: 16, top: 8, bottom: 8 }).alignItems(VerticalAlign.Center)
+
+      // 标签
+      Row() {
+        Text('主题').fontSize(14).fontColor(this.currentTab === 0 ? AppColors.primary : AppColors.textSecondary)
+          .fontWeight(this.currentTab === 0 ? FontWeight.Bold : FontWeight.Normal)
+          .layoutWeight(1).textAlign(TextAlign.Center).padding({ top: 8, bottom: 8 })
+          .onClick(() => this.handleTabChange(0))
+        Text('内容').fontSize(14).fontColor(this.currentTab === 1 ? AppColors.primary : AppColors.textSecondary)
+          .fontWeight(this.currentTab === 1 ? FontWeight.Bold : FontWeight.Normal)
+          .layoutWeight(1).textAlign(TextAlign.Center).padding({ top: 8, bottom: 8 })
+          .onClick(() => this.handleTabChange(1))
+        Text('板块').fontSize(14).fontColor(this.currentTab === 2 ? AppColors.primary : AppColors.textSecondary)
+          .fontWeight(this.currentTab === 2 ? FontWeight.Bold : FontWeight.Normal)
+          .layoutWeight(1).textAlign(TextAlign.Center).padding({ top: 8, bottom: 8 })
+          .onClick(() => this.handleTabChange(2))
+        Text('作者').fontSize(14).fontColor(this.currentTab === 3 ? AppColors.primary : AppColors.textSecondary)
+          .fontWeight(this.currentTab === 3 ? FontWeight.Bold : FontWeight.Normal)
+          .layoutWeight(1).textAlign(TextAlign.Center).padding({ top: 8, bottom: 8 })
+          .onClick(() => this.handleTabChange(3))
+      }.width('100%').backgroundColor(AppColors.bgTertiary).border({ width: { bottom: 0.5 }, color: AppColors.separator })
+
+      if (this.submitted.length === 0) {
+        // 搜索历史
+        Scroll() {
+          Column() {
+            if (this.history.length > 0) {
+              Row() {
+                Text('搜索历史').fontSize(13).fontWeight(FontWeight.Bold).fontColor(AppColors.textSecondary)
+                Text('清空').fontSize(13).fontColor(AppColors.textTertiary).onClick(() => this.clearHistoryAll())
+              }.width('100%').justifyContent(FlexAlign.SpaceBetween).margin({ bottom: 8 })
+              Flex({ wrap: FlexWrap.Wrap }) {
+                ForEach(this.history, (kw: string) => {
+                  Row() {
+                    Text(escHtml(kw)).fontSize(14).fontColor(AppColors.textPrimary).onClick(() => this.handleHistoryClick(kw))
+                    Text('✕').fontSize(12).fontColor(AppColors.textTertiary).margin({ left: 4 })
+                      .onClick(() => this.removeHistory(kw))
+                  }.padding({ left: 12, right: 10, top: 6, bottom: 6 })
+                  .backgroundColor(AppColors.bgSecondary).borderRadius(16).margin({ right: 8, bottom: 8 })
+                })
+              }
+            } else {
+              Column() {
+                Text('🕐').fontSize(36).opacity(0.4)
+                Text('暂无搜索历史').fontSize(14).fontColor(AppColors.textTertiary).margin({ top: 8 })
+              }.margin({ top: 60 })
+            }
+          }.width('100%').padding(16).alignItems(HorizontalAlign.Start)
+        }.layoutWeight(1)
+      } else if (this.isLoading) {
+        Column() {
+          LoadingProgress().width(28).height(28).color(AppColors.textTertiary)
+          Text('搜索中...').fontSize(14).fontColor(AppColors.textTertiary).margin({ top: 8 })
+        }.width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
+      } else if (this.currentTab === 2) {
+        // 板块搜索结果
+        if (this.forums.length === 0) {
+          Column() { Text('#').fontSize(36).opacity(0.4); Text('未找到相关板块').fontSize(14).fontColor(AppColors.textTertiary).margin({ top: 8 }) }
+            .width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
+        } else {
+          List() {
+            ForEach(this.forums, (forum: object) => {
+              ListItem() {
+                Row() {
+                  Image(`https://img4.nga.178.com/ngabbs/nga_classic/f/app/${(forum as Record<string, Object>)['fid']}.png`)
+                    .width(40).height(40).borderRadius(10).objectFit(ImageFit.Cover).backgroundColor(AppColors.bgSecondary).margin({ right: 12 }).onError(() => {})
+                  Column() {
+                    Text(escHtml(String((forum as Record<string, Object>)['name'] ?? ''))).fontSize(15).fontColor(AppColors.textPrimary)
+                      .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+                  }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+                }.width('100%').padding({ left: 16, right: 16, top: 10, bottom: 10 }).alignItems(VerticalAlign.Center)
+                .onClick(() => {
+                  router.pushUrl({ url: 'pages/TopicListPage', params: { fid: String((forum as Record<string, Object>)['fid']), name: String((forum as Record<string, Object>)['name']) } })
+                })
+              }
+            })
+          }.width('100%').layoutWeight(1).divider({ strokeWidth: 0.5, color: AppColors.separator })
+        }
+      } else {
+        // 主题/内容/作者搜索结果
+        if (this.threads.length === 0) {
+          Column() { Text('🔍').fontSize(36).opacity(0.4); Text('未找到相关结果').fontSize(14).fontColor(AppColors.textTertiary).margin({ top: 8 }) }
+            .width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
+        } else {
+          List({ scroller: this.scroller }) {
+            ForEach(this.threads, (thread: object) => {
+              ListItem() {
+                Column() {
+                  Text(escHtml(String((thread as Record<string, Object>)['subject'] ?? ''))).fontSize(15)
+                    .fontColor(AppColors.textPrimary).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
+                  Row() {
+                    Text(`${escHtml(String((thread as Record<string, Object>)['author'] ?? ''))} · ${formatTime(Number((thread as Record<string, Object>)['postDate'] ?? 0))}`)
+                      .fontSize(12).fontColor(AppColors.textTertiary)
+                    Text(`💬 ${(thread as Record<string, Object>)['replies'] ?? 0}`).fontSize(12).fontColor(AppColors.textTertiary)
+                  }.width('100%').justifyContent(FlexAlign.SpaceBetween).margin({ top: 6 })
+                }.width('100%').padding({ left: 16, right: 16, top: 10, bottom: 10 }).alignItems(HorizontalAlign.Start)
+                .onClick(() => {
+                  router.pushUrl({ url: 'pages/ThreadPage', params: { tid: String((thread as Record<string, Object>)['tid'] ?? '') } })
+                })
+              }
+            })
+            ListItem() {
+              Row() {
+                if (this.isLoadingMore) {
+                  LoadingProgress().width(16).height(16).color(AppColors.textTertiary)
+                  Text('加载更多...').fontSize(13).fontColor(AppColors.textTertiary).margin({ left: 8 })
+                } else if (this.currentPage >= this.totalPages && this.threads.length > 0) {
+                  Text('— 已到底 —').fontSize(12).fontColor(AppColors.textTertiary)
+                }
+              }.width('100%').justifyContent(FlexAlign.Center).padding(16)
+            }
+          }.width('100%').layoutWeight(1).divider({ strokeWidth: 0.5, color: AppColors.separator })
+          .lanes(new BreakpointType(1, 2, 2).getValue(this.currentBreakpoint), 12)
+          .edgeEffect(EdgeEffect.Spring)
+          .onReachEnd(() => { if (!this.isLoadingMore && this.currentPage < this.totalPages) { this.doSearch(this.currentPage + 1) } })
+        }
+      }
+    }
+    .width('100%').height('100%').backgroundColor(AppColors.bg)
+  }
+}

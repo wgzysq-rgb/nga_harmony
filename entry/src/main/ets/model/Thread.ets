@@ -1,0 +1,63 @@
+export interface ThreadPagination {
+  page: number;
+  totalPages: number;
+  totalRows: number;
+}
+
+export interface ThreadData {
+  rowList: ThreadRowInfo[];
+  threadInfo: object | null;
+  __F: Record<string, string>;
+  __ROWS: number;
+  rowNum: number;
+  pagination: ThreadPagination;
+}
+
+export interface ThreadRowInfo {
+  tid: number;
+  fid: number;
+  pid: number;
+  lou: number;
+  authorid: number;
+  author: string;
+  subject: string;
+  content: string;
+  vote: string;
+  postdate: string;
+  attachs: Attachment[];
+  level: string;
+  yz: string;
+  js_escap_avatar: string;
+  muteTime: string;
+  aurvrc: number;
+  signature: string;
+  comments: ThreadRowInfo[];
+  hotReplies: string[];
+  from_client: string;
+  from_client_model: string;
+  isanonymous: boolean;
+  alterinfo: string;
+  score: number;
+  score_2: number;
+  isInBlackList: boolean;
+  userNote: string;
+  imageUrlList: string[];
+  formattedHtmlData: string;
+  isMuted: boolean;
+  postCount: string;
+  reputation: number;
+  memberGroup: string;
+}
+
+export interface Attachment {
+  aid: string;
+  attachurl: string;
+  url_utf8_org_name: string;
+  name: string;
+  ext: string;
+  type: string;
+  size: number;
+  thumb: string;
+  dscp: string;
+  subid: number;
+}
