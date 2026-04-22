@@ -10,6 +10,7 @@ import { AppColors } from '../common/Constants'
 import { formatTime, escHtml } from '../common/Utils'
 import { BreakpointType } from '../common/Constants'
 import { Avatar } from '../common/Avatar'
+import { parseNgaContent } from '../service/ContentParser'
 
 @CustomDialog
 struct ReplyDialog {
@@ -67,6 +68,10 @@ struct ThreadPage {
   @State expandedSigs: Set<string> = new Set()
   @State expandedComments: Set<string> = new Set()
   @State expandedAttachs: Set<string> = new Set()
+  @State imageViewerVisible: boolean = false
+  @State imageViewerUrls: string[] = []
+  @State imageViewerInitialIndex: number = 0
+  @State imageViewerCurrentIndex: number = 0
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'sm'
 
   private tid: string = ''
@@ -167,9 +172,10 @@ struct ThreadPage {
   }
 
   build() {
-    Column() {
-      // 导航栏
-      Row() {
+    Stack() {
+      Column() {
+        // 导航栏
+        Row() {
         Text('←').fontSize(22).fontColor(AppColors.primary)
           .onClick(() => router.back()).padding({ left: 8, right: 8 })
         Text(this.threadSubject).fontSize(17).fontWeight(FontWeight.Bold).layoutWeight(1)
@@ -250,6 +256,12 @@ struct ThreadPage {
       }
     }
     .width('100%').height('100%').backgroundColor(AppColors.bg)
+
+      if (this.imageViewerVisible) {
+        this.ImageViewerBuilder()
+      }
+    }
+    .width('100%').height('100%')
   }
 
   @Builder
@@ -278,8 +290,8 @@ struct ThreadPage {
           Text('该用户已被屏蔽').fontSize(14).fontColor(AppColors.textTertiary)
             .margin({ top: 12 }).width('100%').textAlign(TextAlign.Center).padding({ top: 16, bottom: 16 })
         } else {
-          Text(escHtml(post.content)).fontSize(15).fontColor(AppColors.textPrimary)
-            .width('100%').margin({ top: 8 }).lineHeight(22)
+          RichText(parseNgaContent(post.content))
+            .width('100%').margin({ top: 8 })
 
           // 附件
           if (post.attachs.length > 0) {
@@ -294,10 +306,33 @@ struct ThreadPage {
             }.margin({ top: 8 })
             if (this.expandedAttachs.has(String(post.pid))) {
               Flex({ wrap: FlexWrap.Wrap }) {
-                ForEach(post.attachs, (att: PostAttachInfo) => {
+                ForEach(post.attachs, (att: PostAttachInfo, index: number) => {
                   Image(att.thumb || att.attachurl).width(100).height(100).borderRadius(8)
                     .objectFit(ImageFit.Cover).backgroundColor(AppColors.bgSecondary)
                     .margin({ right: 6, top: 6 }).onError(() => {})
+                    .onClick(() => {
+                      const urls: string[] = []
+                      for (let i = 0; i < post.attachs.length; i++) {
+                        const url = post.attachs[i].attachurl
+                        if (url && url.length > 0) {
+                          urls.push(url)
+                        }
+                      }
+                      if (urls.length > 0) {
+                        let idx = 0
+                        const clickedUrl = att.attachurl
+                        for (let i = 0; i < urls.length; i++) {
+                          if (urls[i] === clickedUrl) {
+                            idx = i
+                            break
+                          }
+                        }
+                        this.imageViewerUrls = urls
+                        this.imageViewerInitialIndex = idx
+                        this.imageViewerCurrentIndex = idx
+                        this.imageViewerVisible = true
+                      }
+                    })
                 })
               }.margin({ top: 4 })
             }
@@ -358,5 +393,37 @@ struct ThreadPage {
       }
       .width('100%').padding({ left: 16, right: 16, top: 12, bottom: 12 }).alignItems(HorizontalAlign.Start)
     }
+  }
+
+  @Builder
+  ImageViewerBuilder() {
+    Column() {
+      Row() {
+        Blank().layoutWeight(1)
+        Text('✕').fontSize(24).fontColor(Color.White).padding({ right: 16, top: 16 })
+          .onClick(() => { this.imageViewerVisible = false })
+      }.width('100%')
+
+      Swiper() {
+        ForEach(this.imageViewerUrls, (url: string) => {
+          Image(url).objectFit(ImageFit.Contain).width('100%').onError(() => {})
+        })
+      }
+      .index(this.imageViewerInitialIndex)
+      .indicator(this.imageViewerUrls.length > 1)
+      .loop(false)
+      .onChange((index: number) => { this.imageViewerCurrentIndex = index })
+      .layoutWeight(1)
+      .width('100%')
+
+      if (this.imageViewerUrls.length > 1) {
+        Text(`${this.imageViewerCurrentIndex + 1} / ${this.imageViewerUrls.length}`)
+          .fontSize(16).fontColor(Color.White).margin({ top: 12, bottom: 32 })
+      } else {
+        Blank().height(32)
+      }
+    }
+    .width('100%').height('100%')
+    .backgroundColor(Color.Black)
   }
 }

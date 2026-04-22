@@ -11,6 +11,7 @@ import { AppColors } from '../common/Constants'
 import { formatTime, escHtml } from '../common/Utils'
 import router from '@ohos.router'
 import { Avatar } from '../common/Avatar'
+import { parseNgaContent } from '../service/ContentParser'
 
 @CustomDialog
 struct ThreadReplyDialog {
@@ -68,6 +69,10 @@ export struct ThreadPanel {
   @State expandedSigs: Set<string> = new Set()
   @State expandedComments: Set<string> = new Set()
   @State expandedAttachs: Set<string> = new Set()
+  @State imageViewerVisible: boolean = false
+  @State imageViewerUrls: string[] = []
+  @State imageViewerInitialIndex: number = 0
+  @State imageViewerCurrentIndex: number = 0
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'sm'
 
   private scroller: Scroller = new Scroller()
@@ -179,9 +184,10 @@ export struct ThreadPanel {
   }
 
   build() {
-    Column() {
-      // 嵌入式导航栏 - 返回使用 routerStore.back()
-      Row() {
+    Stack() {
+      Column() {
+        // 嵌入式导航栏 - 返回使用 routerStore.back()
+        Row() {
         Text('←').fontSize(22).fontColor(AppColors.primary)
           .onClick(() => routerStore.back()).padding({ left: 8, right: 8 })
         Text(this.threadSubject).fontSize(17).fontWeight(FontWeight.Bold).layoutWeight(1)
@@ -241,23 +247,25 @@ export struct ThreadPanel {
         })
       }
 
-      // 底部回复栏
-      if (!this.isLoading && !this.hasError) {
-        Row() {
-          TextInput({ placeholder: '写回复...' })
-            .layoutWeight(1).fontSize(15).borderRadius(12).backgroundColor(AppColors.bgSecondary)
-            .padding({ left: 12, right: 12 }).height(40).enabled(false)
-            .onClick(() => { this.replyTargetPid = 0; this.replyDialogCtrl?.open() })
-          Button('发送').fontSize(14).fontColor(Color.White).backgroundColor(AppColors.primary)
-            .borderRadius(12).height(40).padding({ left: 16, right: 16 }).margin({ left: 8 })
-            .onClick(() => { this.replyTargetPid = 0; this.replyDialogCtrl?.open() })
-        }
-        .width('100%').padding({ left: 12, right: 12, top: 8, bottom: 8 })
-        .backgroundColor(AppColors.bgTertiary).border({ width: { top: 0.5 }, color: AppColors.separator })
+      // 浮动回复按钮 (复刻 React: floating reply FAB)
+      Stack() {
+        Text('💬').fontSize(22).fontColor(Color.White)
       }
+      .width(48).height(48).borderRadius(24)
+      .backgroundColor(AppColors.primary)
+      .shadow({ radius: 8, color: '#40007AFF', offsetY: 2 })
+      .position({ x: '100%', y: '100%' })
+      .translate({ x: '-68vp', y: '-76vp' })
+      .onClick(() => { this.replyTargetPid = 0; this.replyDialogCtrl?.open() })
     }
     .width('100%').height('100%').backgroundColor(AppColors.bg)
     .bindContentCover(this.replyDialogCtrl !== undefined, this.ReplyDialogBuilder())
+
+      if (this.imageViewerVisible) {
+        this.ImageViewerBuilder()
+      }
+    }
+    .width('100%').height('100%')
   }
 
   @Builder
@@ -293,8 +301,8 @@ export struct ThreadPanel {
           Text('该用户已被屏蔽').fontSize(14).fontColor(AppColors.textTertiary)
             .margin({ top: 12 }).width('100%').textAlign(TextAlign.Center).padding({ top: 16, bottom: 16 })
         } else {
-          Text(escHtml(post.content)).fontSize(15).fontColor(AppColors.textPrimary)
-            .width('100%').margin({ top: 8 }).lineHeight(22)
+          RichText(parseNgaContent(post.content))
+            .width('100%').margin({ top: 8 })
 
           if (post.attachs.length > 0) {
             Row() {
@@ -308,10 +316,33 @@ export struct ThreadPanel {
             }.margin({ top: 8 })
             if (this.expandedAttachs.has(String(post.pid))) {
               Flex({ wrap: FlexWrap.Wrap }) {
-                ForEach(post.attachs, (att: PostAttachInfo) => {
+                ForEach(post.attachs, (att: PostAttachInfo, index: number) => {
                   Image(att.thumb || att.attachurl).width(100).height(100).borderRadius(8)
                     .objectFit(ImageFit.Cover).backgroundColor(AppColors.bgSecondary)
                     .margin({ right: 6, top: 6 }).onError(() => {})
+                    .onClick(() => {
+                      const urls: string[] = []
+                      for (let i = 0; i < post.attachs.length; i++) {
+                        const url = post.attachs[i].attachurl
+                        if (url && url.length > 0) {
+                          urls.push(url)
+                        }
+                      }
+                      if (urls.length > 0) {
+                        let idx = 0
+                        const clickedUrl = att.attachurl
+                        for (let i = 0; i < urls.length; i++) {
+                          if (urls[i] === clickedUrl) {
+                            idx = i
+                            break
+                          }
+                        }
+                        this.imageViewerUrls = urls
+                        this.imageViewerInitialIndex = idx
+                        this.imageViewerCurrentIndex = idx
+                        this.imageViewerVisible = true
+                      }
+                    })
                 })
               }.margin({ top: 4 })
             }

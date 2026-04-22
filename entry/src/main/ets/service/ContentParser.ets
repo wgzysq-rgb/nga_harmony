@@ -67,7 +67,7 @@ export function parseNgaContent(content: string): string {
   html = html.replace(/\[img\]\.(\/mon_\S+?)\[\/img\]/g,
     (s: string, p1: string): string => {
       const cleanPath = stripThumbnailSuffix(p1);
-      return `<img src="https://img.nga.178.com/attachments${cleanPath}">`;
+      return `<img src="https://img.nga.178.com/attachments${cleanPath}" style="max-width:100%;height:auto;border-radius:8px;">`;
     }
   );
 
@@ -150,7 +150,7 @@ export function parseNgaContent(content: string): string {
   html = html.replace(/\[img\](.*?)\[\/img\]/g,
     (s: string, p1: string): string => {
       const cleanUrl = stripThumbnailSuffix(p1);
-      return `<img src="${cleanUrl}">`;
+      return `<img src="${cleanUrl}" style="max-width:100%;height:auto;border-radius:8px;">`;
     }
   );
 
