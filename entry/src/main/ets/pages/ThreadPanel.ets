@@ -72,15 +72,16 @@ export struct ThreadPanel {
   @State expandedSigs: Set<string> = new Set()
   @State expandedComments: Set<string> = new Set()
   @State expandedAttachs: Set<string> = new Set()
-  @State imageViewerVisible: boolean = false
+  @State @Watch('onImageViewerChanged') imageViewerVisible: boolean = false
   @State imageViewerUrls: string[] = []
   @State imageViewerInitialIndex: number = 0
   @State imageViewerCurrentIndex: number = 0
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'sm'
+  @StorageProp('profileCardVisible') @Watch('onExternalProfileCardClose') storageProfileCardVis: boolean = false
 
   @State showReplyDialog: boolean = false
   @State profileCardUid: string = ''
-  @State profileCardVisible: boolean = false
+  @State @Watch('onProfileCardVisChanged') profileCardVisible: boolean = false
   @State profileCardScreenX: number = 0
   @State profileCardScreenY: number = 0
   private scroller: Scroller = new Scroller()
@@ -107,6 +108,20 @@ export struct ThreadPanel {
       this.profileCardScreenY = screenY + pad
     }
     this.profileCardVisible = true
+  }
+
+  private onProfileCardVisChanged(): void {
+    AppStorage.setOrCreate('profileCardVisible', this.profileCardVisible)
+  }
+
+  private onExternalProfileCardClose(): void {
+    if (!this.storageProfileCardVis && this.profileCardVisible) {
+      this.profileCardVisible = false
+    }
+  }
+
+  private onImageViewerChanged(): void {
+    AppStorage.setOrCreate('imageViewerVisible', this.imageViewerVisible)
   }
 
   aboutToAppear(): void {
@@ -317,9 +332,6 @@ export struct ThreadPanel {
   @Builder
   ProfileCardOverlay() {
     Stack() {
-      Column().width('100%').height('100%').backgroundColor('#20000000')
-        .onClick(() => { this.profileCardVisible = false })
-
       ProfileCardPopup({
         targetUid: this.profileCardUid,
         currentBreakpoint: this.currentBreakpoint,
@@ -332,7 +344,8 @@ export struct ThreadPanel {
     }
     .width('100%')
     .height('100%')
-    .alignContent(Alignment.TopStart)
+    .hitTestBehavior(HitTestMode.Transparent)
+    .onClick(() => { this.profileCardVisible = false })
   }
 
   @Builder

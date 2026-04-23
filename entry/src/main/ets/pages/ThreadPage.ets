@@ -117,6 +117,18 @@ struct ThreadPage {
     this.loadPage(1)
   }
 
+  onBackPress(): boolean {
+    if (this.profileCardVisible) {
+      this.profileCardVisible = false
+      return true
+    }
+    if (this.imageViewerVisible) {
+      this.imageViewerVisible = false
+      return true
+    }
+    return false
+  }
+
   private async loadPage(page: number): Promise<void> {
     if (page === 1) {
       this.isLoading = true
@@ -302,9 +314,6 @@ struct ThreadPage {
   @Builder
   ProfileCardOverlay() {
     Stack() {
-      Column().width('100%').height('100%').backgroundColor('#20000000')
-        .onClick(() => { this.profileCardVisible = false })
-
       ProfileCardPopup({
         targetUid: this.profileCardUid,
         currentBreakpoint: this.currentBreakpoint,
@@ -317,7 +326,8 @@ struct ThreadPage {
     }
     .width('100%')
     .height('100%')
-    .alignContent(Alignment.TopStart)
+    .hitTestBehavior(HitTestMode.Transparent)
+    .onClick(() => { this.profileCardVisible = false })
   }
 
   @Builder

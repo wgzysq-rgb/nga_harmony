@@ -12,7 +12,7 @@
  * - React 用 AnimatePresence; 鸿蒙直接条件渲染
  */
 
-import { appStore } from '../store/AppStore'
+import { appStore, FavBoard } from '../store/AppStore'
 import { routerStore, type BoardSlot, type NavEntry, Screen } from '../store/RouterStore'
 import { getCurrentUser, getForumCategories } from '../service/NgaApi'
 import { AppColors } from '../common/Constants'
@@ -47,19 +47,23 @@ struct MainPage {
    */
   onBackPress(): boolean {
     if (this.currentBreakpoint === 'sm') {
-      return false // sm 模式使用 router 页面栈, 交给系统处理
+      return false
     }
-    // md/lg 模式: 所有导航由 RouterStore 面板管理
-    if (routerStore.activityStack.length > 0) {
-      routerStore.back() // 弹出活动 (如帖子详情), 返回帖子列表
+    if (AppStorage.get<boolean>('imageViewerVisible') ?? false) {
+      AppStorage.setOrCreate('imageViewerVisible', false)
       return true
     }
-    // 桌面模式下 boardSlot 持久保留, 与 React BackFAB 行为一致:
-    // React 桌面模式中 boardSlot 不会被 back() 清除, 用户通过侧边栏切换板块
-    if (routerStore.boardSlot) {
-      return true // 消费事件防止退出, 但不改变 boardSlot 状态
+    if (AppStorage.get<boolean>('profileCardVisible') ?? false) {
+      AppStorage.setOrCreate('profileCardVisible', false)
+      return true
     }
-    // 无任何面板内容, 允许退出应用
+    if (routerStore.activityStack.length > 0) {
+      routerStore.back()
+      return true
+    }
+    if (routerStore.boardSlot) {
+      return true
+    }
     return false
   }
 
@@ -385,26 +389,23 @@ struct MainPage {
 struct CommunityTabContent {
   @State isLoading: boolean = true
   @State collapsedCatIds: string[] = []
-  @State favoritesVersion: number = 0
+  @State favoritesList: FavBoard[] = []
   @Prop currentBreakpoint: string = 'sm'
   @StorageProp('routerVersion') routerVersion: number = 0
   @StorageProp('favVersion') @Watch('onFavVersionChange') favVersion: number = 0
   categories: import('../model/Forum').Category[] = []
 
   aboutToAppear(): void {
+    this.syncFavorites()
     this.loadCategories()
   }
 
   private onFavVersionChange(): void {
-    this.favoritesVersion = this.favVersion
+    this.syncFavorites()
   }
 
-  private get favorites(): import('../store/AppStore').FavBoard[] {
-    return appStore.settings.favorites ?? []
-  }
-
-  private get favCount(): number {
-    return this.favorites.length
+  private syncFavorites(): void {
+    this.favoritesList = [...appStore.settings.favorites]
   }
 
   private async loadCategories(): Promise<void> {
@@ -441,11 +442,7 @@ struct CommunityTabContent {
   // 复刻 React DesktopSidebar: 板块以列表形式展示, 分类可折叠, 高亮当前选中
 
   private isFavBoard(fid: number): boolean {
-    const favs: import('../store/AppStore').FavBoard[] = this.favorites
-    if (favs === null || favs === undefined) {
-      return false
-    }
-    for (const f of favs) {
+    for (const f of this.favoritesList) {
       if (f.fid === fid) return true
     }
     return false
@@ -455,13 +452,17 @@ struct CommunityTabContent {
     if (this.isFavBoard(fid)) {
       appStore.removeFavorite(fid)
     } else {
-      appStore.addFavorite({ fid: fid, stid: fid, name: name })
+      const fb = new FavBoard()
+      fb.fid = fid
+      fb.stid = fid
+      fb.name = name
+      appStore.addFavorite(fb)
     }
   }
 
   @Builder
   SidebarListContent() {
-    if (this.favCount > 0) {
+    if (this.favoritesList.length > 0) {
       Column() {
         Text('收藏板块')
           .fontSize(11)
@@ -470,7 +471,7 @@ struct CommunityTabContent {
           .width('100%')
           .padding({ left: 8, top: 8, bottom: 4 })
 
-        ForEach(this.favorites, (fav: import('../store/AppStore').FavBoard) => {
+        ForEach(this.favoritesList, (fav: FavBoard) => {
           Row() {
             Image(`https://img4.nga.178.com/ngabbs/nga_classic/f/app/${fav.fid}.png`)
               .width(20).height(20).borderRadius(5).objectFit(ImageFit.Cover)
@@ -479,13 +480,6 @@ struct CommunityTabContent {
               .fontSize(12).maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
               .margin({ left: 6 }).layoutWeight(1)
-            Text('★')
-              .fontSize(14)
-              .fontColor(AppColors.primary)
-              .margin({ left: 4 })
-              .onClick(() => {
-                this.handleToggleFav(fav.fid, fav.name)
-              })
           }
           .width('100%').height(32)
           .padding({ left: 8, right: 8 })
@@ -493,7 +487,7 @@ struct CommunityTabContent {
           .borderRadius(8)
           .backgroundColor(this.isActiveBoard(fav.fid) ? AppColors.bgSecondary : Color.Transparent)
           .onClick(() => {
-            routerStore.navigateForum(fav.fid, fav.name, String(fav.stid))
+            routerStore.navigateForum(fav.fid, fav.name)
           })
         })
       }
@@ -598,7 +592,7 @@ struct CommunityTabContent {
     })
 
     // 收藏板块 (网格)
-    if (this.favCount > 0) {
+    if (this.favoritesList.length > 0) {
       this.FavoritesGrid()
     }
 
@@ -636,7 +630,7 @@ struct CommunityTabContent {
           .fontSize(13)
           .fontWeight(FontWeight.Bold)
           .fontColor(AppColors.primary)
-        Text(`${this.favCount} 个板块`)
+        Text(`${this.favoritesList.length} 个板块`)
           .fontSize(11)
           .fontColor(AppColors.textTertiary)
       }
@@ -645,7 +639,7 @@ struct CommunityTabContent {
       .justifyContent(FlexAlign.SpaceBetween)
 
       GridRow({ columns: { sm: 4, md: 4, lg: 3 }, gutter: 8 }) {
-        ForEach(this.favorites, (fav: import('../store/AppStore').FavBoard) => {
+        ForEach(this.favoritesList, (fav: FavBoard) => {
           GridCol() {
             Column() {
               Stack() {
@@ -672,7 +666,7 @@ struct CommunityTabContent {
             .onClick(() => {
               router.pushUrl({
                 url: 'pages/TopicListPage',
-                params: { fid: String(fav.fid), stid: String(fav.stid), name: fav.name }
+                params: { fid: String(fav.fid), name: fav.name }
               })
             })
           }
