@@ -158,44 +158,39 @@ struct MainPage {
   }
 
   // ============== 三列模式 (lg) ==============
-  // 复刻 React RouterProvider threecol:
-  //   hasBoard + hasActivity → 三列: 侧边栏 | TopicList(40%) | Activity(flex)
-  //   hasBoard + noActivity  → 两列: 侧边栏 | TopicList(flex)
-  //   noBoard + hasActivity  → 两列: 侧边栏 | Activity(flex)  (board列隐藏)
+  //   hasBoard + hasActivity → 三列: 侧边栏 | TopicList(40%剩余) | Activity(60%剩余)
+  //   hasBoard + noActivity  → 两列: 侧边栏 | TopicList(全部剩余)
+  //   noBoard + hasActivity  → 两列: 侧边栏 | Activity(全部剩余)
   //   noBoard + noActivity   → 两列: 侧边栏 | 空提示
-  //
-  // 关键: 中间列始终存在 (除 noBoard+hasActivity), 与 React <div> 结构一致
-  //   无 activity: width(0) + layoutWeight(1) ≡ React flex:'1 1 0%'
-  //   有 activity: width('40%') + layoutWeight(0) ≡ React width:'40%' flex:'none'
 
   @Builder
   LgLayout() {
     Row() {
-      // 第1列: 侧边栏 (固定宽度)
       this.SidebarContent()
 
-      // 第2列: 主题列表或空提示 (对齐 React: 始终存在, 除非 noBoard+hasActivity)
-      if (this.boardSlot || !this.topActivity) {
-        Column() {
-          if (this.boardSlot) {
-            this.BoardPanel()
-          } else {
-            this.EmptyHint()
+      Row() {
+        if (this.boardSlot || !this.topActivity) {
+          Column() {
+            if (this.boardSlot) {
+              this.BoardPanel()
+            } else {
+              this.EmptyHint()
+            }
           }
+          .layoutWeight(this.topActivity ? 4 : 1)
+          .height('100%')
         }
-        .width(this.topActivity ? '40%' : 0)
-        .layoutWeight(this.topActivity ? 0 : 1)
-        .height('100%')
-      }
 
-      // 第3列: Activity (帖子详情等)
-      if (this.topActivity) {
-        Column() {
-          this.ActivityPanel()
+        if (this.topActivity) {
+          Column() {
+            this.ActivityPanel()
+          }
+          .layoutWeight(6)
+          .height('100%')
         }
-        .layoutWeight(1)
-        .height('100%')
       }
+      .layoutWeight(1)
+      .height('100%')
     }
     .width('100%')
     .height('100%')
@@ -308,31 +303,23 @@ struct MainPage {
   SidebarContent() {
     Column() {
       // 用户卡片 (复刻 React: Avatar + nickName + "查看个人资料")
-      Row() {
+      Column() {
         Avatar({
           avatar: appStore.auth.avatarUrl,
           uid: appStore.auth.uid,
           name: appStore.auth.nickName,
-          avatarSize: 44
+          avatarSize: 36
         })
-        Column() {
-          Text(appStore.auth.nickName || '未登录')
-            .fontSize(15)
-            .fontWeight(FontWeight.Bold)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-          Text('查看个人资料')
-            .fontSize(12)
-            .fontColor(AppColors.textTertiary)
-            .margin({ top: 2 })
-        }
-        .alignItems(HorizontalAlign.Start)
-        .margin({ left: 12 })
-        .layoutWeight(1)
+        Text(appStore.auth.nickName || '未登录')
+          .fontSize(13)
+          .fontWeight(FontWeight.Bold)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .margin({ top: 8 })
       }
       .width('100%')
-      .padding({ left: 20, right: 20, top: 20, bottom: 20 })
-      .alignItems(VerticalAlign.Center)
+      .padding({ top: 14, bottom: 14 })
+      .alignItems(HorizontalAlign.Center)
       .border({ width: { bottom: 0.5 }, color: AppColors.separator })
       .onClick(() => {
         if (appStore.auth.uid) {
@@ -360,12 +347,12 @@ struct MainPage {
       .height(44)
       .backgroundColor(AppColors.bgSecondary)
       .borderRadius(12)
-      .margin({ left: 12, right: 12, top: 8, bottom: 16 })
+      .margin({ left: 6, right: 6, top: 8, bottom: 12 })
       .onClick(() => {
         appStore.toggleTheme()
       })
     }
-    .width(280)
+    .width(180)
     .height('100%')
     .backgroundColor(AppColors.bgTertiary)
     .border({ width: { right: 0.5 }, color: AppColors.separator })
@@ -448,20 +435,20 @@ struct CommunityTabContent {
           .fontWeight(FontWeight.Bold)
           .fontColor(AppColors.textSecondary)
           .width('100%')
-          .padding({ left: 16, top: 8, bottom: 4 })
+          .padding({ left: 8, top: 8, bottom: 4 })
 
         ForEach(appStore.settings.favorites, (fav: import('../store/AppStore').FavBoard) => {
           Row() {
             Image(`https://img4.nga.178.com/ngabbs/nga_classic/f/app/${fav.fid}.png`)
-              .width(24).height(24).borderRadius(6).objectFit(ImageFit.Cover)
+              .width(20).height(20).borderRadius(5).objectFit(ImageFit.Cover)
               .onError(() => {})
             Text(fav.name)
-              .fontSize(13).maxLines(1)
+              .fontSize(12).maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
-              .margin({ left: 8 }).layoutWeight(1)
+              .margin({ left: 6 }).layoutWeight(1)
           }
-          .width('100%').height(36)
-          .padding({ left: 16, right: 16 })
+          .width('100%').height(32)
+          .padding({ left: 8, right: 8 })
           .alignItems(VerticalAlign.Center)
           .borderRadius(8)
           .backgroundColor(this.isActiveBoard(fav.fid) ? AppColors.bgSecondary : Color.Transparent)
@@ -506,7 +493,7 @@ struct CommunityTabContent {
           .margin({ left: 6 })
       }
       .width('100%')
-      .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+      .padding({ left: 8, right: 8, top: 8, bottom: 8 })
       .alignItems(VerticalAlign.Center)
       .onClick(() => {
         this.toggleCat(cat.name)
@@ -517,15 +504,15 @@ struct CommunityTabContent {
         ForEach(this.collectBoards(cat), (board: import('../model/Forum').BoardContent) => {
           Row() {
             Image(`https://img4.nga.178.com/ngabbs/nga_classic/f/app/${board.fid}.png`)
-              .width(20).height(20).borderRadius(5).objectFit(ImageFit.Cover)
+              .width(18).height(18).borderRadius(4).objectFit(ImageFit.Cover)
               .onError(() => {})
             Text(board.name)
-              .fontSize(13).maxLines(1)
+              .fontSize(12).maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
-              .margin({ left: 8 }).layoutWeight(1)
+              .margin({ left: 6 }).layoutWeight(1)
           }
-          .width('100%').height(32)
-          .padding({ left: 32, right: 16 })
+          .width('100%').height(30)
+          .padding({ left: 22, right: 8 })
           .alignItems(VerticalAlign.Center)
           .borderRadius(8)
           .backgroundColor(this.isActiveBoard(board.fid) ? AppColors.bgSecondary : Color.Transparent)

@@ -235,7 +235,7 @@ export struct ThreadPanel {
               } else if (this.currentPage >= this.totalPages && this.allPosts.length > 0) {
                 Text('已加载全部回复').fontSize(13).fontColor(AppColors.textTertiary)
               }
-            }.width('100%').justifyContent(FlexAlign.Center).padding({ top: 16, bottom: 80 })
+            }.width('100%').justifyContent(FlexAlign.Center).padding({ top: 16, bottom: 16 })
           }
         }
         .width('100%').layoutWeight(1)
@@ -247,26 +247,28 @@ export struct ThreadPanel {
           }
         })
       }
+    }
+    .width('100%').height('100%')
 
-      // 浮动回复按钮 (复刻 React: floating reply FAB)
+      // 浮动回复按钮
       Row() {
         Stack() {
-          Text('💬').fontSize(22).fontColor(Color.White)
+          Image($r('app.media.icon_reply'))
+            .width(20).height(20)
+            .fillColor(AppColors.primary)
         }
-        .width(48).height(48).borderRadius(24)
-        .backgroundColor(AppColors.primary)
-        .shadow({ radius: 8, color: '#40007AFF', offsetY: 2 })
+        .width(40).height(40).borderRadius(20)
+        .backgroundColor(Color.White)
+        .shadow({ radius: 16, color: '#40000000', offsetY: 4 })
         .onClick(() => { this.replyTargetPid = 0; this.showReplyDialog = true })
-      }.width('100%').justifyContent(FlexAlign.End).padding({ right: 20, bottom: 20 })
-    }
-    .width('100%').height('100%').backgroundColor(AppColors.bg)
-    .bindContentCover(this.showReplyDialog, this.ReplyDialogBuilder())
+      }.width('100%').justifyContent(FlexAlign.End).padding({ right: 16, bottom: 16 })
 
       if (this.imageViewerVisible) {
         this.ImageViewerBuilder()
       }
     }
-    .width('100%').height('100%')
+    .width('100%').height('100%').backgroundColor(AppColors.bg).alignContent(Alignment.BottomEnd)
+    .bindContentCover(this.showReplyDialog, this.ReplyDialogBuilder())
   }
 
   @Builder

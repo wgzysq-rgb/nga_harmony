@@ -117,99 +117,104 @@ export struct TopicListPanel {
   }
 
   build() {
-    Column() {
-      // 标题栏 (嵌入式, 不带返回按钮)
-      Row() {
-        Text(this.boardName)
-          .fontSize(17).fontWeight(FontWeight.Bold).layoutWeight(1)
-          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-      }
-      .width('100%').height(44).padding({ left: 16, right: 16 })
-      .backgroundColor(AppColors.bgTertiary)
-      .border({ width: { bottom: 0.5 }, color: AppColors.separator })
-      .alignItems(VerticalAlign.Center)
+    Stack() {
+      Column() {
+        // 标题栏 (嵌入式, 不带返回按钮)
+        Row() {
+          Text(this.boardName)
+            .fontSize(17).fontWeight(FontWeight.Bold).layoutWeight(1)
+            .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .width('100%').height(44).padding({ left: 16, right: 16 })
+        .backgroundColor(AppColors.bgTertiary)
+        .border({ width: { bottom: 0.5 }, color: AppColors.separator })
+        .alignItems(VerticalAlign.Center)
 
-      // 排序栏
-      Row() {
-        ForEach(SORT_MODES, (mode: SortMode) => {
-          Text(mode.label)
-            .fontSize(13)
-            .fontColor(this.sortMode === mode.key ? AppColors.textPrimary : AppColors.textTertiary)
-            .fontWeight(this.sortMode === mode.key ? FontWeight.Bold : FontWeight.Normal)
-            .backgroundColor(this.sortMode === mode.key ? AppColors.bg : Color.Transparent)
-            .borderRadius(7)
-            .padding({ left: 12, right: 12, top: 5, bottom: 5 })
-            .layoutWeight(1)
-            .textAlign(TextAlign.Center)
-            .onClick(() => {
-              if (this.sortMode !== mode.key) {
-                this.sortMode = mode.key
-                this.loadTopics(1)
+        // 排序栏
+        Row() {
+          ForEach(SORT_MODES, (mode: SortMode) => {
+            Text(mode.label)
+              .fontSize(13)
+              .fontColor(this.sortMode === mode.key ? AppColors.textPrimary : AppColors.textTertiary)
+              .fontWeight(this.sortMode === mode.key ? FontWeight.Bold : FontWeight.Normal)
+              .backgroundColor(this.sortMode === mode.key ? AppColors.bg : Color.Transparent)
+              .borderRadius(7)
+              .padding({ left: 12, right: 12, top: 5, bottom: 5 })
+              .layoutWeight(1)
+              .textAlign(TextAlign.Center)
+              .onClick(() => {
+                if (this.sortMode !== mode.key) {
+                  this.sortMode = mode.key
+                  this.loadTopics(1)
+                }
+              })
+          })
+        }
+        .width('92%').margin({ top: 8, bottom: 4 }).padding(3)
+        .backgroundColor(AppColors.bgSecondary).borderRadius(10)
+
+        // 内容
+        if (this.isLoading) {
+          Column() {
+            LoadingProgress().width(28).height(28).color(AppColors.textTertiary)
+            Text('加载中...').fontSize(14).fontColor(AppColors.textTertiary).margin({ top: 8 })
+          }.width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
+        } else if (this.hasError) {
+          Column() {
+            Text(this.errorMsg || '加载失败').fontSize(14).fontColor(AppColors.textTertiary).margin({ bottom: 12 })
+            Button('重试').fontSize(14).fontColor(AppColors.primary).backgroundColor(AppColors.bgSecondary).borderRadius(10)
+              .onClick(() => this.loadTopics(1))
+          }.width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
+        } else if (this.threads.length === 0) {
+          Column() {
+            Text('💬').fontSize(40).opacity(0.4).margin({ bottom: 8 })
+            Text('暂无主题').fontSize(15).fontColor(AppColors.textTertiary)
+          }.width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
+        } else {
+          List({ scroller: this.scroller }) {
+            ForEach(this.threads, (thread: object) => {
+              ListItem() {
+                this.TopicCard(thread as Record<string, Object>)
               }
             })
-        })
-      }
-      .width('92%').margin({ top: 8, bottom: 4 }).padding(3)
-      .backgroundColor(AppColors.bgSecondary).borderRadius(10)
-
-      // 内容
-      if (this.isLoading) {
-        Column() {
-          LoadingProgress().width(28).height(28).color(AppColors.textTertiary)
-          Text('加载中...').fontSize(14).fontColor(AppColors.textTertiary).margin({ top: 8 })
-        }.width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
-      } else if (this.hasError) {
-        Column() {
-          Text(this.errorMsg || '加载失败').fontSize(14).fontColor(AppColors.textTertiary).margin({ bottom: 12 })
-          Button('重试').fontSize(14).fontColor(AppColors.primary).backgroundColor(AppColors.bgSecondary).borderRadius(10)
-            .onClick(() => this.loadTopics(1))
-        }.width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
-      } else if (this.threads.length === 0) {
-        Column() {
-          Text('💬').fontSize(40).opacity(0.4).margin({ bottom: 8 })
-          Text('暂无主题').fontSize(15).fontColor(AppColors.textTertiary)
-        }.width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
-      } else {
-        List({ scroller: this.scroller }) {
-          ForEach(this.threads, (thread: object) => {
             ListItem() {
-              this.TopicCard(thread as Record<string, Object>)
+              Row() {
+                if (this.isLoadingMore) {
+                  LoadingProgress().width(16).height(16).color(AppColors.textTertiary)
+                  Text('加载更多...').fontSize(13).fontColor(AppColors.textTertiary).margin({ left: 8 })
+                } else if (this.currentPage >= this.totalPages) {
+                  Text('— 已到底 —').fontSize(12).fontColor(AppColors.textTertiary)
+                }
+              }.width('100%').justifyContent(FlexAlign.Center).padding({ top: 16, bottom: 16 })
+            }
+          }
+          .width('100%').layoutWeight(1)
+          .divider({ strokeWidth: 0.5, color: AppColors.separator })
+          .lanes(new BreakpointType(1, 1, 1).getValue(this.currentBreakpoint), 12)
+          .edgeEffect(EdgeEffect.Spring)
+          .onReachEnd(() => {
+            if (!this.isLoadingMore && this.currentPage < this.totalPages) {
+              this.loadTopics(this.currentPage + 1)
             }
           })
-          ListItem() {
-            Row() {
-              if (this.isLoadingMore) {
-                LoadingProgress().width(16).height(16).color(AppColors.textTertiary)
-                Text('加载更多...').fontSize(13).fontColor(AppColors.textTertiary).margin({ left: 8 })
-              } else if (this.currentPage >= this.totalPages) {
-                Text('— 已到底 —').fontSize(12).fontColor(AppColors.textTertiary)
-              }
-            }.width('100%').justifyContent(FlexAlign.Center).padding({ top: 16, bottom: 16 })
-          }
         }
-        .width('100%').layoutWeight(1)
-        .divider({ strokeWidth: 0.5, color: AppColors.separator })
-        .lanes(new BreakpointType(1, 1, 1).getValue(this.currentBreakpoint), 12)
-        .edgeEffect(EdgeEffect.Spring)
-        .onReachEnd(() => {
-          if (!this.isLoadingMore && this.currentPage < this.totalPages) {
-            this.loadTopics(this.currentPage + 1)
-          }
-        })
       }
+      .width('100%').height('100%')
 
-      // 浮动刷新按钮 (复刻 React: floating RefreshCw FAB)
+      // 浮动刷新按钮
       Row() {
         Stack() {
-          Text('🔄').fontSize(20).fontColor(AppColors.primary)
+          Image($r('app.media.icon_refresh'))
+            .width(20).height(20)
+            .fillColor(AppColors.primary)
         }
-        .width(44).height(44).borderRadius(22)
-        .backgroundColor(AppColors.bgTertiary)
-        .shadow({ radius: 6, color: '#20000000', offsetY: 2 })
+        .width(40).height(40).borderRadius(20)
+        .backgroundColor(Color.White)
+        .shadow({ radius: 16, color: '#40000000', offsetY: 4 })
         .onClick(() => this.loadTopics(1))
       }.width('100%').justifyContent(FlexAlign.End).padding({ right: 16, bottom: 16 })
     }
-    .width('100%').height('100%').backgroundColor(AppColors.bg)
+    .width('100%').height('100%').backgroundColor(AppColors.bg).alignContent(Alignment.BottomEnd)
   }
 
   @Builder
