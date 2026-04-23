@@ -5,13 +5,15 @@
  */
 
 import { appStore } from '../store/AppStore'
-import { routerStore } from '../store/RouterStore'
+import { routerStore, Screen } from '../store/RouterStore'
 import { getThread, getPostAuth, postReply, addFavorite, ThreadResult, PostInfo, PostAttachInfo, PostAuthResult, PostReplyResult } from '../service/NgaApi'
 import { AppColors } from '../common/Constants'
 import { formatTime, escHtml } from '../common/Utils'
 import router from '@ohos.router'
+import { componentUtils } from '@kit.ArkUI'
 import { Avatar } from '../common/Avatar'
 import { parseNgaContent, extractContentImages, stripBbCode } from '../service/ContentParser'
+import { ProfileCardPopup } from '../common/ProfileCardPopup'
 
 @CustomDialog
 struct ThreadReplyDialog {
@@ -77,8 +79,35 @@ export struct ThreadPanel {
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'sm'
 
   @State showReplyDialog: boolean = false
+  @State profileCardUid: string = ''
+  @State profileCardVisible: boolean = false
+  @State profileCardScreenX: number = 0
+  @State profileCardScreenY: number = 0
   private scroller: Scroller = new Scroller()
   private replyTargetPid: number = 0
+
+  private showProfileCard(uid: string, screenX: number, screenY: number): void {
+    this.profileCardUid = uid
+    const cardW: number = 280
+    const cardH: number = 400
+    const pad: number = 8
+    try {
+      const info = componentUtils.getRectangleById('threadPanelRoot')
+      const context = this.getUIContext()
+      const rootX = context.px2vp(Number(info.windowOffset.x))
+      const rootY = context.px2vp(Number(info.windowOffset.y))
+      const rootW = context.px2vp(Number(info.size.width))
+      const rootH = context.px2vp(Number(info.size.height))
+      const localX = screenX - rootX
+      const localY = screenY - rootY
+      this.profileCardScreenX = Math.max(pad, Math.min(localX - cardW / 2, rootW - cardW - pad))
+      this.profileCardScreenY = Math.max(pad, Math.min(localY + pad, rootH - cardH - pad))
+    } catch (e) {
+      this.profileCardScreenX = screenX - cardW / 2
+      this.profileCardScreenY = screenY + pad
+    }
+    this.profileCardVisible = true
+  }
 
   aboutToAppear(): void {
     this.loadPage(1)
@@ -266,8 +295,13 @@ export struct ThreadPanel {
       if (this.imageViewerVisible) {
         this.ImageViewerBuilder()
       }
+
+      if (this.profileCardVisible) {
+        this.ProfileCardOverlay()
+      }
     }
     .width('100%').height('100%').backgroundColor(AppColors.bg).alignContent(Alignment.BottomEnd)
+    .id('threadPanelRoot')
     .bindContentCover(this.showReplyDialog, this.ReplyDialogBuilder())
   }
 
@@ -281,23 +315,53 @@ export struct ThreadPanel {
   }
 
   @Builder
+  ProfileCardOverlay() {
+    Stack() {
+      Column().width('100%').height('100%').backgroundColor('#20000000')
+        .onClick(() => { this.profileCardVisible = false })
+
+      ProfileCardPopup({
+        targetUid: this.profileCardUid,
+        currentBreakpoint: this.currentBreakpoint,
+        onClose: () => { this.profileCardVisible = false }
+      })
+        .position({
+          x: this.profileCardScreenX,
+          y: this.profileCardScreenY
+        })
+    }
+    .width('100%')
+    .height('100%')
+    .alignContent(Alignment.TopStart)
+  }
+
+  @Builder
   PostItem(post: PostInfo) {
     if (this.authorOnly && this.threadAuthorId.length > 0 && String(post.authorid) !== this.threadAuthorId) {
       // 不渲染
     } else {
       Column() {
         Row() {
-          Avatar({ avatar: post.avatar, uid: String(post.authorid), name: post.author, avatarSize: 32 })
+          Row() {
+            Avatar({ avatar: post.avatar, uid: String(post.authorid), name: post.author, avatarSize: 32 })
 
-          Column() {
-            Text(escHtml(post.author)).fontSize(14).fontColor(AppColors.primary).fontWeight(FontWeight.Medium)
-            Row() {
-              if (post.memberGroup && post.memberGroup.length > 0) {
-                Text(post.memberGroup).fontSize(11).fontColor(AppColors.textTertiary)
+            Column() {
+              Text(escHtml(post.author)).fontSize(14).fontColor(AppColors.primary).fontWeight(FontWeight.Medium)
+              Row() {
+                if (post.memberGroup && post.memberGroup.length > 0) {
+                  Text(post.memberGroup).fontSize(11).fontColor(AppColors.textTertiary)
+                }
+                Text(formatTime(Number(post.postdate))).fontSize(11).fontColor(AppColors.textTertiary).margin({ left: 6 })
               }
-              Text(formatTime(Number(post.postdate))).fontSize(11).fontColor(AppColors.textTertiary).margin({ left: 6 })
+            }.alignItems(HorizontalAlign.Start).margin({ left: 8 }).layoutWeight(1)
+          }.layoutWeight(1)
+          .onClick((event: ClickEvent) => {
+            const uid = String(post.authorid)
+            if (uid) {
+              this.showProfileCard(uid, event.screenX, event.screenY)
             }
-          }.alignItems(HorizontalAlign.Start).margin({ left: 8 }).layoutWeight(1)
+          })
+
           Text(`#${post.lou}`).fontSize(13).fontColor(AppColors.textTertiary)
         }.width('100%')
 
@@ -401,6 +465,12 @@ export struct ThreadPanel {
               ForEach(this.expandedComments.has(String(post.pid)) ? post.comments : post.comments.slice(0, 2), (c: PostInfo) => {
                 Row() {
                   Text(escHtml(c.author)).fontSize(13).fontColor(AppColors.primary).fontWeight(FontWeight.Medium)
+                    .onClick((event: ClickEvent) => {
+                      const uid = String(c.authorid)
+                      if (uid) {
+                        this.showProfileCard(uid, event.screenX, event.screenY)
+                      }
+                    })
                   Text(': ').fontSize(13).fontColor(AppColors.textTertiary)
                   Text(escHtml(c.content)).fontSize(13).fontColor(AppColors.textSecondary).layoutWeight(1)
                 }.width('100%').padding({ top: 2, bottom: 2 })

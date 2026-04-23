@@ -698,6 +698,53 @@ export async function postReply(token: string, tid: number, fid: number,
 
 // ============== 收藏 ==============
 
+export interface FavBoardItem {
+  fid: number
+  stid: number
+  name: string
+}
+
+export class ForumFavoritesResult extends ApiResult {
+  data: FavBoardItem[] = []
+}
+
+export async function fetchForumFavorites(token: string): Promise<ForumFavoritesResult> {
+  const result = new ForumFavoritesResult()
+  const session = sessionStore.get(token)
+  if (!session) {
+    result.error = '未登录'
+    return result
+  }
+  try {
+    const fields: Record<string, string> = {
+      '__lib': 'forum_favor2',
+      '__act': 'forum_favor',
+      '__output': '8',
+      'action': 'sync',
+    }
+    const raw = await ngaClient.post('/nuke.php', fields, { uid: session.uid, cid: session.cid }) as Record<string, Object>
+    const data = raw?.['data'] as Record<string, Object> | undefined
+    const items = data?.['0'] as Record<string, Object> | undefined
+    if (items && typeof items === 'object') {
+      const keys = Object.keys(items)
+      const forums: FavBoardItem[] = []
+      for (const key of keys) {
+        const item = items[key] as Record<string, Object>
+        forums.push({
+          fid: Number(item['fid']) || 0,
+          stid: Number(item['id']) || 0,
+          name: String(item['name'] ?? ''),
+        })
+      }
+      result.data = forums
+    }
+    result.ok = true
+  } catch (e) {
+    result.error = (e as Error).message ?? '获取收藏板块失败'
+  }
+  return result
+}
+
 export async function addFavorite(token: string, tid: number, pid: number): Promise<ApiResult> {
   const result = new ApiResult();
   const session = sessionStore.get(token);

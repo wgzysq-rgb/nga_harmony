@@ -6,6 +6,7 @@
 import { preferences } from '@kit.ArkData'
 import { hilog } from '@kit.PerformanceAnalysisKit'
 import { Context } from '@kit.AbilityKit'
+import { fetchForumFavorites } from '../service/NgaApi'
 
 const TAG = 'AppStore'
 const DOMAIN = 0x0000
@@ -28,10 +29,10 @@ export interface BlacklistEntry {
   nickName: string
 }
 
-export interface FavBoard {
-  fid: number
-  stid: number
-  name: string
+export class FavBoard {
+  fid: number = 0
+  stid: number = 0
+  name: string = ''
 }
 
 export class SettingsState {
@@ -94,6 +95,7 @@ class AppStoreClass {
     this.auth.avatarUrl = ''
     this.auth.isAuthenticated = false
     this.auth.initialized = true
+    this.favoritesLoaded = false
     this.persistAuth()
   }
 
@@ -146,14 +148,42 @@ class AppStoreClass {
     return ids
   }
 
+  private favoritesLoaded: boolean = false
+
+  async fetchFavorites(): Promise<void> {
+    if (this.favoritesLoaded || !this.auth.isAuthenticated) return
+    try {
+      const result = await fetchForumFavorites(this.auth.token)
+      if (result.ok && result.data.length > 0) {
+        const favs: FavBoard[] = []
+        for (let i = 0; i < result.data.length; i++) {
+          const item = result.data[i]
+          const fb = new FavBoard()
+          fb.fid = item.fid
+          fb.stid = item.stid
+          fb.name = item.name
+          favs.push(fb)
+        }
+        this.settings.favorites = favs
+        this.persistSettings()
+        AppStorage.setOrCreate('favVersion', (AppStorage.get<number>('favVersion') ?? 0) + 1)
+      }
+      this.favoritesLoaded = true
+    } catch (e) {
+      hilog.error(DOMAIN, TAG, 'fetchFavorites failed')
+    }
+  }
+
   addFavorite(board: FavBoard): void {
     this.settings.favorites = [...this.settings.favorites, board]
     this.persistSettings()
+    AppStorage.setOrCreate('favVersion', (AppStorage.get<number>('favVersion') ?? 0) + 1)
   }
 
   removeFavorite(fid: number): void {
     this.settings.favorites = this.settings.favorites.filter(f => f.fid !== fid)
     this.persistSettings()
+    AppStorage.setOrCreate('favVersion', (AppStorage.get<number>('favVersion') ?? 0) + 1)
   }
 
   setFontSize(size: number): void {
@@ -193,7 +223,6 @@ class AppStoreClass {
       if (raw) {
         const obj = JSON.parse(raw) as Record<string, Object>
         if (obj['blacklist']) this.settings.blacklist = obj['blacklist'] as BlacklistEntry[]
-        if (obj['favorites']) this.settings.favorites = obj['favorites'] as FavBoard[]
         if (obj['fontSize']) this.settings.fontSize = Number(obj['fontSize'])
         if (obj['domainIndex']) this.settings.domainIndex = Number(obj['domainIndex'])
         if (obj['theme']) this.settings.theme = String(obj['theme'])
