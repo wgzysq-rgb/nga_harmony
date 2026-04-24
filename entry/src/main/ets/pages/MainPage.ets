@@ -219,8 +219,6 @@ struct MainPage {
         .layoutWeight(1).width('100%')
       }
       .width('100%').height('100%')
-    } else if (this.topActivity!.screen.type === 'search') {
-      SearchPanel()
     } else if (this.topActivity!.screen.type === 'notifications') {
       Column() {
         this.PanelNavBar(this.topActivity!.screen.getTitle())

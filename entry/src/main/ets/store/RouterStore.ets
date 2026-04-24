@@ -50,7 +50,6 @@ export type ScreenType =
   | 'notifications'
   | 'messages'
   | 'messageDetail'
-  | 'search'
   | 'blacklist'
   | 'settings'
   | 'browseHistory'
@@ -102,12 +101,6 @@ export class Screen {
     return s
   }
 
-  static search(): Screen {
-    const s = new Screen()
-    s.type = 'search'
-    return s
-  }
-
   static notifications(): Screen {
     const s = new Screen()
     s.type = 'notifications'
@@ -154,7 +147,6 @@ export class Screen {
       case 'notifications': return '通知'
       case 'messages': return '私信'
       case 'messageDetail': return '私信'
-      case 'search': return '搜索'
       case 'blacklist': return '黑名单管理'
       case 'settings': return '设置'
       case 'browseHistory': return '浏览历史'
