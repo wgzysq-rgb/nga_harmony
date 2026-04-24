@@ -103,16 +103,24 @@ struct MainPage {
 
   @Builder
   SmLayout() {
-    Stack() {
-      if (this.topActivity) {
+    if (this.topActivity) {
+      Column() {
         this.ActivityPanel()
-      } else if (this.boardSlot) {
+      }
+      .width('100%').height('100%')
+      .transition(TransitionEffect.opacity(0).animation({ duration: 200 }))
+    } else if (this.boardSlot) {
+      Column() {
         this.BoardPanel()
-      } else {
+      }
+      .width('100%').height('100%')
+      .transition(TransitionEffect.opacity(0).animation({ duration: 200 }))
+    } else {
+      Column() {
         this.MobileHomeContent()
       }
+      .width('100%').height('100%')
     }
-    .width('100%').height('100%')
   }
 
   @Builder
@@ -132,11 +140,37 @@ struct MainPage {
 
       Column() {
         if (this.topActivity) {
-          this.ActivityPanel()
+          Column() {
+            this.ActivityPanel()
+          }
+          .height('100%').width('100%')
+          .transition(
+            TransitionEffect.asymmetric(
+              TransitionEffect.translate({ x: 30 }).combine(TransitionEffect.opacity(0))
+                .animation({ duration: 250 }),
+              TransitionEffect.translate({ x: 30 }).combine(TransitionEffect.opacity(0))
+                .animation({ duration: 250 })
+            )
+          )
         } else if (this.boardSlot) {
-          this.BoardPanel()
+          Column() {
+            this.BoardPanel()
+          }
+          .height('100%').width('100%')
+          .transition(
+            TransitionEffect.asymmetric(
+              TransitionEffect.translate({ x: -30 }).combine(TransitionEffect.opacity(0))
+                .animation({ duration: 250 }),
+              TransitionEffect.translate({ x: -30 }).combine(TransitionEffect.opacity(0))
+                .animation({ duration: 250 })
+            )
+          )
         } else {
-          this.EmptyHint()
+          Column() {
+            this.EmptyHint()
+          }
+          .height('100%').width('100%')
+          .transition(TransitionEffect.opacity(0).animation({ duration: 150 }))
         }
       }
       .layoutWeight(1)
@@ -162,16 +196,25 @@ struct MainPage {
               this.EmptyHint()
             }
           }
-          .layoutWeight(this.topActivity ? 4 : 1)
+          .width(this.topActivity ? '40%' : '100%')
           .height('100%')
+          .animation({ duration: 250, curve: Curve.FastOutLinearIn })
         }
 
         if (this.topActivity) {
           Column() {
             this.ActivityPanel()
           }
-          .layoutWeight(6)
+          .layoutWeight(1)
           .height('100%')
+          .transition(
+            TransitionEffect.asymmetric(
+              TransitionEffect.translate({ x: 30 }).combine(TransitionEffect.opacity(0))
+                .animation({ duration: 250 }),
+              TransitionEffect.translate({ x: 30 }).combine(TransitionEffect.opacity(0))
+                .animation({ duration: 250 })
+            )
+          )
         }
       }
       .layoutWeight(1)
