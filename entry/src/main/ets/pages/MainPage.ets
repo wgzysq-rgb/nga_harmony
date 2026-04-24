@@ -359,23 +359,24 @@ struct MainPage {
         }
       })
 
+      Row() {
+        Text('🔍')
+          .fontSize(14).margin({ right: 6 })
+        Text('搜索板块、主题...')
+          .fontSize(12).fontColor(AppColors.textTertiary)
+      }
+      .width('100%').height(36).padding({ left: 10, right: 10 })
+      .backgroundColor(AppColors.bgSecondary).borderRadius(8)
+      .margin({ left: 8, right: 8, top: 8 })
+      .alignItems(VerticalAlign.Center)
+      .onClick(() => {
+        routerStore.navigateActivity(Screen.search())
+      })
+
       Column() {
         CommunityTabContent({ currentBreakpoint: this.currentBreakpoint })
       }
       .layoutWeight(1)
-
-      Row() {
-        Text(appStore.settings.theme === 'dark' ? '☀️' : '🌙')
-          .fontSize(15).margin({ right: 8 })
-        Text(appStore.settings.theme === 'dark' ? '亮色模式' : '深色模式')
-          .fontSize(13).fontColor(AppColors.textSecondary)
-      }
-      .width('100%').justifyContent(FlexAlign.Center).height(44)
-      .backgroundColor(AppColors.bgSecondary).borderRadius(12)
-      .margin({ left: 6, right: 6, top: 8, bottom: 12 })
-      .onClick(() => {
-        appStore.toggleTheme()
-      })
     }
     .width(180)
     .height('100%')
