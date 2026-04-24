@@ -11,6 +11,7 @@ import { NavBar } from '../common/NavBar'
 import { AppColors, NOTI_TYPE_MAP } from '../common/Constants'
 import { formatTime, escHtml } from '../common/Utils'
 import { BreakpointType } from '../common/Constants'
+import { NotificationDataSource } from '../common/LazyDataSource'
 
 const FILTER_LABELS: string[] = ['全部', '回复', '@我', '私信']
 const FILTER_TYPES: number[][] = [[], [1, 2, 3, 4], [7, 8], [10, 11]]
@@ -25,6 +26,7 @@ struct NotificationPage {
   @State activeFilter: number = 0
   @State clearing: boolean = false
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'sm'
+  private notificationsDataSource: NotificationDataSource = new NotificationDataSource()
 
   aboutToAppear(): void {
     this.loadNotifications()
@@ -37,6 +39,7 @@ struct NotificationPage {
       const result = await getNotifications(appStore.auth.token)
       if (result.ok) {
         this.notifications = result.data as NotificationInfo[]
+        this.updateFilteredDataSource()
       } else {
         this.hasError = true
         this.errorMsg = result.error || '加载失败'
@@ -54,12 +57,17 @@ struct NotificationPage {
     return this.notifications.filter((n: NotificationInfo) => types.includes(n.type))
   }
 
+  private updateFilteredDataSource(): void {
+    this.notificationsDataSource.replaceAll(this.filteredNotifications)
+  }
+
   private async handleClearAll(): Promise<void> {
     if (this.clearing) return
     this.clearing = true
     try {
       await clearNotifications(appStore.auth.token)
       this.notifications = []
+      this.notificationsDataSource.clear()
     } catch (e) {
       appStore.showToast('清除失败')
     }
@@ -122,7 +130,7 @@ struct NotificationPage {
             .padding({ left: 12, right: 12, top: 5, bottom: 5 })
             .layoutWeight(1)
             .textAlign(TextAlign.Center)
-            .onClick(() => { this.activeFilter = index as number })
+            .onClick(() => { this.activeFilter = index as number; this.updateFilteredDataSource() })
         })
       }
       .width('92%')
@@ -177,7 +185,7 @@ struct NotificationPage {
         .alignItems(HorizontalAlign.Center)
       } else {
         List() {
-          ForEach(this.filteredNotifications, (n: NotificationInfo) => {
+          LazyForEach(this.notificationsDataSource, (n: NotificationInfo) => {
             ListItem() {
               Row() {
                 Text(NOTI_TYPE_MAP[n.type] ? NOTI_TYPE_MAP[n.type].icon : '📋')
@@ -193,7 +201,7 @@ struct NotificationPage {
               }.width('100%').padding({ left: 16, right: 16, top: 10, bottom: 10 }).alignItems(VerticalAlign.Center)
               .onClick(() => this.handleNotificationClick(n))
             }
-          })
+          }, (n: NotificationInfo) => String(n.timeStamp) + String(n.userId))
         }
         .width('100%')
         .layoutWeight(1)

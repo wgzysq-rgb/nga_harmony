@@ -35,17 +35,19 @@ export class Screen {
   // thread
   tid: string = ''
   threadPage: number = 1
+  pid: string = ''
   // profile
   uid: string = ''
   // messageDetail
   mid: string = ''
   messagePage: number = 1
 
-  static thread(tid: string, page: number = 1): Screen {
+  static thread(tid: string, page: number = 1, pid: string = ''): Screen {
     const s = new Screen()
     s.type = 'thread'
     s.tid = tid
     s.threadPage = page
+    s.pid = pid
     return s
   }
 

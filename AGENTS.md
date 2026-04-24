@@ -86,6 +86,10 @@
 - 新增颜色等资源请确认是否需要添加黑色主题支持(参考历史工程)，新工程建议默认支持黑色及白色主题
 
 
+## ArkTS 疑难处理规范
+
+- 当处理或使用 ArkTS 时，如遇到不确定的语法、API 用法，或用户报告了编译/运行错误，必须积极通过网络搜索（使用 `mcp__web-search-prime__web_search_prime`）查阅华为开发者官方文档，确认正确的 ArkTS 使用方式，而非凭经验猜测
+
 ## ArkUI 动画规范(`animateTo`,`transform`,`renderGroup`,`opacity`)
 
 - 优先使用 HarmonyOS 提供的原生动画 API 和高级模板

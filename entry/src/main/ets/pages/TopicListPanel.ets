@@ -9,6 +9,7 @@ import { routerStore, Screen } from '../store/RouterStore'
 import { getTopicList, createTopicListParams, TopicListParams, TopicListResult } from '../service/NgaApi'
 import { AppColors, FONT_COLORS, SORT_MODES, SortMode, BreakpointType } from '../common/Constants'
 import { formatTime, escHtml } from '../common/Utils'
+import { ThreadDataSource } from '../common/LazyDataSource'
 import router from '@ohos.router'
 
 @Component
@@ -22,6 +23,7 @@ export struct TopicListPanel {
   @State hasError: boolean = false
   @State errorMsg: string = ''
   @State threads: object[] = []
+  private threadsDataSource: ThreadDataSource = new ThreadDataSource()
   @State currentPage: number = 1
   @State totalPages: number = 0
   @State sortMode: string = 'latest'
@@ -35,6 +37,7 @@ export struct TopicListPanel {
 
   private onBoardChanged(): void {
     this.threads = []
+    this.threadsDataSource.clear()
     this.currentPage = 1
     this.totalPages = 0
     this.hasError = false
@@ -73,11 +76,13 @@ export struct TopicListPanel {
         const list = result.data.threadPageList
         if (page === 1) {
           this.threads = list
+          this.threadsDataSource.replaceAll(list)
         } else {
           const arr: object[] = []
           for (let i = 0; i < this.threads.length; i++) arr.push(this.threads[i])
           for (let i = 0; i < list.length; i++) arr.push(list[i])
           this.threads = arr
+          this.threadsDataSource.appendAll(list)
         }
         this.currentPage = page
         this.totalPages = result.data.pagination.totalPages
@@ -172,10 +177,13 @@ export struct TopicListPanel {
           }.width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
         } else {
           List({ scroller: this.scroller }) {
-            ForEach(this.threads, (thread: object) => {
+            LazyForEach(this.threadsDataSource, (thread: object) => {
               ListItem() {
                 this.TopicCard(thread as Record<string, Object>)
               }
+            }, (thread: object) => {
+              const t = thread as Record<string, Object>
+              return String(t['tid'] ?? '')
             })
             ListItem() {
               Row() {

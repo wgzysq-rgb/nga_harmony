@@ -9,6 +9,7 @@ import { NavBar } from '../common/NavBar'
 import { AppColors } from '../common/Constants'
 import { formatTime, escHtml } from '../common/Utils'
 import { BreakpointType } from '../common/Constants'
+import { ThreadDataSource } from '../common/LazyDataSource'
 import { preferences } from '@kit.ArkData'
 import { Context } from '@kit.AbilityKit'
 
@@ -29,6 +30,8 @@ struct SearchPage {
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'sm'
 
   private scroller: Scroller = new Scroller()
+  private forumsDataSource: ThreadDataSource = new ThreadDataSource()
+  private threadsDataSource: ThreadDataSource = new ThreadDataSource()
 
   aboutToAppear(): void {
     this.loadHistory()
@@ -85,6 +88,8 @@ struct SearchPage {
     this.saveHistory(kw)
     this.threads = []
     this.forums = []
+    this.threadsDataSource.clear()
+    this.forumsDataSource.clear()
     this.currentPage = 1
     this.doSearch(1)
   }
@@ -95,6 +100,8 @@ struct SearchPage {
     this.saveHistory(kw)
     this.threads = []
     this.forums = []
+    this.threadsDataSource.clear()
+    this.forumsDataSource.clear()
     this.currentPage = 1
     this.doSearch(1)
   }
@@ -104,7 +111,10 @@ struct SearchPage {
     try {
       if (this.currentTab === 2) {
         const result: SearchForumResult = await searchForum(appStore.auth.token, this.submitted)
-        if (result.ok && result.data) { this.forums = result.data as object[] }
+        if (result.ok && result.data) {
+          this.forums = result.data as object[]
+          this.forumsDataSource.replaceAll(this.forums)
+        }
       } else {
         const params: TopicListParams = createTopicListParams()
         params.page = String(page)
@@ -112,12 +122,15 @@ struct SearchPage {
         if (this.currentTab === 3) { params.author = this.submitted } else { params.key = this.submitted }
         const result: TopicListResult = await getTopicList(appStore.auth.token, params)
         if (result.ok && result.data) {
-          if (page === 1) { this.threads = result.data.threadPageList }
-          else {
+          if (page === 1) {
+            this.threads = result.data.threadPageList
+            this.threadsDataSource.replaceAll(this.threads)
+          } else {
             const arr: object[] = []
             for (let i = 0; i < this.threads.length; i++) { arr.push(this.threads[i]) }
             for (let i = 0; i < result.data.threadPageList.length; i++) { arr.push(result.data.threadPageList[i]) }
             this.threads = arr
+            this.threadsDataSource.replaceAll(this.threads)
           }
           this.currentPage = page
           this.totalPages = result.data.pagination.totalPages
@@ -134,6 +147,8 @@ struct SearchPage {
     this.currentTab = index
     this.threads = []
     this.forums = []
+    this.threadsDataSource.clear()
+    this.forumsDataSource.clear()
     this.currentPage = 1
     if (this.submitted) { this.doSearch(1) }
   }
@@ -152,7 +167,7 @@ struct SearchPage {
             .onSubmit(() => this.handleSubmit())
           if (this.keyword.length > 0) {
             Text('✕').fontSize(16).fontColor(AppColors.textTertiary).margin({ left: 8 })
-              .onClick(() => { this.keyword = ''; this.submitted = ''; this.threads = []; this.forums = [] })
+              .onClick(() => { this.keyword = ''; this.submitted = ''; this.threads = []; this.forums = []; this.threadsDataSource.clear(); this.forumsDataSource.clear() })
           }
         }.layoutWeight(1).height(40).padding({ left: 12, right: 12 })
         .backgroundColor(AppColors.bgSecondary).borderRadius(10).alignItems(VerticalAlign.Center)
@@ -218,7 +233,7 @@ struct SearchPage {
             .width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
         } else {
           List() {
-            ForEach(this.forums, (forum: object) => {
+            LazyForEach(this.forumsDataSource, (forum: object) => {
               ListItem() {
                 Row() {
                   Image(`https://img4.nga.178.com/ngabbs/nga_classic/f/app/${(forum as Record<string, Object>)['fid']}.png`)
@@ -232,7 +247,7 @@ struct SearchPage {
                   router.pushUrl({ url: 'pages/TopicListPage', params: { fid: String((forum as Record<string, Object>)['fid']), name: String((forum as Record<string, Object>)['name']) } })
                 })
               }
-            })
+            }, (forum: object) => String((forum as Record<string, Object>)['fid'] ?? ''))
           }.width('100%').layoutWeight(1).divider({ strokeWidth: 0.5, color: AppColors.separator })
         }
       } else {
@@ -242,7 +257,7 @@ struct SearchPage {
             .width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
         } else {
           List({ scroller: this.scroller }) {
-            ForEach(this.threads, (thread: object) => {
+            LazyForEach(this.threadsDataSource, (thread: object) => {
               ListItem() {
                 Column() {
                   Text(escHtml(String((thread as Record<string, Object>)['subject'] ?? ''))).fontSize(15)
@@ -257,7 +272,7 @@ struct SearchPage {
                   router.pushUrl({ url: 'pages/ThreadPage', params: { tid: String((thread as Record<string, Object>)['tid'] ?? '') } })
                 })
               }
-            })
+            }, (thread: object) => String((thread as Record<string, Object>)['tid'] ?? ''))
             ListItem() {
               Row() {
                 if (this.isLoadingMore) {

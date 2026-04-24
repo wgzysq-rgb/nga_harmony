@@ -10,6 +10,7 @@ import { ConfirmDialog } from '../common/Dialogs'
 import { AppColors } from '../common/Constants'
 import { escHtml } from '../common/Utils'
 import { BreakpointType } from '../common/Constants'
+import { BlacklistDataSource } from '../common/LazyDataSource'
 
 @Entry
 @Component
@@ -19,6 +20,11 @@ struct BlacklistPage {
   @State removeTarget: BlacklistEntry | null = null
 
   private confirmDialogController?: CustomDialogController
+  private blacklistDataSource: BlacklistDataSource = new BlacklistDataSource()
+
+  aboutToAppear(): void {
+    this.blacklistDataSource.replaceAll(appStore.settings.blacklist)
+  }
 
   build() {
     Column() {
@@ -69,7 +75,7 @@ struct BlacklistPage {
         .alignItems(HorizontalAlign.Center)
       } else {
         List() {
-          ForEach(appStore.settings.blacklist, (entry: BlacklistEntry, index: number) => {
+          LazyForEach(this.blacklistDataSource, (entry: BlacklistEntry) => {
             ListItem() {
               Row() {
                 Stack() {
@@ -110,7 +116,7 @@ struct BlacklistPage {
               .padding({ left: 16, right: 16, top: 10, bottom: 10 })
               .alignItems(VerticalAlign.Center)
             }
-          })
+          }, (entry: BlacklistEntry) => entry.userId)
         }
         .width('100%')
         .layoutWeight(1)
@@ -151,6 +157,7 @@ struct BlacklistPage {
             .onSubmit(() => {
               if (this.addUid.trim()) {
                 appStore.addBlacklist({ userId: this.addUid.trim(), nickName: `User${this.addUid.trim()}` })
+                this.blacklistDataSource.replaceAll(appStore.settings.blacklist)
                 this.addUid = ''
                 this.showAddDialog = false
               }
@@ -181,6 +188,7 @@ struct BlacklistPage {
               .onClick(() => {
                 if (this.addUid.trim()) {
                   appStore.addBlacklist({ userId: this.addUid.trim(), nickName: `User${this.addUid.trim()}` })
+                  this.blacklistDataSource.replaceAll(appStore.settings.blacklist)
                   this.addUid = ''
                   this.showAddDialog = false
                 }
@@ -214,6 +222,7 @@ struct BlacklistPage {
           onConfirm: () => {
             if (this.removeTarget) {
               appStore.removeBlacklist(this.removeTarget.userId)
+              this.blacklistDataSource.replaceAll(appStore.settings.blacklist)
               this.removeTarget = null
             }
           },

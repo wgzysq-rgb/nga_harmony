@@ -16,6 +16,7 @@ import { appStore, FavBoard } from '../store/AppStore'
 import { routerStore, type BoardSlot, type NavEntry, Screen } from '../store/RouterStore'
 import { getCurrentUser, getForumCategories } from '../service/NgaApi'
 import { AppColors } from '../common/Constants'
+import { CategoryDataSource } from '../common/LazyDataSource'
 import { TopicListPanel } from './TopicListPanel'
 import { ThreadPanel } from './ThreadPanel'
 import { ProfilePanel } from './ProfilePanel'
@@ -216,7 +217,7 @@ struct MainPage {
   @Builder
   ActivityPanel() {
     if (this.topActivity!.screen.type === 'thread') {
-      ThreadPanel({ threadTid: this.topActivity!.screen.tid })
+      ThreadPanel({ threadTid: this.topActivity!.screen.tid, threadPid: this.topActivity!.screen.pid, navEntryId: this.topActivity!.id })
     } else if (this.topActivity!.screen.type === 'profile') {
       Column() {
         Row() {
@@ -394,6 +395,7 @@ struct CommunityTabContent {
   @StorageProp('routerVersion') routerVersion: number = 0
   @StorageProp('favVersion') @Watch('onFavVersionChange') favVersion: number = 0
   categories: import('../model/Forum').Category[] = []
+  private categoriesDataSource: CategoryDataSource = new CategoryDataSource()
 
   aboutToAppear(): void {
     this.syncFavorites()
@@ -413,6 +415,7 @@ struct CommunityTabContent {
       const result = await getForumCategories(appStore.auth.token)
       if (result.ok) {
         this.categories = result.data
+        this.categoriesDataSource.replaceAll(this.categories)
       }
     } catch (e) {
       // ignore
@@ -611,11 +614,11 @@ struct CommunityTabContent {
       .alignItems(HorizontalAlign.Center)
     } else {
       List() {
-        ForEach(this.categories, (cat: import('../model/Forum').Category) => {
+        LazyForEach(this.categoriesDataSource, (cat: import('../model/Forum').Category) => {
           ListItem() {
             this.CategoryGrid(cat)
           }
-        })
+        }, (cat: import('../model/Forum').Category) => cat.id)
       }
       .width('100%')
       .divider({ strokeWidth: 8, color: Color.Transparent })

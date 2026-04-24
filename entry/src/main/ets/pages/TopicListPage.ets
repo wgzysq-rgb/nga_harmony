@@ -8,6 +8,7 @@ import { getTopicList, createTopicListParams, TopicListParams, TopicListResult }
 import { NavBar } from '../common/NavBar'
 import { AppColors, FONT_COLORS, SORT_MODES, SortMode, BreakpointType } from '../common/Constants'
 import { formatTime, escHtml } from '../common/Utils'
+import { ThreadDataSource } from '../common/LazyDataSource'
 
 @Entry
 @Component
@@ -17,6 +18,7 @@ struct TopicListPage {
   @State hasError: boolean = false
   @State errorMsg: string = ''
   @State threads: object[] = []
+  private threadsDataSource: ThreadDataSource = new ThreadDataSource()
   @State currentPage: number = 1
   @State totalPages: number = 0
   @State sortMode: string = 'latest'
@@ -85,6 +87,7 @@ struct TopicListPage {
         const list = result.data.threadPageList
         if (page === 1) {
           this.threads = list
+          this.threadsDataSource.replaceAll(list)
         } else {
           const arr: object[] = []
           for (let i = 0; i < this.threads.length; i++) {
@@ -94,6 +97,7 @@ struct TopicListPage {
             arr.push(list[i])
           }
           this.threads = arr
+          this.threadsDataSource.appendAll(list)
         }
         this.currentPage = page
         this.totalPages = result.data.pagination.totalPages
@@ -188,11 +192,14 @@ struct TopicListPage {
         }.width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
       } else {
         List({ scroller: this.scroller }) {
-          ForEach(this.threads, (thread: object) => {
-            ListItem() {
-              this.TopicCard(thread as Record<string, Object>)
-            }
-          })
+            LazyForEach(this.threadsDataSource, (thread: object) => {
+              ListItem() {
+                this.TopicCard(thread as Record<string, Object>)
+              }
+            }, (thread: object) => {
+              const t = thread as Record<string, Object>
+              return String(t['tid'] ?? '')
+            })
           ListItem() {
             Row() {
               if (this.isLoadingMore) {

@@ -15,6 +15,7 @@ import { Avatar } from '../common/Avatar'
 import { parseBBCode } from '../service/BBCodeParser'
 import { ProfileCardPopup } from '../common/ProfileCardPopup'
 import { BBCodeContentView } from '../common/BBCodeContentView'
+import { PostInfoDataSource } from '../common/LazyDataSource'
 
 @CustomDialog
 struct ThreadReplyDialog {
@@ -58,10 +59,13 @@ struct ThreadReplyDialog {
 @Component
 export struct ThreadPanel {
   @Prop @Watch('onThreadChanged') threadTid: string = ''
+  @Prop threadPid: string = ''
+  @Prop @Watch('onScrollToPid') navEntryId: number = 0
   @State isLoading: boolean = true
   @State hasError: boolean = false
   @State errorMsg: string = ''
   @State allPosts: PostInfo[] = []
+  private postsDataSource: PostInfoDataSource = new PostInfoDataSource()
   @State currentPage: number = 1
   @State totalPages: number = 0
   @State isLoadingMore: boolean = false
@@ -131,6 +135,7 @@ export struct ThreadPanel {
 
   private onThreadChanged(): void {
     this.allPosts = []
+    this.postsDataSource.clear()
     this.currentPage = 1
     this.totalPages = 0
     this.hasError = false
@@ -140,6 +145,18 @@ export struct ThreadPanel {
     this.expandedComments = new Set()
     this.expandedAttachs = new Set()
     this.loadPage(1)
+  }
+
+  private onScrollToPid(): void {
+    if (this.threadPid.length > 0 && this.allPosts.length > 0) {
+      const pidNum = parseInt(this.threadPid, 10)
+      for (let i = 0; i < this.allPosts.length; i++) {
+        if (this.allPosts[i].pid === pidNum) {
+          this.scroller.scrollToIndex(i, true, ScrollAlign.CENTER)
+          break
+        }
+      }
+    }
   }
 
   private async loadPage(page: number): Promise<void> {
@@ -165,13 +182,18 @@ export struct ThreadPanel {
         }
         if (page === 1) {
           this.allPosts = result.posts
+          this.postsDataSource.replaceAll(result.posts)
         } else {
           const arr: PostInfo[] = []
           for (let i = 0; i < this.allPosts.length; i++) arr.push(this.allPosts[i])
           for (let i = 0; i < result.posts.length; i++) arr.push(result.posts[i])
           this.allPosts = arr
+          this.postsDataSource.appendAll(result.posts)
         }
         this.currentPage = page
+        if (page === 1 && this.threadPid.length > 0) {
+          this.onScrollToPid()
+        }
       } else if (page === 1) {
         this.hasError = true
         this.errorMsg = result.error || '加载失败'
@@ -267,11 +289,11 @@ export struct ThreadPanel {
         }.width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
       } else {
         List({ scroller: this.scroller }) {
-          ForEach(this.allPosts, (post: PostInfo) => {
+          LazyForEach(this.postsDataSource, (post: PostInfo) => {
             ListItem() {
               this.PostItem(post)
             }
-          })
+          }, (post: PostInfo) => String(post.pid))
           ListItem() {
             Row() {
               if (this.isLoadingMore) {
@@ -402,9 +424,10 @@ export struct ThreadPanel {
                 }
                 const tid = params.get('tid') || ''
                 const pageStr = params.get('page') || '1'
+                const pid = params.get('pid') || ''
                 const page = parseInt(pageStr, 10) || 1
                 if (tid.length > 0) {
-                  routerStore.navigateActivity(Screen.thread(tid, page))
+                  routerStore.navigateActivity(Screen.thread(tid, page, pid))
                 }
               } else if (href.startsWith('#/profile?')) {
                 const uidStr = href.split('uid=')[1]
@@ -490,9 +513,10 @@ export struct ThreadPanel {
                       }
                       const tid = params.get('tid') || ''
                       const pageStr = params.get('page') || '1'
+                      const pid = params.get('pid') || ''
                       const page = parseInt(pageStr, 10) || 1
                       if (tid.length > 0) {
-                        routerStore.navigateActivity(Screen.thread(tid, page))
+                        routerStore.navigateActivity(Screen.thread(tid, page, pid))
                       }
                     } else if (href.startsWith('#/profile?')) {
                       const uidStr = href.split('uid=')[1]

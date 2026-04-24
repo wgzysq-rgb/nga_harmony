@@ -23,6 +23,24 @@ class RenderContext {
   quoteDepth: number = 0
 }
 
+class QuoteSplit {
+  hasHeader: boolean = false
+  body: BBNode[] = []
+}
+
+function splitQuoteChildren(children: BBNode[]): QuoteSplit {
+  const result = new QuoteSplit()
+  if (children.length > 0 && children[0].type === BBNodeType.POST_BY) {
+    result.hasHeader = true
+    const b: BBNode[] = []
+    for (let i = 1; i < children.length; i++) b.push(children[i])
+    result.body = b
+  } else {
+    result.body = children
+  }
+  return result
+}
+
 @Component
 export struct BBCodeContentView {
   nodes: BBNode[] = []
@@ -305,7 +323,12 @@ export struct BBCodeContentView {
   @Builder
   RenderQuote(node: BBNode, ctx: RenderContext) {
     Column() {
-      this.RenderChildren(node.children, this.makeQuoteCtx(ctx))
+      if (splitQuoteChildren(node.children).hasHeader) {
+        this.RenderQuoteHeader(node.children[0], ctx)
+        this.RenderChildren(splitQuoteChildren(node.children).body, this.makeQuoteCtx(ctx))
+      } else {
+        this.RenderChildren(node.children, this.makeQuoteCtx(ctx))
+      }
     }
     .width('100%')
     .padding({ left: 12, top: 6, bottom: 6 })
@@ -317,6 +340,24 @@ export struct BBCodeContentView {
     })
     .borderRadius({ topLeft: 4, bottomLeft: 4 })
     .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  RenderQuoteHeader(node: BBNode, ctx: RenderContext) {
+    Row() {
+      Text() {
+        ForEach(node.children, (child: BBNode) => {
+          this.RenderInlineSpan(child, this.makeQuoteCtx(ctx))
+        })
+      }
+      .fontSize(14)
+      .fontColor(AppColors.textSecondary)
+      .fontStyle(FontStyle.Italic)
+      .lineHeight(20)
+    }
+    .width('100%')
+    .padding({ bottom: 2 })
+    .border({ width: { bottom: 0.5 }, color: { bottom: AppColors.separator } })
   }
 
   private makeQuoteCtx(parent: RenderContext): RenderContext {

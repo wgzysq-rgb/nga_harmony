@@ -162,7 +162,7 @@ function tryMatchBlock(state: ParseState, result: BBNode[]): boolean {
       const n = new BBNode()
       n.type = BBNodeType.POST_BY
       const childNodes: BBNode[] = []
-      parseInlineInto('Reply to [' + body, childNodes)
+      parseInlineInto('[' + body, childNodes)
       n.children = childNodes
       result.push(n)
       return true
@@ -177,8 +177,32 @@ function tryMatchBlock(state: ParseState, result: BBNode[]): boolean {
     state.pos = pQuote.lastIndex
     const n = new BBNode()
     n.type = BBNodeType.QUOTE
+
+    let pQuoteHeader: RegExp = /\[pid=(\d+),(\d+),(\d+)\]Reply\[\/pid\] \[b\]Post by \[uid=(\d+)\](.*?)\[\/uid\] \(([^)]+)\):\[\/b\]/gi
+    pQuoteHeader.lastIndex = state.pos
+    const qhm = pQuoteHeader.exec(state.content)
+    if (qhm && qhm.index === state.pos) {
+      const headerBody = `pid=${qhm[1]},${qhm[2]},${qhm[3]}]Reply[/pid] Post by [uid=${qhm[4]}]${qhm[5]}[/uid] (${qhm[6]}):`
+      const childNodes: BBNode[] = []
+      parseInlineInto('[' + headerBody, childNodes)
+      const headerNode = new BBNode()
+      headerNode.type = BBNodeType.POST_BY
+      headerNode.children = childNodes
+      n.children.push(headerNode)
+      state.pos = pQuoteHeader.lastIndex
+      let pSkipBr: RegExp = /(?:<br\s*\/?>)+/gi
+      pSkipBr.lastIndex = state.pos
+      const brm = pSkipBr.exec(state.content)
+      if (brm && brm.index === state.pos) {
+        state.pos = pSkipBr.lastIndex
+      }
+    }
+
     let pCloseQuote: RegExp = /\[\/quote\]/gi
-    n.children = parseBlockNodes(state, pCloseQuote)
+    const bodyChildren = parseBlockNodes(state, pCloseQuote)
+    for (let i = 0; i < bodyChildren.length; i++) {
+      n.children.push(bodyChildren[i])
+    }
     result.push(n)
     return true
   }

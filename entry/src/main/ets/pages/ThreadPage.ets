@@ -15,6 +15,7 @@ import { parseBBCode } from '../service/BBCodeParser'
 import { ProfileCardPopup } from '../common/ProfileCardPopup'
 import { BBCodeContentView } from '../common/BBCodeContentView'
 import { componentUtils } from '@kit.ArkUI'
+import { PostInfoDataSource } from '../common/LazyDataSource'
 
 @CustomDialog
 struct ReplyDialog {
@@ -61,6 +62,7 @@ struct ThreadPage {
   @State hasError: boolean = false
   @State errorMsg: string = ''
   @State allPosts: PostInfo[] = []
+  private postsDataSource: PostInfoDataSource = new PostInfoDataSource()
   @State currentPage: number = 1
   @State totalPages: number = 0
   @State isLoadingMore: boolean = false
@@ -150,11 +152,13 @@ struct ThreadPage {
         this.totalPages = result.pagination.totalPages
         if (page === 1) {
           this.allPosts = result.posts
+          this.postsDataSource.replaceAll(result.posts)
         } else {
           const arr: PostInfo[] = []
           for (let i = 0; i < this.allPosts.length; i++) { arr.push(this.allPosts[i]) }
           for (let i = 0; i < result.posts.length; i++) { arr.push(result.posts[i]) }
           this.allPosts = arr
+          this.postsDataSource.appendAll(result.posts)
         }
         this.currentPage = page
       } else if (page === 1) {
@@ -255,11 +259,11 @@ struct ThreadPage {
         GridRow({ columns: { sm: 1, md: 12, lg: 12 } }) {
           GridCol({ span: { sm: 1, md: 8, lg: 8 }, offset: { sm: 0, md: 2, lg: 2 } }) {
             List({ scroller: this.scroller }) {
-              ForEach(this.allPosts, (post: PostInfo) => {
+              LazyForEach(this.postsDataSource, (post: PostInfo) => {
                 ListItem() {
                   this.PostItem(post)
                 }
-              })
+              }, (post: PostInfo) => String(post.pid))
               ListItem() {
                 Row() {
                   if (this.isLoadingMore) {
@@ -385,12 +389,13 @@ struct ThreadPage {
                 }
                 const tid = params.get('tid') || ''
                 const pageStr = params.get('page') || '1'
+                const pid = params.get('pid') || ''
                 const page = parseInt(pageStr, 10) || 1
                 if (tid.length > 0) {
                   if (this.currentBreakpoint === 'sm') {
                     router.pushUrl({ url: `pages/ThreadPage?tid=${tid}&page=${page}` })
                   } else {
-                    routerStore.navigateActivity(Screen.thread(tid, page))
+                    routerStore.navigateActivity(Screen.thread(tid, page, pid))
                   }
                 }
               } else if (href.startsWith('#/profile?')) {
@@ -479,12 +484,13 @@ struct ThreadPage {
                       }
                       const tid = params.get('tid') || ''
                       const pageStr = params.get('page') || '1'
+                      const pid = params.get('pid') || ''
                       const page = parseInt(pageStr, 10) || 1
                       if (tid.length > 0) {
                         if (this.currentBreakpoint === 'sm') {
                           router.pushUrl({ url: `pages/ThreadPage?tid=${tid}&page=${page}` })
                         } else {
-                          routerStore.navigateActivity(Screen.thread(tid, page))
+                          routerStore.navigateActivity(Screen.thread(tid, page, pid))
                         }
                       }
                     } else if (href.startsWith('#/profile?')) {

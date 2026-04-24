@@ -6,6 +6,7 @@ import { AppColors } from '../common/Constants'
 import { ConfirmDialog } from '../common/Dialogs'
 import { escHtml, formatTime } from '../common/Utils'
 import { appStore } from '../store/AppStore'
+import { HistoryItemDataSource } from '../common/LazyDataSource'
 
 class HistoryItem {
   tid: string = ''
@@ -22,6 +23,7 @@ struct BrowseHistoryPage {
   @State items: HistoryItem[] = []
   @State showClearConfirm: boolean = false
   clearDialogController?: CustomDialogController
+  private historyDataSource: HistoryItemDataSource = new HistoryItemDataSource()
 
   aboutToAppear(): void {
     this.loadHistory()
@@ -33,6 +35,7 @@ struct BrowseHistoryPage {
       const pref = await preferences.getPreferences(ctx, 'nga_browse_history')
       const raw = (await pref.get('items', '[]')) as string
       this.items = JSON.parse(raw) as HistoryItem[]
+      this.historyDataSource.replaceAll(this.items as object[])
     } catch (e) {
       this.items = []
     }
@@ -40,11 +43,13 @@ struct BrowseHistoryPage {
 
   private async removeItem(tid: string): Promise<void> {
     this.items = this.items.filter((item: HistoryItem) => item.tid !== tid)
+    this.historyDataSource.replaceAll(this.items as object[])
     await this.persist()
   }
 
   private async clearAll(): Promise<void> {
     this.items = []
+    this.historyDataSource.clear()
     await this.persist()
   }
 
@@ -84,12 +89,12 @@ struct BrowseHistoryPage {
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
       } else {
-        Scroll() {
-          Column() {
-            ForEach(this.items, (item: HistoryItem) => {
+        List() {
+          LazyForEach(this.historyDataSource, (itemObj: object) => {
+            ListItem() {
               Row() {
                 Column() {
-                  Text(escHtml(item.subject))
+                  Text(escHtml((itemObj as HistoryItem).subject))
                     .fontSize(15)
                     .fontColor(AppColors.textPrimary)
                     .maxLines(2)
@@ -97,16 +102,16 @@ struct BrowseHistoryPage {
                     .width('100%')
 
                   Row() {
-                    if (item.board) {
-                      Text(escHtml(item.board))
+                    if ((itemObj as HistoryItem).board) {
+                      Text(escHtml((itemObj as HistoryItem).board))
                         .fontSize(12)
                         .fontColor(AppColors.textTertiary)
                         .margin({ right: 4 })
                     }
-                    Text(`${escHtml(item.author)} · ${formatTime(item.ts / 1000)}`)
+                    Text(`${escHtml((itemObj as HistoryItem).author)} · ${formatTime((itemObj as HistoryItem).ts / 1000)}`)
                       .fontSize(12)
                       .fontColor(AppColors.textTertiary)
-                    Text(`💬 ${item.replies}`)
+                    Text(`💬 ${(itemObj as HistoryItem).replies}`)
                       .fontSize(12)
                       .fontColor(AppColors.textTertiary)
                       .margin({ left: 8 })
@@ -120,7 +125,7 @@ struct BrowseHistoryPage {
                   .fontSize(16)
                   .fontColor(AppColors.textTertiary)
                   .padding(8)
-                  .onClick(() => this.removeItem(item.tid))
+                  .onClick(() => this.removeItem((itemObj as HistoryItem).tid))
               }
               .width('100%')
               .padding({ left: 16, right: 16, top: 12, bottom: 12 })
@@ -128,16 +133,14 @@ struct BrowseHistoryPage {
               .onClick(() => {
                 router.pushUrl({
                   url: 'pages/ThreadPage',
-                  params: { tid: item.tid }
+                  params: { tid: (itemObj as HistoryItem).tid }
                 })
               })
-              .border({ width: { bottom: 0.5 }, color: AppColors.separator })
-            }, (item: HistoryItem) => item.tid)
-          }
-          .width('100%')
+            }
+          }, (itemObj: object) => (itemObj as HistoryItem).tid)
         }
         .layoutWeight(1)
-        .scrollBar(BarState.Off)
+        .divider({ strokeWidth: 0.5, color: AppColors.separator })
       }
     }
     .width('100%')

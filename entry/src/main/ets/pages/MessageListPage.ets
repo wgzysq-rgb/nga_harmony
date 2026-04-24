@@ -11,6 +11,7 @@ import { AppColors } from '../common/Constants'
 import { formatTime, escHtml } from '../common/Utils'
 import { BreakpointType } from '../common/Constants'
 import { Avatar } from '../common/Avatar'
+import { MessageThreadDataSource } from '../common/LazyDataSource'
 
 @Entry
 @Component
@@ -24,6 +25,7 @@ struct MessageListPage {
   @State composeContent: string = ''
   @State sending: boolean = false
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'sm'
+  private threadsDataSource: MessageThreadDataSource = new MessageThreadDataSource()
 
   aboutToAppear(): void {
     const params = router.getParams() as Record<string, string>
@@ -41,6 +43,7 @@ struct MessageListPage {
       const result: MessageListResult = await getMessageList(appStore.auth.token, '1')
       if (result.ok && result.data) {
         this.threads = result.data.messageEntryList
+        this.threadsDataSource.replaceAll(this.threads)
       } else {
         this.hasError = true
       }
@@ -148,7 +151,7 @@ struct MessageListPage {
         .alignItems(HorizontalAlign.Center)
       } else {
         List() {
-          ForEach(this.threads, (thread: MessageThreadInfo) => {
+          LazyForEach(this.threadsDataSource, (thread: MessageThreadInfo) => {
             ListItem() {
               Row() {
                 Avatar({ name: thread.last_from_username || thread.from_username, avatarSize: 44 })
@@ -167,7 +170,7 @@ struct MessageListPage {
                 router.pushUrl({ url: 'pages/MessageDetailPage', params: { mid: String(thread.mid) } })
               })
             }
-          })
+          }, (thread: MessageThreadInfo) => String(thread.mid))
         }
         .width('100%')
         .layoutWeight(1)

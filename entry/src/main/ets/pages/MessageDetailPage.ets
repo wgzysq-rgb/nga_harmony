@@ -12,6 +12,7 @@ import { AppColors } from '../common/Constants'
 import { formatTime, escHtml } from '../common/Utils'
 import { BreakpointType } from '../common/Constants'
 import { Avatar } from '../common/Avatar'
+import { MessageArticleDataSource } from '../common/LazyDataSource'
 
 @Entry
 @Component
@@ -25,6 +26,7 @@ struct MessageDetailPage {
 
   private mid: string = ''
   private scroller: Scroller = new Scroller()
+  private messagesDataSource: MessageArticleDataSource = new MessageArticleDataSource()
 
   aboutToAppear(): void {
     const params = router.getParams() as Record<string, string>
@@ -41,6 +43,7 @@ struct MessageDetailPage {
       const result = await getMessageDetail(appStore.auth.token, this.mid, '1')
       if (result.ok && result.data) {
         this.messages = result.data.messageEntryList
+        this.messagesDataSource.replaceAll(this.messages)
         this.title = result.data.title || '私信详情'
         // 滚动到底部
         setTimeout(() => {
@@ -135,7 +138,7 @@ struct MessageDetailPage {
         }
 
         List({ scroller: this.scroller }) {
-            ForEach(this.messages, (msg: MessageArticle) => {
+            LazyForEach(this.messagesDataSource, (msg: MessageArticle) => {
               ListItem() {
                 Row() {
                   Avatar({ name: msg.author || msg.from || '未知', avatarSize: 36 })
@@ -167,8 +170,8 @@ struct MessageDetailPage {
               .padding({ left: 16, right: 16, top: 10, bottom: 10 })
               .alignItems(VerticalAlign.Top)
             }
-          })
-        }
+          }, (msg: MessageArticle) => String(msg.time) + String(msg.from))
+          }
         .width('100%')
         .layoutWeight(1)
         .divider({ strokeWidth: 0.5, color: AppColors.separator })
