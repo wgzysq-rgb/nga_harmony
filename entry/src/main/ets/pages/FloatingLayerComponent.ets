@@ -1,57 +1,53 @@
-import { floatingLayerStore, FloatingPage } from '../store/FloatingLayerStore'
+import { floatingLayerStore, FloatingLayerStoreClass, FloatingPage } from '../store/FloatingLayerStore'
 import { AppColors } from '../common/Constants'
 import { ImageViewer } from '../common/ImageViewer'
 import { ProfileCardPopup } from '../common/ProfileCardPopup'
 import { ReplyDialog } from '../common/ReplyDialog'
 
-function topOf(stack: string[]): string {
-  return stack.length > 0 ? stack[stack.length - 1] : ''
-}
-
 @Component
 export struct FloatingLayerComponent {
-  @StorageProp('floatingVersion') floatingVersion: number = 0
+  @State private floating: FloatingLayerStoreClass = floatingLayerStore
   @Prop currentBreakpoint: string = 'sm'
 
   build() {
     Stack() {
-      if (topOf(floatingLayerStore.stack) === FloatingPage.IMAGE_VIEWER) {
+      if (this.floating.top === FloatingPage.IMAGE_VIEWER) {
         ImageViewer({
-          urls: floatingLayerStore.imageViewerUrls,
-          initialIndex: floatingLayerStore.imageViewerIndex,
-          onClose: () => { floatingLayerStore.remove(FloatingPage.IMAGE_VIEWER) }
+          urls: this.floating.imageViewerUrls,
+          initialIndex: this.floating.imageViewerIndex,
+          onClose: () => { this.floating.remove(FloatingPage.IMAGE_VIEWER) }
         })
       }
-      if (topOf(floatingLayerStore.stack) === FloatingPage.PROFILE_CARD) {
+      if (this.floating.top === FloatingPage.PROFILE_CARD) {
         Stack() {
           Column().width('100%').height('100%').backgroundColor('#33000000')
-            .onClick(() => { floatingLayerStore.remove(FloatingPage.PROFILE_CARD) })
+            .onClick(() => { this.floating.remove(FloatingPage.PROFILE_CARD) })
           ProfileCardPopup({
-            targetUid: floatingLayerStore.profileCardUid,
+            targetUid: this.floating.profileCardUid,
             currentBreakpoint: this.currentBreakpoint,
-            onClose: () => { floatingLayerStore.remove(FloatingPage.PROFILE_CARD) }
+            onClose: () => { this.floating.remove(FloatingPage.PROFILE_CARD) }
           })
           .position({
-            x: floatingLayerStore.profileCardX,
-            y: floatingLayerStore.profileCardY
+            x: this.floating.profileCardX,
+            y: this.floating.profileCardY
           })
         }
         .width('100%').height('100%')
       }
-      if (topOf(floatingLayerStore.stack) === FloatingPage.REPLY_DIALOG) {
+      if (this.floating.top === FloatingPage.REPLY_DIALOG) {
         Stack() {
           Column().width('100%').height('100%').backgroundColor('#33000000')
 
           Column().width('100%').height('100%')
-            .onClick(() => { floatingLayerStore.notifyReplyCloseRequested() })
+            .onClick(() => { this.floating.notifyReplyCloseRequested() })
 
           Column() {
             ReplyDialog({
-              dialogTitle: floatingLayerStore.replyDialogTitle,
-              onSend: floatingLayerStore.replyOnSend,
+              dialogTitle: this.floating.replyDialogTitle,
+              onSend: this.floating.replyOnSend,
               onClose: () => {
-                floatingLayerStore.registerReplyCloseHandler(null)
-                floatingLayerStore.remove(FloatingPage.REPLY_DIALOG)
+                this.floating.registerReplyCloseHandler(null)
+                this.floating.remove(FloatingPage.REPLY_DIALOG)
               }
             })
           }
@@ -60,11 +56,11 @@ export struct FloatingLayerComponent {
         .width('100%').height('100%')
       }
 
-      if (floatingLayerStore.replyConfirmActive) {
+      if (this.floating.replyConfirmActive) {
         Stack() {
           Column().width('100%').height('100%').backgroundColor('#33000000')
             .onClick(() => {
-              floatingLayerStore.hideReplyConfirm()
+              this.floating.hideReplyConfirm()
             })
           Column() {
             Text('放弃编辑？').fontSize(17).fontWeight(FontWeight.Bold).fontColor(AppColors.textPrimary)
@@ -75,13 +71,13 @@ export struct FloatingLayerComponent {
               Text('继续编辑').fontSize(16).fontWeight(FontWeight.Medium).fontColor(AppColors.primary)
                 .layoutWeight(1).textAlign(TextAlign.Center).padding({ top: 14, bottom: 14 })
                 .onClick(() => {
-                  floatingLayerStore.hideReplyConfirm()
+                  this.floating.hideReplyConfirm()
                 })
               Divider().vertical(true).height(24).color(AppColors.separator).alignSelf(ItemAlign.Center)
               Text('放弃').fontSize(16).fontWeight(FontWeight.Medium).fontColor(AppColors.destructive)
                 .layoutWeight(1).textAlign(TextAlign.Center).padding({ top: 14, bottom: 14 })
                 .onClick(() => {
-                  floatingLayerStore.confirmAbandon()
+                  this.floating.confirmAbandon()
                 })
             }.width('100%').margin({ top: 16 })
             .border({ width: { top: 0.5 }, color: AppColors.separator })
@@ -96,9 +92,9 @@ export struct FloatingLayerComponent {
     }
     .width('100%').height('100%')
     .hitTestBehavior(
-      (topOf(floatingLayerStore.stack) === FloatingPage.IMAGE_VIEWER ||
-       topOf(floatingLayerStore.stack) === FloatingPage.PROFILE_CARD ||
-       topOf(floatingLayerStore.stack) === FloatingPage.REPLY_DIALOG)
+      (this.floating.top === FloatingPage.IMAGE_VIEWER ||
+       this.floating.top === FloatingPage.PROFILE_CARD ||
+       this.floating.top === FloatingPage.REPLY_DIALOG)
         ? HitTestMode.Default : HitTestMode.None
     )
   }

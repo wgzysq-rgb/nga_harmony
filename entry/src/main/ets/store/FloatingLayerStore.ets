@@ -5,8 +5,7 @@ export enum FloatingPage {
   REPLY_DIALOG = 'replyDialog'
 }
 
-const FLOATING_VERSION_KEY = 'floatingVersion'
-
+@Observed
 export class FloatingLayerStoreClass {
   stack: string[] = []
 
@@ -28,10 +27,6 @@ export class FloatingLayerStoreClass {
     return this.stack.length
   }
 
-  private notify(): void {
-    AppStorage.set(FLOATING_VERSION_KEY, (AppStorage.get<number>(FLOATING_VERSION_KEY) ?? 0) + 1)
-  }
-
   push(page: string): void {
     const idx = this.stack.indexOf(page)
     if (idx >= 0) {
@@ -42,13 +37,11 @@ export class FloatingLayerStoreClass {
     } else {
       this.stack = [...this.stack, page]
     }
-    this.notify()
   }
 
   pop(): boolean {
     if (this.stack.length > 0) {
       this.stack = this.stack.slice(0, -1)
-      this.notify()
       return true
     }
     return false
@@ -56,12 +49,10 @@ export class FloatingLayerStoreClass {
 
   remove(page: string): void {
     this.stack = this.stack.filter(p => p !== page)
-    this.notify()
   }
 
   clear(): void {
     this.stack = []
-    this.notify()
   }
 
   // Reply close handler (for system back interception)
@@ -92,7 +83,6 @@ export class FloatingLayerStoreClass {
     this.registerReplyCloseHandler(null)
     this.stack = this.stack.filter(p => p !== FloatingPage.REPLY_DIALOG)
     this.replyConfirmActive = false
-    this.notify()
   }
 }
 
