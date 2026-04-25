@@ -1,25 +1,27 @@
 import { appStore, FavBoard } from '../store/AppStore'
 import { routerStore, RouterStoreClass } from '../store/RouterStore'
 import { AppColors } from '../common/Constants'
-import { CategoryDataSource } from '../common/LazyDataSource'
+import { CategoryDataSource, SidebarDataSource, SidebarSection, SidebarBoardItem } from '../common/LazyDataSource'
+import type { Category, BoardContent } from '../model/Forum'
 
 @Component
 export struct CommunityTabContent {
   @State isLoading: boolean = true
-  @State collapsedCatIds: string[] = []
   @State favoritesList: FavBoard[] = []
   @State private router: RouterStoreClass = routerStore
   @Prop currentBreakpoint: string = 'sm'
   @StorageProp('favVersion') @Watch('onFavVersionChange') favVersion: number = 0
   @StorageProp('catVersion') @Watch('onCatVersionChange') catVersion: number = 0
-  categories: import('../model/Forum').Category[] = []
+  categories: Category[] = []
   private categoriesDataSource: CategoryDataSource = new CategoryDataSource()
+  private sidebarDataSource: SidebarDataSource = new SidebarDataSource()
 
   aboutToAppear(): void {
     this.syncFavorites()
     if (appStore.cachedCategories.length > 0) {
       this.categories = appStore.cachedCategories
       this.categoriesDataSource.replaceAll(this.categories)
+      this.rebuildSidebarSections()
       this.isLoading = false
     }
     appStore.ensureCategories()
@@ -27,11 +29,13 @@ export struct CommunityTabContent {
 
   private onFavVersionChange(): void {
     this.syncFavorites()
+    this.rebuildSidebarSections()
   }
 
   private onCatVersionChange(): void {
     this.categories = appStore.cachedCategories
     this.categoriesDataSource.replaceAll(this.categories)
+    this.rebuildSidebarSections()
     if (this.isLoading) {
       this.isLoading = false
     }
@@ -41,22 +45,51 @@ export struct CommunityTabContent {
     this.favoritesList = [...appStore.settings.favorites]
   }
 
-  build() {
-    Scroll() {
-      Column() {
-        if (this.currentBreakpoint === 'sm') {
-          this.MobileContent()
-        } else {
-          this.SidebarListContent()
+  private rebuildSidebarSections(): void {
+    const sections: SidebarSection[] = []
+    if (this.favoritesList.length > 0) {
+      const favItems: SidebarBoardItem[] = []
+      for (const fav of this.favoritesList) {
+        favItems.push({ fid: fav.fid, stid: fav.stid, name: fav.name })
+      }
+      sections.push({ id: '__fav__', name: '收藏板块', items: favItems, collapsed: false, collapsible: false })
+    }
+    for (const cat of this.categories) {
+      const boards: SidebarBoardItem[] = []
+      const seen = new Set<number>()
+      if (cat.sub && Array.isArray(cat.sub)) {
+        for (const sub of cat.sub) {
+          if (sub.content && Array.isArray(sub.content)) {
+            for (const board of sub.content) {
+              if (!seen.has(board.fid)) {
+                seen.add(board.fid)
+                boards.push({ fid: board.fid, stid: board.stid, name: board.name })
+              }
+            }
+          }
         }
       }
-      .width('100%')
-      .padding({ bottom: 8 })
-      .alignItems(HorizontalAlign.Center)
+      sections.push({ id: cat.id, name: cat.name, items: boards, collapsed: true, collapsible: true })
     }
-    .width('100%')
-    .height('100%')
-    .scrollBar(BarState.Off)
+    this.sidebarDataSource.replaceAll(sections)
+  }
+
+  build() {
+    if (this.currentBreakpoint === 'sm') {
+      Scroll() {
+        Column() {
+          this.MobileContent()
+        }
+        .width('100%')
+        .padding({ bottom: 8 })
+        .alignItems(HorizontalAlign.Center)
+      }
+      .width('100%')
+      .height('100%')
+      .scrollBar(BarState.Off)
+    } else {
+      this.SidebarListContent()
+    }
   }
 
   private isFavBoard(fid: number): boolean {
@@ -80,98 +113,89 @@ export struct CommunityTabContent {
 
   @Builder
   SidebarListContent() {
-    if (this.favoritesList.length > 0) {
-      Column() {
-        Text('收藏板块')
-          .fontSize(11).fontWeight(FontWeight.Bold).fontColor(AppColors.textSecondary)
-          .width('100%').padding({ left: 8, top: 8, bottom: 4 })
-
-        ForEach(this.favoritesList, (fav: FavBoard) => {
-          Row() {
-            Image(`https://img4.nga.178.com/ngabbs/nga_classic/f/app/${fav.fid}.png`)
-              .width(20).height(20).borderRadius(5).objectFit(ImageFit.Cover)
-              .onError(() => {})
-            Text(fav.name)
-              .fontSize(12).maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-              .margin({ left: 6 }).layoutWeight(1)
-          }
-          .width('100%').height(32)
-          .padding({ left: 8, right: 8 })
-          .alignItems(VerticalAlign.Center)
-          .borderRadius(8)
-          .backgroundColor(this.isActiveBoard(fav.fid) ? AppColors.bgSecondary : Color.Transparent)
-          .onClick(() => {
-            routerStore.navigateForum(fav.fid, fav.name)
-          })
-        })
-      }
-      .width('100%')
-    }
-
     if (this.isLoading) {
       Column() {
         LoadingProgress().width(24).height(24).color(AppColors.textTertiary)
       }
-      .width('100%').height(60)
+      .width('100%').height('100%')
       .justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
     } else {
-      ForEach(this.categories, (cat: import('../model/Forum').Category) => {
-        this.SidebarCategorySection(cat)
-      })
+      List({ space: 0 }) {
+        LazyForEach(this.sidebarDataSource, (section: SidebarSection) => {
+          ListItemGroup({
+            header: this.SidebarSectionHeader(section)
+          }) {
+            if (!section.collapsed) {
+              ForEach(section.items, (item: SidebarBoardItem) => {
+                ListItem() {
+                  Row() {
+                    Image(`https://img4.nga.178.com/ngabbs/nga_classic/f/app/${item.fid}.png`)
+                      .width(section.collapsible ? 18 : 20)
+                      .height(section.collapsible ? 18 : 20)
+                      .borderRadius(section.collapsible ? 4 : 5)
+                      .objectFit(ImageFit.Cover)
+                      .onError(() => {})
+                    Text(item.name)
+                      .fontSize(12).maxLines(1)
+                      .textOverflow({ overflow: TextOverflow.Ellipsis })
+                      .margin({ left: 6 }).layoutWeight(1)
+                    if (section.collapsible) {
+                      Text(this.isFavBoard(item.fid) ? '★' : '☆')
+                        .fontSize(12)
+                        .fontColor(this.isFavBoard(item.fid) ? AppColors.primary : AppColors.textTertiary)
+                        .margin({ left: 4 })
+                        .onClick(() => {
+                          this.handleToggleFav(item.fid, item.name)
+                        })
+                    }
+                  }
+                  .width('100%').height(section.collapsible ? 30 : 32)
+                  .padding({ left: section.collapsible ? 22 : 8, right: 8 })
+                  .alignItems(VerticalAlign.Center)
+                  .borderRadius(8)
+                  .backgroundColor(this.isActiveBoard(item.fid) ? AppColors.bgSecondary : Color.Transparent)
+                  .onClick(() => {
+                    routerStore.navigateForum(item.fid, item.name)
+                  })
+                }
+              }, (item: SidebarBoardItem) => `${item.fid}`)
+            }
+          }
+        }, (section: SidebarSection) => `${section.id}_${section.collapsed}`)
+      }
+      .width('100%')
+      .height('100%')
+      .scrollBar(BarState.Off)
+      .cachedCount(2)
+      .divider({ strokeWidth: 0.5, color: AppColors.separator })
     }
   }
 
   @Builder
-  SidebarCategorySection(cat: import('../model/Forum').Category) {
-    Column() {
-      Row() {
+  SidebarSectionHeader(section: SidebarSection) {
+    Row() {
+      if (section.collapsible) {
         Text('›')
           .fontSize(14).fontColor(AppColors.textTertiary).margin({ right: 6 })
-          .rotate({ angle: this.isCatCollapsed(cat) ? 0 : 90 })
-        Text(cat.name)
-          .fontSize(13).fontWeight(FontWeight.Bold)
-        Text(this.collectBoardCount(cat).toString())
-          .fontSize(11).fontColor(AppColors.textTertiary).margin({ left: 6 })
+          .rotate({ angle: section.collapsed ? 0 : 90 })
       }
-      .width('100%')
-      .padding({ left: 8, right: 8, top: 8, bottom: 8 })
-      .alignItems(VerticalAlign.Center)
-      .onClick(() => {
-        this.toggleCat(cat.name)
-      })
-
-      if (!this.isCatCollapsed(cat)) {
-        ForEach(this.collectBoards(cat), (board: import('../model/Forum').BoardContent) => {
-          Row() {
-            Image(`https://img4.nga.178.com/ngabbs/nga_classic/f/app/${board.fid}.png`)
-              .width(18).height(18).borderRadius(4).objectFit(ImageFit.Cover)
-              .onError(() => {})
-            Text(board.name)
-              .fontSize(12).maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-              .margin({ left: 6 }).layoutWeight(1)
-            Text(this.isFavBoard(board.fid) ? '★' : '☆')
-              .fontSize(12)
-              .fontColor(this.isFavBoard(board.fid) ? AppColors.primary : AppColors.textTertiary)
-              .margin({ left: 4 })
-              .onClick(() => {
-                this.handleToggleFav(board.fid, board.name)
-              })
-          }
-          .width('100%').height(30)
-          .padding({ left: 22, right: 8 })
-          .alignItems(VerticalAlign.Center)
-          .borderRadius(8)
-          .backgroundColor(this.isActiveBoard(board.fid) ? AppColors.bgSecondary : Color.Transparent)
-          .onClick(() => {
-            routerStore.navigateForum(board.fid, board.name)
-          })
-        })
+      Text(section.name)
+        .fontSize(section.collapsible ? 13 : 11)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(section.collapsible ? AppColors.textPrimary : AppColors.textSecondary)
+      if (section.collapsible) {
+        Text(section.items.length.toString())
+          .fontSize(11).fontColor(AppColors.textTertiary).margin({ left: 6 })
       }
     }
     .width('100%')
-    .border({ width: { top: 0.5 }, color: AppColors.separator })
+    .padding({ left: 8, right: 8, top: 8, bottom: 8 })
+    .alignItems(VerticalAlign.Center)
+    .onClick(() => {
+      if (section.collapsible) {
+        this.toggleSidebarSection(section)
+      }
+    })
   }
 
   @Builder
@@ -202,11 +226,11 @@ export struct CommunityTabContent {
       .justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
     } else {
       List() {
-        LazyForEach(this.categoriesDataSource, (cat: import('../model/Forum').Category) => {
+        LazyForEach(this.categoriesDataSource, (cat: Category) => {
           ListItem() {
             this.CategoryGrid(cat)
           }
-        }, (cat: import('../model/Forum').Category) => cat.id)
+        }, (cat: Category) => cat.id)
       }
       .width('100%')
       .divider({ strokeWidth: 8, color: Color.Transparent })
@@ -255,17 +279,17 @@ export struct CommunityTabContent {
   }
 
   @Builder
-  CategoryGrid(cat: import('../model/Forum').Category) {
+  CategoryGrid(cat: Category) {
     Column() {
       Row() {
         Text(cat.name).fontSize(13).fontWeight(FontWeight.Bold)
-        Text(this.collectBoardCount(cat).toString())
+        Text(this.collectBoardCountForCat(cat).toString())
           .fontSize(11).fontColor(AppColors.textTertiary).margin({ left: 6 })
       }
       .width('100%').padding({ left: 16, right: 16, top: 12, bottom: 8 })
 
       GridRow({ columns: { sm: 4, md: 4, lg: 3 }, gutter: 8 }) {
-        ForEach(this.collectBoards(cat), (board: import('../model/Forum').BoardContent) => {
+        ForEach(this.collectBoardsFromCat(cat), (board: BoardContent) => {
           GridCol() {
             Column() {
               Stack() {
@@ -298,24 +322,9 @@ export struct CommunityTabContent {
     return this.router.boardSlot !== null && this.router.boardSlot.fid === fid
   }
 
-  private isCatCollapsed(cat: import('../model/Forum').Category): boolean {
-    return this.collapsedCatIds.indexOf(cat.name) >= 0
-  }
-
-  private toggleCat(catId: string): void {
-    const idx = this.collapsedCatIds.indexOf(catId)
-    if (idx >= 0) {
-      const next = [...this.collapsedCatIds]
-      next.splice(idx, 1)
-      this.collapsedCatIds = next
-    } else {
-      this.collapsedCatIds = [...this.collapsedCatIds, catId]
-    }
-  }
-
-  private collectBoards(cat: import('../model/Forum').Category): import('../model/Forum').BoardContent[] {
+  private collectBoardsFromCat(cat: Category): BoardContent[] {
     const seen = new Set<number>()
-    const boards: import('../model/Forum').BoardContent[] = []
+    const boards: BoardContent[] = []
     if (cat.sub && Array.isArray(cat.sub)) {
       for (const sub of cat.sub) {
         if (sub.content && Array.isArray(sub.content)) {
@@ -331,7 +340,22 @@ export struct CommunityTabContent {
     return boards
   }
 
-  private collectBoardCount(cat: import('../model/Forum').Category): number {
-    return this.collectBoards(cat).length
+  private collectBoardCountForCat(cat: Category): number {
+    return this.collectBoardsFromCat(cat).length
+  }
+
+  private toggleSidebarSection(section: SidebarSection): void {
+    const idx = this.sidebarDataSource.indexOf(section.id)
+    if (idx < 0) {
+      return
+    }
+    const updated: SidebarSection = {
+      id: section.id,
+      name: section.name,
+      items: section.items,
+      collapsed: !section.collapsed,
+      collapsible: section.collapsible
+    }
+    this.sidebarDataSource.updateSection(idx, updated)
   }
 }

@@ -1,7 +1,7 @@
 import { http } from '@kit.NetworkKit';
 import { cryptoFramework } from '@kit.CryptoArchitectureKit';
 import { util } from '@kit.ArkTS';
-import { preprocessJson, repairTruncatedJson } from '../parser/JsonUtil';
+import { preprocessJson } from '../parser/JsonUtil';
 import { ngaThrottler } from './Throttle';
 
 // ============== 类型定义 ==============
@@ -392,10 +392,6 @@ async function ngaRequest(path: string, method: http.RequestMethod,
     try {
       return JSON.parse(text) as Record<string, Object>;
     } catch (parseError) {
-      const repaired = repairTruncatedJson(text);
-      if (repaired) {
-        return repaired;
-      }
       const errResult: Record<string, Object> = {
         '__parseError': true as Object,
         '__rawLength': text.length as Object,

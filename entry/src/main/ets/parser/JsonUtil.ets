@@ -1,8 +1,3 @@
-interface BracketCount {
-  braces: number;
-  brackets: number;
-}
-
 export function preprocessJson(text: string): string {
   let t = text;
   t = t.replace('window.script_muti_get_var_store=', '');
@@ -47,53 +42,3 @@ export function preprocessJson(text: string): string {
   return result;
 }
 
-function countBrackets(text: string): BracketCount {
-  let braces = 0;
-  let brackets = 0;
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-    if (ch === '{') braces++;
-    else if (ch === '}') braces--;
-    else if (ch === '[') brackets++;
-    else if (ch === ']') brackets--;
-  }
-  const result: BracketCount = { braces, brackets };
-  return result;
-}
-
-export function repairTruncatedJson(text: string): object | null {
-  if (text.length < 100 || !text.startsWith('{')) return null;
-
-  const tIdx = text.lastIndexOf('"__T"');
-  if (tIdx > 100) {
-    const beforeT = text.slice(0, tIdx).replace(/,\s*$/, '');
-    const counts = countBrackets(beforeT);
-    if (counts.braces >= 0 && counts.brackets >= 0) {
-      try {
-        const suffix = '}'.repeat(counts.braces) + ']'.repeat(counts.brackets);
-        const repaired = beforeT + suffix;
-        const parsed = JSON.parse(repaired) as Record<string, Object>;
-        if (parsed) return parsed;
-      } catch (e) {
-        // fall through
-      }
-    }
-  }
-
-  for (let attempt = 0; attempt < 10; attempt++) {
-    const lastComma = text.lastIndexOf(',', text.length - attempt - 1);
-    if (lastComma < 50) continue;
-    const candidate = text.slice(0, lastComma);
-    const counts = countBrackets(candidate);
-    if (counts.braces < 0 || counts.brackets < 0) continue;
-    try {
-      const suffix = '}'.repeat(counts.braces) + ']'.repeat(counts.brackets);
-      const repaired = candidate + suffix;
-      const parsed = JSON.parse(repaired) as Record<string, Object>;
-      if (parsed) return parsed;
-    } catch (e) {
-      // continue
-    }
-  }
-  return null;
-}

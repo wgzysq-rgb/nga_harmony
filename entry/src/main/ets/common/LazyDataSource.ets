@@ -318,6 +318,81 @@ class BlacklistDataSource implements IDataSource {
   }
 }
 
+interface SidebarBoardItem {
+  fid: number;
+  stid: number;
+  name: string;
+}
+
+interface SidebarSection {
+  id: string;
+  name: string;
+  items: SidebarBoardItem[];
+  collapsed: boolean;
+  collapsible: boolean;
+}
+
+class SidebarDataSource implements IDataSource {
+  private dataList: SidebarSection[] = []
+  private listeners: DataChangeListener[] = []
+
+  totalCount(): number {
+    return this.dataList.length
+  }
+
+  getData(index: number): SidebarSection {
+    return this.dataList[index]
+  }
+
+  registerDataChangeListener(listener: DataChangeListener): void {
+    if (this.listeners.indexOf(listener) < 0) {
+      this.listeners.push(listener)
+    }
+  }
+
+  unregisterDataChangeListener(listener: DataChangeListener): void {
+    const pos = this.listeners.indexOf(listener)
+    if (pos >= 0) {
+      this.listeners.splice(pos, 1)
+    }
+  }
+
+  replaceAll(list: SidebarSection[]): void {
+    this.dataList = []
+    for (let i = 0; i < list.length; i++) {
+      this.dataList.push(list[i])
+    }
+    this.notifyReload()
+  }
+
+  updateSection(index: number, section: SidebarSection): void {
+    this.dataList[index] = section
+    for (let i = 0; i < this.listeners.length; i++) {
+      this.listeners[i].onDataChange(index)
+    }
+  }
+
+  indexOf(sectionId: string): number {
+    for (let i = 0; i < this.dataList.length; i++) {
+      if (this.dataList[i].id === sectionId) {
+        return i
+      }
+    }
+    return -1
+  }
+
+  clear(): void {
+    this.dataList = []
+    this.notifyReload()
+  }
+
+  private notifyReload(): void {
+    for (let i = 0; i < this.listeners.length; i++) {
+      this.listeners[i].onDataReloaded()
+    }
+  }
+}
+
 class CategoryDataSource implements IDataSource {
   private dataList: Category[] = []
   private listeners: DataChangeListener[] = []
@@ -408,4 +483,9 @@ class HistoryItemDataSource implements IDataSource {
   }
 }
 
-export { PostInfoDataSource, ThreadDataSource, MessageThreadDataSource, MessageArticleDataSource, NotificationDataSource, BlacklistDataSource, CategoryDataSource, HistoryItemDataSource }
+export {
+  PostInfoDataSource, ThreadDataSource, MessageThreadDataSource,
+  MessageArticleDataSource, NotificationDataSource, BlacklistDataSource,
+  CategoryDataSource, HistoryItemDataSource, SidebarDataSource,
+  SidebarSection, SidebarBoardItem
+}

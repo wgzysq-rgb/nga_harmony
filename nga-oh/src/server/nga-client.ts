@@ -2,8 +2,6 @@ import { request as httpsRequest } from 'node:https';
 import { request as httpRequest } from 'node:http';
 import { URL, URLSearchParams } from 'node:url';
 import { publicEncrypt, constants as cryptoConstants } from 'node:crypto';
-import { writeFileSync, mkdirSync, existsSync } from 'node:fs';
-import { resolve, join } from 'node:path';
 import iconv from 'iconv-lite';
 import { snapAls } from './lib/snapshot.js';
 import { ngaThrottler } from './lib/throttle.js';
@@ -230,71 +228,6 @@ function preprocessJson(text: string): string {
   return result;
 }
 
-const PARSE_ERROR_DIR = resolve(process.cwd(), 'data', 'parse-errors');
-
-function saveParseError(url: string, rawText: string, preprocessed: string, errorMsg: string): void {
-  try {
-    if (!existsSync(PARSE_ERROR_DIR)) {
-      mkdirSync(PARSE_ERROR_DIR, { recursive: true });
-    }
-    const ts = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `${ts}.json`;
-    const entry = {
-      time: new Date().toISOString(),
-      url,
-      error: errorMsg,
-      rawLength: rawText.length,
-      rawHead: rawText.slice(0, 2000),
-      rawTail: rawText.slice(-500),
-      preprocessedHead: preprocessed.slice(0, 2000),
-      preprocessedTail: preprocessed.slice(-500),
-    };
-    writeFileSync(join(PARSE_ERROR_DIR, filename), JSON.stringify(entry, null, 2), 'utf-8');
-    console.log(`[ParseError] saved to data/parse-errors/${filename}  url=${url}`);
-  } catch {
-    // never let dump logic break the request
-  }
-}
-
-function repairTruncatedJson(text: string): any | null {
-  if (text.length < 100 || !text.startsWith('{')) return null;
-  const tIdx = text.lastIndexOf('"__T"');
-  if (tIdx > 100) {
-    const beforeT = text.slice(0, tIdx).replace(/,\s*$/, '');
-    let braces = 0, brackets = 0;
-    for (const ch of beforeT) {
-      if (ch === '{') braces++;
-      else if (ch === '}') braces--;
-      else if (ch === '[') brackets++;
-      else if (ch === ']') brackets--;
-    }
-    if (braces >= 0 && brackets >= 0) {
-      try {
-        const parsed = JSON.parse(beforeT + '}'.repeat(braces) + ']'.repeat(brackets));
-        if (parsed && typeof parsed === 'object') return parsed;
-      } catch {}
-    }
-  }
-  for (let attempt = 0; attempt < 10; attempt++) {
-    const lastComma = text.lastIndexOf(',', text.length - attempt - 1);
-    if (lastComma < 50) continue;
-    const candidate = text.slice(0, lastComma);
-    let braces = 0, brackets = 0;
-    for (const ch of candidate) {
-      if (ch === '{') braces++;
-      else if (ch === '}') braces--;
-      else if (ch === '[') brackets++;
-      else if (ch === ']') brackets--;
-    }
-    if (braces < 0 || brackets < 0) continue;
-    try {
-      const parsed = JSON.parse(candidate + '}'.repeat(braces) + ']'.repeat(brackets));
-      if (parsed && typeof parsed === 'object') return parsed;
-    } catch {}
-  }
-  return null;
-}
-
 async function ngaRequest(path: string, options: NgaRequestOptions = {}): Promise<any> {
   const {
     method = 'GET',
@@ -393,13 +326,6 @@ async function ngaRequest(path: string, options: NgaRequestOptions = {}): Promis
       snapFill(path, params, result);
       return result;
     } catch (e: any) {
-      const repaired = repairTruncatedJson(text);
-      if (repaired) {
-        console.log(`[JSON Repair] repaired truncated JSON for ${url.pathname} (original ${text.length} chars)`);
-        snapFill(path, params, repaired);
-        return repaired;
-      }
-      saveParseError(url.toString(), rawText, text, e.message);
       const errResult = { __parseError: true, __rawLength: text.length, __snippet: text.slice(0, 500), error: e.message };
       snapFill(path, params, errResult);
       return errResult;
