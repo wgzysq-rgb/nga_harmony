@@ -1,6 +1,5 @@
 import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
-import { getUserProfile, UserProfileResult } from '../service/NgaApi'
 import { ProfileData, AdminForumsData } from '../model/User'
 import { AppColors } from '../common/Constants'
 import { formatTime, fmtNum, escHtml } from '../common/Utils'
@@ -13,27 +12,25 @@ export struct ProfileCardPopup {
   @State profile: ProfileData | null = null
   @State isLoading: boolean = true
   @State hasError: boolean = false
+  @StorageProp('profileVersion') @Watch('onProfileVersionChange') profileVersion: number = 0
   onClose: () => void = () => {}
 
   aboutToAppear(): void {
-    this.loadProfile()
+    const cached = appStore.getCachedProfile(this.targetUid)
+    if (cached) {
+      this.profile = cached
+      this.isLoading = false
+    }
+    appStore.ensureProfile(this.targetUid)
   }
 
-  private async loadProfile(): Promise<void> {
-    if (!this.targetUid) return
-    this.isLoading = true
-    this.hasError = false
-    try {
-      const result: UserProfileResult = await getUserProfile(appStore.auth.token, this.targetUid)
-      if (result.ok && result.data) {
-        this.profile = result.data
-      } else {
-        this.hasError = true
-      }
-    } catch (e) {
-      this.hasError = true
+  private onProfileVersionChange(): void {
+    const cached = appStore.getCachedProfile(this.targetUid)
+    if (cached) {
+      this.profile = cached
+      this.isLoading = false
+      this.hasError = false
     }
-    this.isLoading = false
   }
 
   private navigateProfile(uid: string): void {

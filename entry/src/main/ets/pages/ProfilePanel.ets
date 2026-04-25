@@ -1,6 +1,6 @@
 import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
-import { getUserProfile, getNotifications, checkin } from '../service/NgaApi'
+import { getNotifications, checkin } from '../service/NgaApi'
 import { ProfileData, ReputationData } from '../model/User'
 import { AppColors } from '../common/Constants'
 import { formatTime, fmtNum, escHtml } from '../common/Utils'
@@ -16,6 +16,7 @@ export struct ProfilePanel {
   @State unreadMessages: number = 0
   @State checkinLoading: boolean = false
   @State checkinResult: string = ''
+  @StorageProp('profileVersion') @Watch('onProfileVersionChange') profileVersion: number = 0
 
   @Prop @Watch('onUidChange') uid: string = ''
   private isOwnProfile: boolean = false
@@ -24,7 +25,12 @@ export struct ProfilePanel {
   aboutToAppear(): void {
     this.uidInitialized = true
     this.isOwnProfile = appStore.auth.uid === this.uid
-    this.loadProfile()
+    const cached = appStore.getCachedProfile(this.uid)
+    if (cached) {
+      this.profile = cached
+      this.isLoading = false
+    }
+    appStore.ensureProfile(this.uid)
     if (this.isOwnProfile) {
       this.loadUnreadCount()
     }
@@ -35,29 +41,27 @@ export struct ProfilePanel {
       return
     }
     this.profile = null
+    this.isLoading = true
+    this.hasError = false
     this.isOwnProfile = appStore.auth.uid === this.uid
-    this.loadProfile()
+    const cached = appStore.getCachedProfile(this.uid)
+    if (cached) {
+      this.profile = cached
+      this.isLoading = false
+    }
+    appStore.ensureProfile(this.uid)
     if (this.isOwnProfile) {
       this.loadUnreadCount()
     }
   }
 
-  private async loadProfile(): Promise<void> {
-    this.isLoading = true
-    this.hasError = false
-    try {
-      const result = await getUserProfile(appStore.auth.token, this.uid)
-      if (result.ok && result.data) {
-        this.profile = result.data
-      } else {
-        this.hasError = true
-        this.errorMsg = result.error || '加载失败'
-      }
-    } catch (e) {
-      this.hasError = true
-      this.errorMsg = (e as Error).message || '加载失败'
+  private onProfileVersionChange(): void {
+    const cached = appStore.getCachedProfile(this.uid)
+    if (cached) {
+      this.profile = cached
+      this.isLoading = false
+      this.hasError = false
     }
-    this.isLoading = false
   }
 
   private async loadUnreadCount(): Promise<void> {
@@ -205,7 +209,7 @@ export struct ProfilePanel {
             .fontColor(AppColors.primary)
             .backgroundColor(AppColors.bgSecondary)
             .borderRadius(10)
-            .onClick(() => this.loadProfile())
+            .onClick(() => { this.isLoading = true; this.hasError = false; appStore.ensureProfile(this.uid) })
         }
         .width('100%')
         .layoutWeight(1)

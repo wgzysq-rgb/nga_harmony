@@ -17,6 +17,7 @@ export class FloatingLayerStoreClass {
   profileCardY: number = 0
 
   replyDialogTitle: string = '回复'
+  replyTargetLou: number = 0
   replyOnSend?: (text: string) => Promise<void>
 
   get top(): string {

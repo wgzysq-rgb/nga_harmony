@@ -177,6 +177,7 @@ export struct ThreadPanel {
 
   private async handleReplySend(text: string): Promise<void> {
     if (!text || !this.threadTid) return
+    const isComment: boolean = floatingLayerStore.replyTargetLou > 0
     try {
       const authResult: PostAuthResult = await getPostAuth(appStore.auth.token, this.threadFid, 'reply', Number(this.threadTid), 0, 0)
       if (!authResult.ok) {
@@ -185,13 +186,13 @@ export struct ThreadPanel {
       }
 
       let result: PostReplyResult
-      if (this.replyTargetPid > 0) {
+      if (isComment) {
         result = await postComment(appStore.auth.token, Number(this.threadTid), this.replyTargetPid, this.threadFid, text, 0)
       } else {
         result = await postReply(appStore.auth.token, Number(this.threadTid), this.threadFid, text, 0, '', '', 0, 'reply', 0, '')
       }
       if (result.ok) {
-        appStore.showToast(this.replyTargetPid > 0 ? '评论成功' : '回复成功')
+        appStore.showToast(isComment ? '评论成功' : '回复成功')
         if (this.currentPage >= this.totalPages) {
           this.allPosts = []
           this.loadPage(1)
@@ -418,6 +419,8 @@ export struct ThreadPanel {
         .shadow({ radius: 16, color: '#40000000', offsetY: 4 })
         .onClick(() => {
           this.replyTargetPid = 0
+          floatingLayerStore.replyTargetLou = 0
+          floatingLayerStore.replyDialogTitle = '写回复'
           floatingLayerStore.replyOnSend = (text: string): Promise<void> => { return this.handleReplySend(text) }
           floatingLayerStore.push(FloatingPage.REPLY_DIALOG)
         })
@@ -573,6 +576,8 @@ export struct ThreadPanel {
             Text('回复').fontSize(13).fontColor(AppColors.textTertiary)
               .onClick(() => {
                 this.replyTargetPid = post.pid
+                floatingLayerStore.replyTargetLou = post.lou
+                floatingLayerStore.replyDialogTitle = `回复 #${post.lou}`
                 floatingLayerStore.replyOnSend = (text: string): Promise<void> => { return this.handleReplySend(text) }
                 floatingLayerStore.push(FloatingPage.REPLY_DIALOG)
               })

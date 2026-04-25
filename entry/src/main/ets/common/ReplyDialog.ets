@@ -6,11 +6,13 @@ export struct ReplyDialog {
   @Prop dialogTitle: string = '回复'
   @State replyText: string = ''
   @State sending: boolean = false
+  @State replyTargetLou: number = 0
   private maxLength: number = 10000
   onSend?: (text: string) => Promise<void>
   onClose: () => void = () => {}
 
   aboutToAppear(): void {
+    this.replyTargetLou = floatingLayerStore.replyTargetLou
     floatingLayerStore.registerReplyCloseHandler(() => { this.requestClose() })
   }
 
@@ -20,6 +22,12 @@ export struct ReplyDialog {
     } else {
       this.onClose()
     }
+  }
+
+  private clearReplyTarget(): void {
+    this.replyTargetLou = 0
+    floatingLayerStore.replyTargetLou = 0
+    floatingLayerStore.replyDialogTitle = '写回复'
   }
 
   private doSend(): void {
@@ -46,7 +54,20 @@ export struct ReplyDialog {
           .onClick(() => { this.requestClose() }).padding({ left: 8, right: 8 })
       }.width('100%').padding({ left: 20, right: 12, top: 12, bottom: 4 })
 
-      TextArea({ text: this.replyText, placeholder: '写回复...' })
+      if (this.replyTargetLou > 0) {
+        Row() {
+          Text(`回复 #${this.replyTargetLou} 的帖子`)
+            .fontSize(13).fontColor(AppColors.primary)
+          Blank().layoutWeight(1)
+          Text('✕').fontSize(14).fontColor(AppColors.textTertiary)
+            .onClick(() => { this.clearReplyTarget() })
+            .padding({ left: 8, right: 4 })
+        }
+        .width('92%').padding({ top: 4, bottom: 4 })
+        .alignItems(VerticalAlign.Center)
+      }
+
+      TextArea({ text: this.replyText, placeholder: this.replyTargetLou > 0 ? `回复 #${this.replyTargetLou}...` : '写回复...' })
         .width('92%').height(240).margin({ top: 8, bottom: 8 }).padding(14).fontSize(15)
         .borderRadius(12).backgroundColor(AppColors.bgSecondary)
         .onChange((value: string) => { this.replyText = value })

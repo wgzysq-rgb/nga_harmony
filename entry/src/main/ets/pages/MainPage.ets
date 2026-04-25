@@ -12,7 +12,6 @@
 
 import { appStore } from '../store/AppStore'
 import { routerStore, RouterStoreClass } from '../store/RouterStore'
-import { getCurrentUser } from '../service/NgaApi'
 import router from '@ohos.router'
 import { floatingLayerStore, FloatingLayerStoreClass, FloatingPage } from '../store/FloatingLayerStore'
 import { ActivityPanelComponent } from './ActivityPanelComponent'
@@ -27,11 +26,20 @@ import { ToastComponent } from '../common/Toast'
 @Component
 struct MainPage {
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'sm'
+  @StorageProp('profileVersion') @Watch('onProfileRefresh') profileVersion: number = 0
   @State private router: RouterStoreClass = routerStore
   @State private floating: FloatingLayerStoreClass = floatingLayerStore
 
   aboutToAppear(): void {
     this.checkAuth()
+  }
+
+  private onProfileRefresh(): void {
+    const cached = appStore.getCachedProfile(appStore.auth.uid)
+    if (cached) {
+      appStore.auth.nickName = cached.userName
+      appStore.auth.avatarUrl = cached.avatarUrl
+    }
   }
 
   onBackPress(): boolean {
@@ -190,10 +198,13 @@ struct MainPage {
       return
     }
 
-    try {
-      await getCurrentUser(appStore.auth.token)
-    } catch (e) {
+    const cached = appStore.getCachedProfile(appStore.auth.uid)
+    if (cached) {
+      appStore.auth.nickName = cached.userName
+      appStore.auth.avatarUrl = cached.avatarUrl
     }
-    appStore.fetchFavorites()
+
+    appStore.ensureProfile(appStore.auth.uid)
+    appStore.ensureFavorites()
   }
 }

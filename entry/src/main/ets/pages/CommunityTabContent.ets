@@ -1,6 +1,5 @@
 import { appStore, FavBoard } from '../store/AppStore'
 import { routerStore, RouterStoreClass } from '../store/RouterStore'
-import { getForumCategories } from '../service/NgaApi'
 import { AppColors } from '../common/Constants'
 import { CategoryDataSource } from '../common/LazyDataSource'
 
@@ -12,32 +11,34 @@ export struct CommunityTabContent {
   @State private router: RouterStoreClass = routerStore
   @Prop currentBreakpoint: string = 'sm'
   @StorageProp('favVersion') @Watch('onFavVersionChange') favVersion: number = 0
+  @StorageProp('catVersion') @Watch('onCatVersionChange') catVersion: number = 0
   categories: import('../model/Forum').Category[] = []
   private categoriesDataSource: CategoryDataSource = new CategoryDataSource()
 
   aboutToAppear(): void {
     this.syncFavorites()
-    this.loadCategories()
+    if (appStore.cachedCategories.length > 0) {
+      this.categories = appStore.cachedCategories
+      this.categoriesDataSource.replaceAll(this.categories)
+      this.isLoading = false
+    }
+    appStore.ensureCategories()
   }
 
   private onFavVersionChange(): void {
     this.syncFavorites()
   }
 
-  private syncFavorites(): void {
-    this.favoritesList = [...appStore.settings.favorites]
+  private onCatVersionChange(): void {
+    this.categories = appStore.cachedCategories
+    this.categoriesDataSource.replaceAll(this.categories)
+    if (this.isLoading) {
+      this.isLoading = false
+    }
   }
 
-  private async loadCategories(): Promise<void> {
-    try {
-      const result = await getForumCategories(appStore.auth.token)
-      if (result.ok) {
-        this.categories = result.data
-        this.categoriesDataSource.replaceAll(this.categories)
-      }
-    } catch (e) {
-    }
-    this.isLoading = false
+  private syncFavorites(): void {
+    this.favoritesList = [...appStore.settings.favorites]
   }
 
   build() {
