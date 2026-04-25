@@ -382,7 +382,7 @@ function extractPostAuthorName(userInfo: Record<string, Object>, authorid: numbe
 
 /**
  * 从 commonui.postArg.setDefault(fid,stid,tid,...,totalReplies,lastPostTs,pageSize) 提取总回复数
- * 倒数第 3 个参数就是总回复数
+ * 倒数第 3 个参数 = 全楼总回复数，倒数第 1 个 = 每页帖子数
  */
 function extractTotalReplies(html: string): number {
   const idx: number = html.indexOf(SETDEFAULT_MARKER);
@@ -421,10 +421,12 @@ function extractTotalReplies(html: string): number {
   }
   const argsStr: string = html.substring(argsStart, pos - 1);
   const args: string[] = splitTopLevelArgs(argsStr);
+  // 参数格式固定：fid,stid,tid,...,totalReplies,lastPostTs,postsPerPage
+  // 倒数第 3 个 = totalReplies, 倒数第 1 个 = postsPerPage(校验用)
   if (args.length >= 3) {
     const val: string = args[args.length - 3].trim();
     const n: number = parseInt(val, 10);
-    if (!isNaN(n)) {
+    if (!isNaN(n) && n >= 0) {
       return n;
     }
   }
@@ -493,9 +495,9 @@ export function parseHtmlToRawJson(html: string): object {
     __R[String(lou)] = row;
   }
 
-  const totalRows: number = maxLou + 1;
+  const currentPageRows: number = maxLou + 1;
   const totalReplies: number = extractTotalReplies(html);
-  const threadTotalRows: number = totalReplies >= 0 ? totalReplies + 1 : totalRows;
+  const totalRows: number = totalReplies >= 0 ? totalReplies + 1 : currentPageRows;
 
   let firstPostDate: string = '';
   let lastPostDate: string = '';
@@ -525,7 +527,8 @@ export function parseHtmlToRawJson(html: string): object {
     'tid': tid as Object,
     'fid': fid as Object,
     'subject': extractThreadSubject(html) as Object,
-    'replies': Math.max(0, threadTotalRows - 1) as Object,
+    'replies': Math.max(0, totalRows - 1) as Object,
+    'this_visit_rows': currentPageRows as Object,
     'authorid': firstAuthorId as Object,
     'author': extractPostAuthorName(__U, firstAuthorId) as Object,
     'postdate': (firstPostTs || 0) as Object,
@@ -546,7 +549,7 @@ export function parseHtmlToRawJson(html: string): object {
     '__U': __U as Object,
     '__T': __T as Object,
     '__F': __F as Object,
-    '__ROWS': threadTotalRows as Object,
+    '__ROWS': totalRows as Object,
     '__R__ROWS_PAGE': pagePosts as Object,
     '__PAGE': page as Object,
   };

@@ -22,13 +22,16 @@ export struct ThreadPanel {
   @State allPosts: PostInfo[] = []
   private postsDataSource: PostInfoDataSource = new PostInfoDataSource()
   @State currentPage: number = 1
+  @State loadedPageStart: number = 1
   @State totalPages: number = 0
   @State isLoadingMore: boolean = false
+  @State isLoadingPrevious: boolean = false
   @State authorOnly: boolean = false
   @State favDone: boolean = false
   @State threadSubject: string = '帖子'
   @State threadFid: number = 0
   @State threadAuthorId: string = ''
+  @State showPagePicker: boolean = false
   @State expandedSigs: Set<string> = new Set()
   @State expandedComments: Set<string> = new Set()
   @State expandedAttachs: Set<string> = new Set()
@@ -67,6 +70,7 @@ export struct ThreadPanel {
     this.allPosts = []
     this.postsDataSource.clear()
     this.currentPage = 1
+    this.loadedPageStart = 1
     this.totalPages = 0
     this.hasError = false
     this.authorOnly = false
@@ -89,10 +93,14 @@ export struct ThreadPanel {
     }
   }
 
-  private async loadPage(page: number): Promise<void> {
-    if (page === 1) {
+  private async loadPage(page: number, replace?: boolean): Promise<void> {
+    const replaceMode: boolean = replace === true || page === 1
+    if (replaceMode) {
+      this.allPosts = []
+      this.postsDataSource.clear()
       this.isLoading = true
       this.hasError = false
+      this.loadedPageStart = page
       this.scroller.scrollToIndex(0)
     } else {
       this.isLoadingMore = true
@@ -108,9 +116,10 @@ export struct ThreadPanel {
           this.threadAuthorId = String(info['authorid'] ?? '')
         }
         if (result.pagination) {
-          this.totalPages = result.pagination.totalPages
+          this.totalPages = result.pagination.totalPages > this.totalPages ?
+            result.pagination.totalPages : this.totalPages
         }
-        if (page === 1) {
+        if (replaceMode) {
           this.allPosts = result.posts
           this.postsDataSource.replaceAll(result.posts)
         } else {
@@ -121,21 +130,41 @@ export struct ThreadPanel {
           this.postsDataSource.appendAll(result.posts)
         }
         this.currentPage = page
-        if (page === 1 && this.threadPid.length > 0) {
+        if (replaceMode && this.threadPid.length > 0) {
           this.onScrollToPid()
         }
       } else if (page === 1) {
         this.hasError = true
         this.errorMsg = result.error || '加载失败'
+        this.allPosts = []
+        this.postsDataSource.clear()
       }
     } catch (e) {
       if (page === 1) {
         this.hasError = true
         this.errorMsg = (e as Error).message || '加载失败'
+        this.allPosts = []
+        this.postsDataSource.clear()
       }
     }
     this.isLoading = false
     this.isLoadingMore = false
+  }
+
+  private async loadPreviousPage(page: number): Promise<void> {
+    this.isLoadingPrevious = true
+    try {
+      const result: ThreadResult = await getThread(appStore.auth.token, this.threadTid, '', '', String(page))
+      if (result.ok && result.posts.length > 0) {
+        this.loadedPageStart = page
+        this.allPosts = [...result.posts, ...this.allPosts]
+        this.postsDataSource.prependAll(result.posts)
+        // maintainVisibleContentPosition 自动保持可视位置不变
+      }
+    } catch (e) {
+      // 静默失败
+    }
+    this.isLoadingPrevious = false
   }
 
   private async handleReplySend(text: string): Promise<void> {
@@ -219,14 +248,21 @@ export struct ThreadPanel {
 
   build() {
     Stack() {
+      // 页数选择器遮罩（放在最底层，点击任意位置关闭）
+      if (this.showPagePicker) {
+        Column().width('100%').height('100%').onClick(() => { this.showPagePicker = false })
+      }
+
       Column() {
         Row() {
         Text('←').fontSize(22).fontColor(AppColors.primary)
           .onClick(() => routerStore.back()).padding({ left: 8, right: 8 })
+
         Text(this.threadSubject).fontSize(17).fontWeight(FontWeight.Bold).layoutWeight(1)
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+
         Text('⋯').fontSize(22).fontColor(AppColors.primary)
-          .onClick(() => this.handleFavorite()).padding({ left: 8, right: 16 })
+          .onClick(() => this.handleFavorite()).padding({ left: 4, right: 16 })
       }
       .width('100%').height(44).backgroundColor(AppColors.bgTertiary)
       .border({ width: { bottom: 0.5 }, color: AppColors.separator }).alignItems(VerticalAlign.Center)
@@ -259,29 +295,92 @@ export struct ThreadPanel {
             }
           }, (post: PostInfo) => String(post.pid))
           ListItem() {
-            Row() {
-              if (this.isLoadingMore) {
-                LoadingProgress().width(16).height(16).color(AppColors.textTertiary)
-                Text('加载更多...').fontSize(13).fontColor(AppColors.textTertiary).margin({ left: 8 })
-              } else if (this.currentPage >= this.totalPages && this.allPosts.length > 0) {
-                Text('已加载全部回复').fontSize(13).fontColor(AppColors.textTertiary)
-              }
-            }.width('100%').justifyContent(FlexAlign.Center).padding({ top: 16, bottom: 16 })
+            Column() {
+              Row() {
+                if (this.isLoadingMore) {
+                  LoadingProgress().width(16).height(16).color(AppColors.textTertiary)
+                  Text('加载更多...').fontSize(13).fontColor(AppColors.textTertiary).margin({ left: 8 })
+                } else if (this.currentPage >= this.totalPages && this.allPosts.length > 0) {
+                  Text('已加载全部回复').fontSize(13).fontColor(AppColors.textTertiary)
+                }
+              }.width('100%').justifyContent(FlexAlign.Center)
+
+            }.width('100%').padding({ top: 12, bottom: 16 })
           }
         }
         .width('100%').layoutWeight(1)
         .divider({ strokeWidth: 0.5, color: AppColors.separator })
         .edgeEffect(EdgeEffect.Spring)
+        .maintainVisibleContentPosition(true)
         .onReachEnd(() => {
           if (!this.isLoadingMore && this.currentPage < this.totalPages) {
             this.loadPage(this.currentPage + 1)
+          }
+        })
+        .onReachStart(() => {
+          if (!this.isLoadingPrevious && this.loadedPageStart > 1) {
+            this.loadPreviousPage(this.loadedPageStart - 1)
           }
         })
       }
     }
     .width('100%').height('100%')
 
+      // 底部工具栏：页数选择器（左）+ 回复按钮（右）
       Row() {
+        if (this.totalPages > 1) {
+          Row() {
+            // 直接用 inline 代码渲染每个页码按钮，保证 @State currentPage 更新后重新渲染
+            if (this.totalPages === 2) {
+              Column() {
+                Text('1').fontSize(14).fontColor(this.currentPage === 1 ? AppColors.primary : AppColors.textSecondary)
+                  .fontWeight(this.currentPage === 1 ? FontWeight.Bold : FontWeight.Regular).lineHeight(18)
+                if (this.currentPage === 1) { Text('•').fontSize(10).fontColor(AppColors.primary).lineHeight(8).height(8).margin({ top: -2 }) }
+              }.padding({ left: 6, right: 6 }).onClick(() => this.loadPage(1, true))
+              Column() {
+                Text('2').fontSize(14).fontColor(this.currentPage === 2 ? AppColors.primary : AppColors.textSecondary)
+                  .fontWeight(this.currentPage === 2 ? FontWeight.Bold : FontWeight.Regular).lineHeight(18)
+                if (this.currentPage === 2) { Text('•').fontSize(10).fontColor(AppColors.primary).lineHeight(8).height(8).margin({ top: -2 }) }
+              }.padding({ left: 6, right: 6 }).onClick(() => this.loadPage(2, true))
+            } else if (this.currentPage === 1) {
+              Column() {
+                Text('1').fontSize(14).fontColor(AppColors.primary).fontWeight(FontWeight.Bold).lineHeight(18)
+                Text('•').fontSize(10).fontColor(AppColors.primary).lineHeight(8).height(8).margin({ top: -2 })
+              }.padding({ left: 6, right: 6 }).onClick(() => this.loadPage(1, true))
+              Column() {
+                Text('2').fontSize(14).fontColor(AppColors.textSecondary).fontWeight(FontWeight.Regular).lineHeight(18)
+              }.padding({ left: 6, right: 6 }).onClick(() => this.loadPage(2, true))
+            } else if (this.currentPage === this.totalPages) {
+              Column() {
+                Text(String(this.totalPages - 1)).fontSize(14).fontColor(AppColors.textSecondary).fontWeight(FontWeight.Regular).lineHeight(18)
+              }.padding({ left: 6, right: 6 }).onClick(() => this.loadPage(this.totalPages - 1, true))
+              Column() {
+                Text(String(this.totalPages)).fontSize(14).fontColor(AppColors.primary).fontWeight(FontWeight.Bold).lineHeight(18)
+                Text('•').fontSize(10).fontColor(AppColors.primary).lineHeight(8).height(8).margin({ top: -2 })
+              }.padding({ left: 6, right: 6 }).onClick(() => this.loadPage(this.totalPages, true))
+            } else {
+              Column() {
+                Text(String(this.currentPage - 1)).fontSize(14).fontColor(AppColors.textSecondary).fontWeight(FontWeight.Regular).lineHeight(18)
+              }.padding({ left: 6, right: 6 }).onClick(() => this.loadPage(this.currentPage - 1, true))
+              Column() {
+                Text(String(this.currentPage)).fontSize(14).fontColor(AppColors.primary).fontWeight(FontWeight.Bold).lineHeight(18)
+                Text('•').fontSize(10).fontColor(AppColors.primary).lineHeight(8).height(8).margin({ top: -2 })
+              }.padding({ left: 6, right: 6 }).onClick(() => this.loadPage(this.currentPage, true))
+              Column() {
+                Text(String(this.currentPage + 1)).fontSize(14).fontColor(AppColors.textSecondary).fontWeight(FontWeight.Regular).lineHeight(18)
+              }.padding({ left: 6, right: 6 }).onClick(() => this.loadPage(this.currentPage + 1, true))
+            }
+            Text('到').fontSize(13).fontColor(AppColors.primary).padding({ left: 4, right: 2 })
+              .onClick(() => { this.showPagePicker = !this.showPagePicker })
+          }
+          .padding({ left: 8, right: 8, top: 0, bottom: 0 })
+          .height(40).alignItems(VerticalAlign.Center)
+          .backgroundColor(Color.White).borderRadius(20)
+          .shadow({ radius: 16, color: '#40000000', offsetY: 4 })
+        }
+
+        Blank().layoutWeight(1)
+
         Stack() {
           Image($r('app.media.icon_reply'))
             .width(20).height(20)
@@ -295,7 +394,35 @@ export struct ThreadPanel {
           floatingLayerStore.replyOnSend = (text: string): Promise<void> => { return this.handleReplySend(text) }
           floatingLayerStore.push(FloatingPage.REPLY_DIALOG)
         })
-      }.width('100%').justifyContent(FlexAlign.End).padding({ right: 16, bottom: 16 })
+      }
+      .width('100%').padding({ left: 16, right: 16, bottom: 16 }).alignItems(VerticalAlign.Center)
+
+      // 页数选择器弹出面板
+      if (this.totalPages > 1 && this.showPagePicker) {
+        Column() {
+          Text('选择页面').fontSize(14).fontColor(AppColors.textPrimary).fontWeight(FontWeight.Bold)
+            .padding({ top: 12, bottom: 8 })
+          Divider().color(AppColors.separator)
+          Scroll() {
+            Column() {
+              ForEach(this.buildPageArray(), (p: number) => {
+                Text(String(p)).fontSize(15).fontColor(p === this.currentPage ? AppColors.primary :
+                  AppColors.textPrimary).fontWeight(p === this.currentPage ? FontWeight.Bold : FontWeight.Regular)
+                  .width('100%').textAlign(TextAlign.Center).padding({ top: 10, bottom: 10 })
+                  .onClick(() => {
+                    this.showPagePicker = false
+                    if (p !== this.currentPage) {
+                      this.loadPage(p, true)
+                    }
+                  })
+              }, (p: number) => String(p))
+            }.width('100%')
+          }.height(200).width(80)
+        }
+        .width(100).backgroundColor(Color.White).borderRadius(12)
+        .shadow({ radius: 16, color: '#40000000', offsetY: 4 })
+        .alignSelf(ItemAlign.Start).margin({ left: 16, bottom: 64 })
+      }
     }
     .width('100%').height('100%').backgroundColor(AppColors.bg).alignContent(Alignment.BottomEnd)
     .id('threadPanelRoot')
@@ -454,5 +581,13 @@ export struct ThreadPanel {
       }
       .width('100%').padding({ left: 16, right: 16, top: 12, bottom: 12 }).alignItems(HorizontalAlign.Start)
     }
+  }
+
+  private buildPageArray(): number[] {
+    const arr: number[] = []
+    for (let i: number = 1; i <= this.totalPages; i++) {
+      arr.push(i)
+    }
+    return arr
   }
 }
