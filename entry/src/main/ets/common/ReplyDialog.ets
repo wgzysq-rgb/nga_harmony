@@ -7,7 +7,7 @@ export struct ReplyDialog {
   @State replyText: string = ''
   @State sending: boolean = false
   private maxLength: number = 10000
-  onSend?: (text: string) => void
+  onSend?: (text: string) => Promise<void>
   onClose: () => void = () => {}
 
   aboutToAppear(): void {
@@ -20,6 +20,16 @@ export struct ReplyDialog {
     } else {
       this.onClose()
     }
+  }
+
+  private doSend(): void {
+    if (!this.onSend || !this.replyText.trim()) return
+    this.sending = true
+    this.onSend(this.replyText.trim()).then(() => {
+      this.onClose()
+    }).finally(() => {
+      this.sending = false
+    })
   }
 
   build() {
@@ -51,12 +61,7 @@ export struct ReplyDialog {
           .fontColor(Color.White).backgroundColor(AppColors.primary)
           .borderRadius(20).padding({ left: 24, right: 24 })
           .enabled(!this.sending && this.replyText.trim().length > 0)
-          .onClick(() => {
-            if (this.onSend && this.replyText.trim()) {
-              this.sending = true
-              this.onSend(this.replyText.trim())
-            }
-          })
+          .onClick(() => { this.doSend() })
       }.width('92%').margin({ top: 4 }).alignItems(VerticalAlign.Center)
     }
     .width('100%').constraintSize({ maxWidth: 576 }).backgroundColor(AppColors.bg).borderRadius(16).alignItems(HorizontalAlign.Center).padding({ bottom: 20 })

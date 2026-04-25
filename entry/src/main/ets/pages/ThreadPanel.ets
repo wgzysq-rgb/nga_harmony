@@ -2,7 +2,7 @@ import { display } from '@kit.ArkUI'
 import { common } from '@kit.AbilityKit'
 import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
-import { getThread, getPostAuth, postReply, addFavorite, ThreadResult, PostInfo, PostAttachInfo, PostAuthResult, PostReplyResult } from '../service/NgaApi'
+import { getThread, getPostAuth, postReply, postComment, addFavorite, ThreadResult, PostInfo, PostAttachInfo, PostAuthResult, PostReplyResult } from '../service/NgaApi'
 import { AppColors } from '../common/Constants'
 import { formatTime, escHtml } from '../common/Utils'
 import { Avatar } from '../common/Avatar'
@@ -143,27 +143,28 @@ export struct ThreadPanel {
     try {
       const authResult: PostAuthResult = await getPostAuth(appStore.auth.token, this.threadFid, 'reply', Number(this.threadTid), 0, 0)
       if (!authResult.ok) {
-        appStore.showToast('无权回复')
+        appStore.showToast(authResult.error || '无权回复')
         return
       }
 
       let result: PostReplyResult
       if (this.replyTargetPid > 0) {
-        result = await postReply(appStore.auth.token, Number(this.threadTid), this.threadFid, text, 0, '', '', 0, 'comment', this.replyTargetPid, '')
+        result = await postComment(appStore.auth.token, Number(this.threadTid), this.replyTargetPid, this.threadFid, text, 0)
       } else {
         result = await postReply(appStore.auth.token, Number(this.threadTid), this.threadFid, text, 0, '', '', 0, 'reply', 0, '')
       }
       if (result.ok) {
         appStore.showToast(this.replyTargetPid > 0 ? '评论成功' : '回复成功')
-        this.allPosts = []
-        this.loadPage(1)
+        if (this.currentPage >= this.totalPages) {
+          this.allPosts = []
+          this.loadPage(1)
+        }
       } else {
         appStore.showToast(result.error || '操作失败')
       }
     } catch (e) {
       appStore.showToast((e as Error).message || '操作失败')
     }
-    floatingLayerStore.remove(FloatingPage.REPLY_DIALOG)
   }
 
   private async handleFavorite(): Promise<void> {
@@ -291,7 +292,7 @@ export struct ThreadPanel {
         .shadow({ radius: 16, color: '#40000000', offsetY: 4 })
         .onClick(() => {
           this.replyTargetPid = 0
-          floatingLayerStore.replyOnSend = (text: string): void => { this.handleReplySend(text) }
+          floatingLayerStore.replyOnSend = (text: string): Promise<void> => { return this.handleReplySend(text) }
           floatingLayerStore.push(FloatingPage.REPLY_DIALOG)
         })
       }.width('100%').justifyContent(FlexAlign.End).padding({ right: 16, bottom: 16 })
@@ -417,7 +418,7 @@ export struct ThreadPanel {
             Text('回复').fontSize(13).fontColor(AppColors.textTertiary)
               .onClick(() => {
                 this.replyTargetPid = post.pid
-                floatingLayerStore.replyOnSend = (text: string): void => { this.handleReplySend(text) }
+                floatingLayerStore.replyOnSend = (text: string): Promise<void> => { return this.handleReplySend(text) }
                 floatingLayerStore.push(FloatingPage.REPLY_DIALOG)
               })
           }.width('100%').justifyContent(FlexAlign.End).margin({ top: 8 })

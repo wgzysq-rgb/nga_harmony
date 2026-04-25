@@ -638,14 +638,16 @@ export async function getPostAuth(token: string, fid: number, action: string,
   }
 
   try {
-    const qs: string[] = [`fid=${fid}`, 'lite=js'];
-    if (action) qs.push(`action=${action}`);
-    if (pid) qs.push(`pid=${pid}`);
-    if (tid) qs.push(`tid=${tid}`);
-    if (comment) qs.push(`comment=${comment}`);
+    const authParams: Record<string, string> = {
+      'fid': String(fid),
+      'lite': 'js',
+    };
+    if (action) authParams['action'] = action;
+    if (pid) authParams['pid'] = String(pid);
+    if (tid) authParams['tid'] = String(tid);
+    if (comment) authParams['comment'] = String(comment);
 
-    const emptyBody: Record<string, string> = {};
-    const raw = await ngaClient.post(`/post.php?${qs.join('&')}`, emptyBody, { uid: session.uid, cid: session.cid }) as Record<string, Object>;
+    const raw = await ngaClient.get('/post.php', authParams, { uid: session.uid, cid: session.cid }) as Record<string, Object>;
     const dataObj = raw?.['data'] as Record<string, Object> | undefined;
     result.auth = String(dataObj?.['auth'] ?? '');
     result.attachUrl = String(dataObj?.['attach_url'] ?? '');
@@ -695,6 +697,43 @@ export async function postReply(token: string, tid: number, fid: number,
     result.ok = true;
   } catch (e) {
     result.error = (e as Error).message ?? '回复失败';
+  }
+  return result;
+}
+
+export async function postComment(token: string, tid: number, pid: number,
+  fid: number, content: string, anony: number): Promise<PostReplyResult> {
+  const result = new PostReplyResult();
+  const session = sessionStore.get(token);
+  if (!session) {
+    result.error = '未登录';
+    return result;
+  }
+
+  try {
+    const fields: Record<string, string> = {
+      'step': '2',
+      'action': 'reply',
+      'comment': '1',
+      'lite': 'htmljs',
+      'nojump': '1',
+      'fid': String(fid),
+      'tid': String(tid),
+      'pid': String(pid),
+      'post_content': content,
+      'anony': String(anony),
+      '__output': '8',
+    };
+
+    const raw = await ngaClient.post('/post.php', fields, { uid: session.uid, cid: session.cid }) as Record<string, Object>;
+    const error = parseNgaError(raw);
+    if (error) {
+      result.error = error;
+      return result;
+    }
+    result.ok = true;
+  } catch (e) {
+    result.error = (e as Error).message ?? '评论失败';
   }
   return result;
 }

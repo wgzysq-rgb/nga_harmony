@@ -1,40 +1,44 @@
-import { floatingLayerStore, FloatingLayerStoreClass, FloatingPage } from '../store/FloatingLayerStore'
+import { floatingLayerStore, FloatingPage } from '../store/FloatingLayerStore'
 import { AppColors } from '../common/Constants'
 import { ImageViewer } from '../common/ImageViewer'
 import { ProfileCardPopup } from '../common/ProfileCardPopup'
 import { ReplyDialog } from '../common/ReplyDialog'
 
+function topOf(stack: string[]): string {
+  return stack.length > 0 ? stack[stack.length - 1] : ''
+}
+
 @Component
 export struct FloatingLayerComponent {
-  @State private floating: FloatingLayerStoreClass = floatingLayerStore
+  @StorageProp('floatingVersion') floatingVersion: number = 0
   @Prop currentBreakpoint: string = 'sm'
 
   build() {
     Stack() {
-      if (this.floating.top === FloatingPage.IMAGE_VIEWER) {
+      if (topOf(floatingLayerStore.stack) === FloatingPage.IMAGE_VIEWER) {
         ImageViewer({
-          urls: this.floating.imageViewerUrls,
-          initialIndex: this.floating.imageViewerIndex,
+          urls: floatingLayerStore.imageViewerUrls,
+          initialIndex: floatingLayerStore.imageViewerIndex,
           onClose: () => { floatingLayerStore.remove(FloatingPage.IMAGE_VIEWER) }
         })
       }
-      if (this.floating.top === FloatingPage.PROFILE_CARD) {
+      if (topOf(floatingLayerStore.stack) === FloatingPage.PROFILE_CARD) {
         Stack() {
           Column().width('100%').height('100%').backgroundColor('#33000000')
             .onClick(() => { floatingLayerStore.remove(FloatingPage.PROFILE_CARD) })
           ProfileCardPopup({
-            targetUid: this.floating.profileCardUid,
+            targetUid: floatingLayerStore.profileCardUid,
             currentBreakpoint: this.currentBreakpoint,
             onClose: () => { floatingLayerStore.remove(FloatingPage.PROFILE_CARD) }
           })
           .position({
-            x: this.floating.profileCardX,
-            y: this.floating.profileCardY
+            x: floatingLayerStore.profileCardX,
+            y: floatingLayerStore.profileCardY
           })
         }
         .width('100%').height('100%')
       }
-      if (this.floating.top === FloatingPage.REPLY_DIALOG) {
+      if (topOf(floatingLayerStore.stack) === FloatingPage.REPLY_DIALOG) {
         Stack() {
           Column().width('100%').height('100%').backgroundColor('#33000000')
 
@@ -43,8 +47,8 @@ export struct FloatingLayerComponent {
 
           Column() {
             ReplyDialog({
-              dialogTitle: this.floating.replyDialogTitle,
-              onSend: this.floating.replyOnSend,
+              dialogTitle: floatingLayerStore.replyDialogTitle,
+              onSend: floatingLayerStore.replyOnSend,
               onClose: () => {
                 floatingLayerStore.registerReplyCloseHandler(null)
                 floatingLayerStore.remove(FloatingPage.REPLY_DIALOG)
@@ -56,7 +60,7 @@ export struct FloatingLayerComponent {
         .width('100%').height('100%')
       }
 
-      if (this.floating.replyConfirmActive) {
+      if (floatingLayerStore.replyConfirmActive) {
         Stack() {
           Column().width('100%').height('100%').backgroundColor('#33000000')
             .onClick(() => {
@@ -92,9 +96,9 @@ export struct FloatingLayerComponent {
     }
     .width('100%').height('100%')
     .hitTestBehavior(
-      (this.floating.top === FloatingPage.IMAGE_VIEWER ||
-       this.floating.top === FloatingPage.PROFILE_CARD ||
-       this.floating.top === FloatingPage.REPLY_DIALOG)
+      (topOf(floatingLayerStore.stack) === FloatingPage.IMAGE_VIEWER ||
+       topOf(floatingLayerStore.stack) === FloatingPage.PROFILE_CARD ||
+       topOf(floatingLayerStore.stack) === FloatingPage.REPLY_DIALOG)
         ? HitTestMode.Default : HitTestMode.None
     )
   }

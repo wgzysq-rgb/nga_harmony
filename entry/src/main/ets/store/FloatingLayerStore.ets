@@ -5,7 +5,8 @@ export enum FloatingPage {
   REPLY_DIALOG = 'replyDialog'
 }
 
-@Observed
+const FLOATING_VERSION_KEY = 'floatingVersion'
+
 export class FloatingLayerStoreClass {
   stack: string[] = []
 
@@ -17,7 +18,7 @@ export class FloatingLayerStoreClass {
   profileCardY: number = 0
 
   replyDialogTitle: string = '回复'
-  replyOnSend?: (text: string) => void
+  replyOnSend?: (text: string) => Promise<void>
 
   get top(): string {
     return this.stack.length > 0 ? this.stack[this.stack.length - 1] : ''
@@ -25,6 +26,10 @@ export class FloatingLayerStoreClass {
 
   get size(): number {
     return this.stack.length
+  }
+
+  private notify(): void {
+    AppStorage.set(FLOATING_VERSION_KEY, (AppStorage.get<number>(FLOATING_VERSION_KEY) ?? 0) + 1)
   }
 
   push(page: string): void {
@@ -37,11 +42,13 @@ export class FloatingLayerStoreClass {
     } else {
       this.stack = [...this.stack, page]
     }
+    this.notify()
   }
 
   pop(): boolean {
     if (this.stack.length > 0) {
       this.stack = this.stack.slice(0, -1)
+      this.notify()
       return true
     }
     return false
@@ -49,10 +56,12 @@ export class FloatingLayerStoreClass {
 
   remove(page: string): void {
     this.stack = this.stack.filter(p => p !== page)
+    this.notify()
   }
 
   clear(): void {
     this.stack = []
+    this.notify()
   }
 
   // Reply close handler (for system back interception)
@@ -83,6 +92,7 @@ export class FloatingLayerStoreClass {
     this.registerReplyCloseHandler(null)
     this.stack = this.stack.filter(p => p !== FloatingPage.REPLY_DIALOG)
     this.replyConfirmActive = false
+    this.notify()
   }
 }
 

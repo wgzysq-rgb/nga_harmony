@@ -27,15 +27,21 @@ export struct ToastOverlay {
 export struct ToastComponent {
   @State message: string = ''
   @State visible: boolean = false
-  private timer: number = -1
+  private pollTimer: number = -1
 
   aboutToAppear(): void {
-    // 轮询检查 toast 状态
-    this.pollToast()
+    this.schedulePoll()
   }
 
   aboutToDisappear(): void {
-    clearTimeout(this.timer)
+    clearTimeout(this.pollTimer)
+  }
+
+  private schedulePoll(): void {
+    this.pollTimer = setTimeout(() => {
+      this.pollToast()
+      this.schedulePoll()
+    }, 150)
   }
 
   private pollToast(): void {

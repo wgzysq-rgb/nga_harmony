@@ -21,6 +21,7 @@ import { SidebarComponent } from './SidebarComponent'
 import { CommunityTabContent } from './CommunityTabContent'
 import { FloatingLayerComponent } from './FloatingLayerComponent'
 import { EmptyHint } from '../common/EmptyHint'
+import { ToastComponent } from '../common/Toast'
 
 @Entry
 @Component
@@ -67,6 +68,7 @@ struct MainPage {
       }
 
       FloatingLayerComponent({ currentBreakpoint: this.currentBreakpoint })
+      ToastComponent()
     }
     .width('100%').height('100%')
   }

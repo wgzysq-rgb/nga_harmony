@@ -80,7 +80,8 @@ function buildUrl(baseUrl: string, path: string, params: Record<string, string>)
     }
   }
   if (qs.length > 0) {
-    url += '?' + qs.join('&');
+    const hasQuery = path.indexOf('?') >= 0
+    url += (hasQuery ? '&' : '?') + qs.join('&');
   }
   return url;
 }
@@ -138,8 +139,32 @@ async function encryptPassword(password: string): Promise<string> {
 
 // ============== HTTP 请求 ==============
 
+const LOG_CHUNK_SIZE: number = 3800;
+
+function logChunks(prefix: string, text: string): void {
+  if (text.length === 0) {
+    return;
+  }
+  if (text.length <= LOG_CHUNK_SIZE) {
+    console.info(prefix, text);
+    return;
+  }
+  let offset = 0;
+  let seq = 1;
+  while (offset < text.length) {
+    const end = Math.min(offset + LOG_CHUNK_SIZE, text.length);
+    console.info(prefix + `[${seq}]`, text.slice(offset, end));
+    offset = end;
+    seq++;
+  }
+}
+
 function httpReq(url: string, method: http.RequestMethod,
   header: Record<string, string>, body?: string): Promise<ArrayBuffer> {
+  console.info('[NGA][REQ]', method, url);
+  if (body && body.length > 0) {
+    logChunks('[NGA][REQ] body:', body);
+  }
   return new Promise<ArrayBuffer>((resolve, reject) => {
     const httpRequest = http.createHttp();
     const options: http.HttpRequestOptions = {
@@ -155,9 +180,11 @@ function httpReq(url: string, method: http.RequestMethod,
     httpRequest.request(url, options, (err, response) => {
       httpRequest.destroy();
       if (err) {
+        console.info('[NGA][REQ] fail:', url, err.message);
         reject(new Error(`HTTP请求失败: ${err.message}`));
         return;
       }
+      console.info('[NGA][RES]', response.responseCode, url);
       if (response.responseCode === 200) {
         resolve(response.result as ArrayBuffer);
       } else {
@@ -241,7 +268,7 @@ async function ngaRequest(path: string, method: http.RequestMethod,
       header['Cookie'] = `ngaPassportUid=${cookies.uid}; ngaPassportCid=${cookies.cid}`;
     }
 
-    if (body) {
+    if (body && method === http.RequestMethod.POST && !header['Content-Type']) {
       header['Content-Type'] = 'application/x-www-form-urlencoded';
     }
 
@@ -261,7 +288,7 @@ async function ngaRequest(path: string, method: http.RequestMethod,
       await ngaThrottler.acquire(retryHostname);
       try {
         const retryUrl = buildUrl(retryBaseUrl, path, params);
-        responseBuffer = await httpReq(retryUrl, method, header, body || undefined);
+        responseBuffer = await httpReq(retryUrl, method, header, body);
       } catch (retryError) {
         throw new Error(`请求失败: ${firstErrorMsg}`);
       } finally {
@@ -271,6 +298,7 @@ async function ngaRequest(path: string, method: http.RequestMethod,
 
     // GB18030 解码
     const rawText = decodeGb18030(responseBuffer);
+    logChunks('[NGA][RES] body:', rawText);
 
     // 处理 HTML 错误页
     const trimmed = rawText.trimStart();
