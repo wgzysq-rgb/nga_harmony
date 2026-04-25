@@ -242,9 +242,32 @@ export struct BBCodeContentView {
     } else if (node.type === BBNodeType.LIST) {
       this.RenderList(node, ctx)
     } else if (node.type === BBNodeType.VIDEO) {
-      Text('🎬 视频').fontSize(15).fontColor(AppColors.primary).margin({ top: 6, bottom: 4 })
+      if (node.src.length > 0) {
+        Video({ src: node.src })
+          .width('100%')
+          .aspectRatio(16 / 9)
+          .controls(true)
+          .borderRadius(8)
+          .backgroundColor(AppColors.bgSecondary)
+          .margin({ top: 6, bottom: 4 })
+          .autoPlay(false)
+      }
     } else if (node.type === BBNodeType.AUDIO) {
-      Text('🎵 音频').fontSize(15).fontColor(AppColors.primary).margin({ top: 6, bottom: 4 })
+      Text('🎵 音频')
+        .fontSize(15).fontColor(AppColors.primary)
+        .decoration({ type: TextDecorationType.Underline, color: AppColors.primary })
+        .margin({ top: 6, bottom: 4 })
+        .onClick(() => {
+          if (node.src.length > 0) this.onLinkClick(node.src)
+        })
+    } else if (node.type === BBNodeType.FLASH) {
+      Text('[Flash 内容]')
+        .fontSize(15).fontColor(AppColors.primary)
+        .decoration({ type: TextDecorationType.Underline, color: AppColors.primary })
+        .margin({ top: 6, bottom: 4 })
+        .onClick(() => {
+          if (node.href.length > 0) this.onLinkClick(node.href)
+        })
     } else if (node.type === BBNodeType.DICE) {
       Text('🎲 骰子').fontSize(15).fontColor(AppColors.textPrimary)
     } else if (node.type === BBNodeType.WARN) {

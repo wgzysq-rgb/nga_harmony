@@ -42,7 +42,7 @@ class PostInfoDataSource implements IDataSource {
     for (let i = 0; i < list.length; i++) {
       this.dataList.push(list[i])
     }
-    this.notifyAdd(this.dataList.length - list.length, list.length)
+    this.notifyReload()
   }
 
   clear(): void {
@@ -57,12 +57,6 @@ class PostInfoDataSource implements IDataSource {
   private notifyReload(): void {
     for (let i = 0; i < this.listeners.length; i++) {
       this.listeners[i].onDataReloaded()
-    }
-  }
-
-  private notifyAdd(index: number, count: number): void {
-    for (let i = 0; i < this.listeners.length; i++) {
-      this.listeners[i].onDataAdd(index)
     }
   }
 }
@@ -104,7 +98,7 @@ class ThreadDataSource implements IDataSource {
     for (let i = 0; i < list.length; i++) {
       this.dataList.push(list[i])
     }
-    this.notifyAdd(this.dataList.length - list.length, list.length)
+    this.notifyReload()
   }
 
   clear(): void {
@@ -119,12 +113,6 @@ class ThreadDataSource implements IDataSource {
   private notifyReload(): void {
     for (let i = 0; i < this.listeners.length; i++) {
       this.listeners[i].onDataReloaded()
-    }
-  }
-
-  private notifyAdd(index: number, count: number): void {
-    for (let i = 0; i < this.listeners.length; i++) {
-      this.listeners[i].onDataAdd(index)
     }
   }
 }

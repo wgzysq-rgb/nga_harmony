@@ -44,6 +44,17 @@ function decodeHtmlEntities(s: string): string {
     .replace(/<[^>]+>/g, '')
 }
 
+function isSafeUrl(url: string): boolean {
+  const trimmed = url.trim().toLowerCase()
+  if (/^javascript:/i.test(trimmed)) return false
+  if (/^vbscript:/i.test(trimmed)) return false
+  if (/^data:/i.test(trimmed)) return false
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('mailto:')) return true
+  if (trimmed.startsWith('/') && !trimmed.startsWith('//')) return true
+  if (/^\w+\.php\b/i.test(trimmed)) return true
+  return false
+}
+
 function escSegHtml(s: string): string {
   return s
     .replace(/&amp;/g, '&')
@@ -322,7 +333,7 @@ function tryMatchBlock(state: ParseState, result: BBNode[]): boolean {
     state.pos = pFlash.lastIndex
     const n = new BBNode()
     n.type = BBNodeType.FLASH
-    n.href = ffm[1].trim()
+    n.href = isSafeUrl(ffm[1].trim()) ? ffm[1].trim() : ''
     result.push(n)
     return true
   }
@@ -676,7 +687,7 @@ function parseInlineInto(seg: string, into: BBNode[]): void {
         i = url1P.lastIndex
         const n = new BBNode()
         n.type = BBNodeType.URL
-        n.href = url1M[1]
+        n.href = isSafeUrl(url1M[1]) ? url1M[1] : ''
         n.text = escSegHtml(url1M[2])
         into.push(n)
         continue
@@ -689,7 +700,7 @@ function parseInlineInto(seg: string, into: BBNode[]): void {
         i = url2P.lastIndex
         const n = new BBNode()
         n.type = BBNodeType.URL
-        n.href = url2M[1]
+        n.href = isSafeUrl(url2M[1]) ? url2M[1] : ''
         n.text = escSegHtml(url2M[1])
         into.push(n)
         continue

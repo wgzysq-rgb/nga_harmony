@@ -1,4 +1,5 @@
 import { display } from '@kit.ArkUI'
+import { common } from '@kit.AbilityKit'
 import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
 import { getThread, getPostAuth, postReply, addFavorite, ThreadResult, PostInfo, PostAttachInfo, PostAuthResult, PostReplyResult } from '../service/NgaApi'
@@ -186,6 +187,35 @@ export struct ThreadPanel {
     floatingLayerStore.push(FloatingPage.IMAGE_VIEWER)
   }
 
+  private handleLinkClick(href: string): void {
+    if (href.startsWith('#/thread?')) {
+      const params = new Map<string, string>()
+      const query = href.substring(href.indexOf('?') + 1)
+      const parts = query.split('&')
+      for (let i = 0; i < parts.length; i++) {
+        const kv = parts[i].split('=')
+        if (kv.length === 2) params.set(kv[0], kv[1])
+      }
+      const tid = params.get('tid') || ''
+      const pageStr = params.get('page') || '1'
+      const pid = params.get('pid') || ''
+      const page = parseInt(pageStr, 10) || 1
+      if (tid.length > 0) {
+        routerStore.navigateActivity(Screen.thread(tid, page, pid))
+      }
+    } else if (href.startsWith('#/profile?')) {
+      const uidStr = href.split('uid=')[1]
+      if (uidStr) {
+        this.showProfileCard(uidStr.split('&')[0], 200, 200)
+      }
+    } else if (href.startsWith('http://') || href.startsWith('https://')) {
+      try {
+        const ctx = getContext(this) as common.UIAbilityContext
+        ctx.openLink(href)
+      } catch (e) {}
+    }
+  }
+
   build() {
     Stack() {
       Column() {
@@ -296,7 +326,7 @@ export struct ThreadPanel {
             }
           })
 
-          Text(`#${post.lou}`).fontSize(13).fontColor(AppColors.textTertiary)
+          Text(post.lou === 0 ? '楼主' : post.lou === 1 ? '沙发' : `#${post.lou}`).fontSize(13).fontColor(AppColors.textTertiary)
         }.width('100%')
 
         if (post.isInBlackList) {
@@ -308,28 +338,8 @@ export struct ThreadPanel {
             onImageClick: (urls: string[], index: number): void => {
               this.openImageViewer(urls, index)
             },
-            onLinkClick: (href: string) => {
-              if (href.startsWith('#/thread?')) {
-                const params = new Map<string, string>()
-                const query = href.substring(href.indexOf('?') + 1)
-                const parts = query.split('&')
-                for (let i = 0; i < parts.length; i++) {
-                  const kv = parts[i].split('=')
-                  if (kv.length === 2) params.set(kv[0], kv[1])
-                }
-                const tid = params.get('tid') || ''
-                const pageStr = params.get('page') || '1'
-                const pid = params.get('pid') || ''
-                const page = parseInt(pageStr, 10) || 1
-                if (tid.length > 0) {
-                  routerStore.navigateActivity(Screen.thread(tid, page, pid))
-                }
-              } else if (href.startsWith('#/profile?')) {
-                const uidStr = href.split('uid=')[1]
-                if (uidStr) {
-                  this.showProfileCard(uidStr.split('&')[0], 200, 200)
-                }
-              }
+            onLinkClick: (href: string): void => {
+              this.handleLinkClick(href)
             }
           }).width('100%').margin({ top: 8 })
 
@@ -391,28 +401,8 @@ export struct ThreadPanel {
                   onImageClick: (urls: string[], index: number): void => {
                     this.openImageViewer(urls, index)
                   },
-                  onLinkClick: (href: string) => {
-                    if (href.startsWith('#/thread?')) {
-                      const params = new Map<string, string>()
-                      const query = href.substring(href.indexOf('?') + 1)
-                      const parts = query.split('&')
-                      for (let i = 0; i < parts.length; i++) {
-                        const kv = parts[i].split('=')
-                        if (kv.length === 2) params.set(kv[0], kv[1])
-                      }
-                      const tid = params.get('tid') || ''
-                      const pageStr = params.get('page') || '1'
-                      const pid = params.get('pid') || ''
-                      const page = parseInt(pageStr, 10) || 1
-                      if (tid.length > 0) {
-                        routerStore.navigateActivity(Screen.thread(tid, page, pid))
-                      }
-                    } else if (href.startsWith('#/profile?')) {
-                      const uidStr = href.split('uid=')[1]
-                      if (uidStr) {
-                        this.showProfileCard(uidStr.split('&')[0], 200, 200)
-                      }
-                    }
+                  onLinkClick: (href: string): void => {
+                    this.handleLinkClick(href)
                   }
                 })
               }

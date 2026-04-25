@@ -17,9 +17,10 @@ export function parseThreadData(raw: object | null, blacklist: Set<string> = new
     rowList.push(mapRow(r, blacklist));
   }
 
+  const actualTotalRows: number = totalRows > 0 ? totalRows : rowList.length;
   const pagination: ThreadPagination = {
     page: 1,
-    totalPages: Math.ceil(totalRows / rowsPerPage),
+    totalPages: Math.ceil(actualTotalRows / rowsPerPage),
     totalRows,
   };
   const result: ThreadData = {

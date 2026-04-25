@@ -13,6 +13,7 @@ export function parseThreadData(raw: any, blacklist: Set<string> = new Set()): T
     rowList.push(mapRow(r, blacklist));
   }
 
+  const actualTotalRows = totalRows > 0 ? totalRows : rowList.length;
   return {
     rowList,
     threadInfo: null,
@@ -21,7 +22,7 @@ export function parseThreadData(raw: any, blacklist: Set<string> = new Set()): T
     rowNum: totalRows,
     pagination: {
       page: 1,
-      totalPages: Math.ceil(totalRows / rowsPerPage),
+      totalPages: Math.ceil(actualTotalRows / rowsPerPage),
       totalRows,
     },
   };
