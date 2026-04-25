@@ -1,8 +1,3 @@
-import { hilog } from '@kit.PerformanceAnalysisKit'
-
-const DOMAIN: number = 0x0001
-const TAG: string = 'ImageViewer'
-
 @Component
 export struct ImageViewer {
   @Prop urls: string[]
@@ -53,8 +48,6 @@ export struct ImageViewer {
 
   aboutToAppear(): void {
     this.currentIndex = this.initialIndex
-    hilog.info(DOMAIN, TAG, 'init index=%{public}d, count=%{public}d',
-      this.currentIndex, this.urls.length)
   }
 
   private calcImgContainedW(): number {
@@ -228,8 +221,6 @@ export struct ImageViewer {
             PinchGesture({ fingers: 2 })
               .onActionStart((event: GestureEvent) => {
                 if (this.isPageAnimating) return
-                hilog.info(DOMAIN, TAG, 'PINCH_START scale=%{public}s zoomScale=%{public}s',
-                  String(event.scale), String(this.zoomScale))
                 this.pinchBaseScale = this.zoomScale
                 this.pinchBaseOffsetX = this.zoomOffsetX
                 this.pinchBaseOffsetY = this.zoomOffsetY
@@ -241,8 +232,6 @@ export struct ImageViewer {
                 if (this.isPageAnimating) return
                 let newScale: number = this.pinchBaseScale * event.scale
                 newScale = Math.max(this.ZOOM_MIN, Math.min(newScale, this.ZOOM_MAX))
-                hilog.info(DOMAIN, TAG, 'PINCH_UPDATE scale=%{public}s eventScale=%{public}s',
-                  String(newScale), String(event.scale))
                 let imgX: number = (this.pinchCenterX - this.pinchBaseOffsetX) / this.pinchBaseScale
                 let imgY: number = (this.pinchCenterY - this.pinchBaseOffsetY) / this.pinchBaseScale
                 this.zoomScale = newScale
@@ -263,8 +252,6 @@ export struct ImageViewer {
             PanGesture({ fingers: 1, direction: PanDirection.All, distance: this.SWIPE_DISTANCE })
               .onActionStart((event: GestureEvent) => {
                 let isZoomed: boolean = this.zoomScale > 1.01
-                hilog.info(DOMAIN, TAG, 'PAN_START zoomed=%{public}s zoomScale=%{public}s pageAnim=%{public}s',
-                  String(isZoomed), String(this.zoomScale), String(this.isPageAnimating))
                 if (this.isPageAnimating) return
                 if (event.fingerList && event.fingerList.length > 0) {
                   this.lastTouchX = event.fingerList[0].localX
@@ -293,22 +280,15 @@ export struct ImageViewer {
                   this.zoomOffsetY = this.panBaseOffsetY + event.offsetY
                 } else {
                   this.swipeTranslateX = this.panBaseSwipeX + event.offsetX
-                  hilog.info(DOMAIN, TAG, 'PAN_MOVE swipeX=%{public}d', this.swipeTranslateX)
                 }
                 this.trackVelocity(event.offsetX, event.offsetY, event.timestamp)
               })
               .onActionEnd((event: GestureEvent) => {
-                if (this.isPageAnimating) {
-                  hilog.info(DOMAIN, TAG, 'PAN_END skipped (animating)')
-                  return
-                }
+                if (this.isPageAnimating) return
                 let dx: number = Math.abs(event.offsetX - this.panStartOffsetX)
                 let dy: number = Math.abs(event.offsetY - this.panStartOffsetY)
                 let isTap: boolean = dx < 6 && dy < 6
                 let isZoomed: boolean = this.zoomScale > 1.01
-                hilog.info(DOMAIN, TAG,
-                  'PAN_END zoomed=%{public}s isTap=%{public}s dx=%{public}d dy=%{public}d swipeX=%{public}d',
-                  String(isZoomed), String(isTap), dx, dy, this.swipeTranslateX)
 
                 if (isZoomed) {
                   if (isTap) {
@@ -329,8 +309,6 @@ export struct ImageViewer {
                 } else {
                   if (isTap) {
                     let dt: number = event.timestamp - this.lastTapTime
-                    hilog.info(DOMAIN, TAG, 'PAN_TAP dt=%{public}d lastTap=%{public}d',
-                      dt, this.lastTapTime)
                     if (dt < this.TAP_TIMEOUT) {
                       if (isZoomed) {
                         animateTo({ duration: 250, curve: Curve.FastOutSlowIn }, () => {
@@ -371,18 +349,14 @@ export struct ImageViewer {
                   let swipeAbs: number = Math.abs(this.swipeTranslateX)
                   let isHorizontal: boolean = dx > dy
                   if (isHorizontal && swipeAbs > this.SWIPE_THRESHOLD) {
-                    hilog.info(DOMAIN, TAG, 'SWIPE_DECIDE swipeX=%{public}d thresh=%{public}d hasPrev=%{public}s hasNext=%{public}s',
-                      this.swipeTranslateX, this.SWIPE_THRESHOLD, String(hasPrev), String(hasNext))
                     if (this.swipeTranslateX > 0 && hasPrev) {
                       this.doSwipeTo(this.currentIndex - 1)
                     } else if (this.swipeTranslateX < 0 && hasNext) {
                       this.doSwipeTo(this.currentIndex + 1)
                     } else {
-                      hilog.info(DOMAIN, TAG, 'SWIPE_BOUNCE no adjacent page')
                       this.doSwipeBounceBack()
                     }
                   } else {
-                    hilog.info(DOMAIN, TAG, 'SWIPE_BOUNCE below threshold or vertical')
                     this.doSwipeBounceBack()
                   }
                   this.resetPanTracking()
@@ -393,8 +367,6 @@ export struct ImageViewer {
         .onAreaChange((oldValue: Area, newValue: Area) => {
           if ((newValue.width as number) > 0) this.containerW = newValue.width as number
           if ((newValue.height as number) > 0) this.containerH = newValue.height as number
-          hilog.info(DOMAIN, TAG, 'AREA container=%{public}dx%{public}d',
-            this.containerW, this.containerH)
         })
       }
       .layoutWeight(1)
