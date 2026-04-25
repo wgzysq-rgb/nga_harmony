@@ -5,9 +5,9 @@ export enum FloatingPage {
   REPLY_DIALOG = 'replyDialog'
 }
 
-class FloatingLayerStoreClass {
-  private _stack: string[] = []
-  private _version: number = 0
+@Observed
+export class FloatingLayerStoreClass {
+  stack: string[] = []
 
   imageViewerUrls: string[] = []
   imageViewerIndex: number = 0
@@ -20,43 +20,43 @@ class FloatingLayerStoreClass {
   replyOnSend?: (text: string) => void
 
   get top(): string {
-    return this._stack.length > 0 ? this._stack[this._stack.length - 1] : ''
+    return this.stack.length > 0 ? this.stack[this.stack.length - 1] : ''
   }
 
   get size(): number {
-    return this._stack.length
+    return this.stack.length
   }
 
   push(page: string): void {
-    const idx = this._stack.indexOf(page)
+    const idx = this.stack.indexOf(page)
     if (idx >= 0) {
-      this._stack.splice(idx, 1)
+      const next = [...this.stack]
+      next.splice(idx, 1)
+      next.push(page)
+      this.stack = next
+    } else {
+      this.stack = [...this.stack, page]
     }
-    this._stack.push(page)
-    this.bump()
   }
 
   pop(): boolean {
-    if (this._stack.length > 0) {
-      this._stack.pop()
-      this.bump()
+    if (this.stack.length > 0) {
+      this.stack = this.stack.slice(0, -1)
       return true
     }
     return false
   }
 
   remove(page: string): void {
-    const idx = this._stack.indexOf(page)
-    if (idx >= 0) {
-      this._stack.splice(idx, 1)
-      this.bump()
-    }
+    this.stack = this.stack.filter(p => p !== page)
   }
 
-  replyConfirmActive: boolean = false
+  clear(): void {
+    this.stack = []
+  }
+
+  // Reply close handler (for system back interception)
   private _replyCloseHandler: (() => void) | null = null
-  replyConfirmOnConfirm: (() => void) | null = null
-  replyConfirmOnCancel: (() => void) | null = null
 
   registerReplyCloseHandler(handler: (() => void) | null): void {
     this._replyCloseHandler = handler
@@ -68,28 +68,21 @@ class FloatingLayerStoreClass {
     }
   }
 
-  showReplyConfirm(onConfirm: () => void, onCancel: () => void): void {
-    this.replyConfirmOnConfirm = onConfirm
-    this.replyConfirmOnCancel = onCancel
+  // Confirm dialog (simplified)
+  replyConfirmActive: boolean = false
+
+  showReplyConfirm(): void {
     this.replyConfirmActive = true
-    this.bump()
   }
 
   hideReplyConfirm(): void {
     this.replyConfirmActive = false
-    this.replyConfirmOnConfirm = null
-    this.replyConfirmOnCancel = null
-    this.bump()
   }
 
-  clear(): void {
-    this._stack = []
-    this.bump()
-  }
-
-  private bump(): void {
-    this._version++
-    AppStorage.setOrCreate('floatingStackVersion', this._version)
+  confirmAbandon(): void {
+    this.registerReplyCloseHandler(null)
+    this.stack = this.stack.filter(p => p !== FloatingPage.REPLY_DIALOG)
+    this.replyConfirmActive = false
   }
 }
 

@@ -1,6 +1,5 @@
 /**
  * 主页面 - 统一三列 Panel 架构
- * 所有断点统一使用 RouterStore 导航, 不再使用 router.pushUrl
  *
  * 第一列: 侧边栏堆栈, 固定且唯一
  * 第二列: 论坛板块堆栈, 替换模式, 堆栈深度为1
@@ -11,100 +10,50 @@
  * lg (三列): 侧边栏 + 板块列 + 活动列
  */
 
-import { appStore, FavBoard } from '../store/AppStore'
-import { routerStore, type BoardSlot, type NavEntry, Screen } from '../store/RouterStore'
-import { getCurrentUser, getForumCategories } from '../service/NgaApi'
-import { AppColors } from '../common/Constants'
-import { CategoryDataSource } from '../common/LazyDataSource'
-import { TopicListPanel } from './TopicListPanel'
-import { ThreadPanel } from './ThreadPanel'
-import { ProfilePanel } from './ProfilePanel'
-import { SearchPanel } from './SearchPanel'
-import { NotificationPanel } from './NotificationPanel'
-import { MessageListPanel } from './MessageListPanel'
-import { MessageDetailPanel } from './MessageDetailPanel'
-import { BlacklistPanel } from './BlacklistPanel'
-import { SettingsPanel } from './SettingsPanel'
-import { BrowseHistoryPanel } from './BrowseHistoryPanel'
-import { Avatar } from '../common/Avatar'
+import { appStore } from '../store/AppStore'
+import { routerStore, RouterStoreClass } from '../store/RouterStore'
+import { getCurrentUser } from '../service/NgaApi'
 import router from '@ohos.router'
-import { floatingLayerStore, FloatingPage } from '../store/FloatingLayerStore'
-import { ImageViewer } from '../common/ImageViewer'
-import { ProfileCardPopup } from '../common/ProfileCardPopup'
-import { ReplyDialog } from '../common/ReplyDialog'
+import { floatingLayerStore, FloatingLayerStoreClass, FloatingPage } from '../store/FloatingLayerStore'
+import { ActivityPanelComponent } from './ActivityPanelComponent'
+import { BoardPanelComponent } from './BoardPanelComponent'
+import { SidebarComponent } from './SidebarComponent'
+import { CommunityTabContent } from './CommunityTabContent'
+import { FloatingLayerComponent } from './FloatingLayerComponent'
+import { EmptyHint } from '../common/EmptyHint'
 
 @Entry
 @Component
 struct MainPage {
-  @State authInitialized: boolean = false
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'sm'
-  @StorageProp('routerVersion') @Watch('onRouterVersionChange') routerVersion: number = 0
-  @StorageProp('floatingStackVersion') @Watch('syncFloatingLayer') floatingStackVersion: number = 0
-  @State showImageViewer: boolean = false
-  @State showProfileCard: boolean = false
-  @State showReplyDialog: boolean = false
-  @State confirmReplyActive: boolean = false
-  @State boardSlot: BoardSlot | null = null
-  @State topActivity: NavEntry | null = null
+  @State private router: RouterStoreClass = routerStore
+  @State private floating: FloatingLayerStoreClass = floatingLayerStore
 
   aboutToAppear(): void {
-    this.syncRouterState()
-    this.syncFloatingLayer()
     this.checkAuth()
   }
 
-  private syncFloatingLayer(): void {
-    const top = floatingLayerStore.top
-    this.showImageViewer = top === FloatingPage.IMAGE_VIEWER
-    this.showProfileCard = top === FloatingPage.PROFILE_CARD
-    this.showReplyDialog = top === FloatingPage.REPLY_DIALOG
-    this.confirmReplyActive = floatingLayerStore.replyConfirmActive
-  }
-
   onBackPress(): boolean {
-    if (floatingLayerStore.size > 0) {
-      if (floatingLayerStore.top === FloatingPage.REPLY_DIALOG) {
-        floatingLayerStore.notifyReplyCloseRequested()
+    if (this.floating.size > 0) {
+      if (this.floating.top === FloatingPage.REPLY_DIALOG) {
+        this.floating.notifyReplyCloseRequested()
       } else {
-        floatingLayerStore.pop()
+        this.floating.pop()
       }
       return true
     }
-    if (routerStore.activityStack.length > 0) {
-      routerStore.back()
+    if (this.router.activityStack.length > 0) {
+      this.router.back()
       return true
     }
-    if (routerStore.boardSlot) {
-      if (this.currentBreakpoint === 'sm' || this.boardSlot?.type === 'search') {
-        routerStore.back()
+    if (this.router.boardSlot) {
+      if (this.currentBreakpoint === 'sm' || this.router.boardSlot.type === 'search') {
+        this.router.back()
         return true
       }
       return true
     }
     return false
-  }
-
-  private onRouterVersionChange(): void {
-    this.syncRouterState()
-  }
-
-  private syncRouterState(): void {
-    this.boardSlot = routerStore.boardSlot
-    this.topActivity = routerStore.topActivity
-  }
-
-  private async checkAuth(): Promise<void> {
-    if (!appStore.auth.isAuthenticated) {
-      router.replaceUrl({ url: 'pages/LoginPage' })
-      return
-    }
-
-    try {
-      await getCurrentUser(appStore.auth.token)
-    } catch (e) {
-    }
-    appStore.fetchFavorites()
-    this.authInitialized = true
   }
 
   build() {
@@ -117,152 +66,42 @@ struct MainPage {
         this.LgLayout()
       }
 
-      this.FloatingLayerContent()
+      FloatingLayerComponent({ currentBreakpoint: this.currentBreakpoint })
     }
     .width('100%').height('100%')
   }
-
-  @Builder
-  FloatingLayerContent() {
-    Stack() {
-      if (this.showImageViewer) {
-        ImageViewer({
-          urls: floatingLayerStore.imageViewerUrls,
-          initialIndex: floatingLayerStore.imageViewerIndex,
-          onClose: () => { floatingLayerStore.remove(FloatingPage.IMAGE_VIEWER) }
-        })
-      }
-      if (this.showProfileCard) {
-        Stack() {
-          Column().width('100%').height('100%').backgroundColor('#33000000')
-            .onClick(() => { floatingLayerStore.remove(FloatingPage.PROFILE_CARD) })
-          ProfileCardPopup({
-            targetUid: floatingLayerStore.profileCardUid,
-            currentBreakpoint: this.currentBreakpoint,
-            onClose: () => { floatingLayerStore.remove(FloatingPage.PROFILE_CARD) }
-          })
-          .position({
-            x: floatingLayerStore.profileCardX,
-            y: floatingLayerStore.profileCardY
-          })
-        }
-        .width('100%').height('100%')
-      }
-      if (this.showReplyDialog) {
-        Stack() {
-          Column().width('100%').height('100%').backgroundColor('#33000000')
-
-          Column().width('100%').height('100%')
-            .onClick(() => { floatingLayerStore.notifyReplyCloseRequested() })
-
-          Column() {
-            ReplyDialog({
-              dialogTitle: floatingLayerStore.replyDialogTitle,
-              onSend: floatingLayerStore.replyOnSend,
-              onClose: () => {
-                floatingLayerStore.registerReplyCloseHandler(null)
-                floatingLayerStore.remove(FloatingPage.REPLY_DIALOG)
-              }
-            })
-          }
-          .align(Alignment.Center)
-        }
-        .width('100%').height('100%')
-      }
-
-      if (this.confirmReplyActive) {
-        Stack() {
-          Column().width('100%').height('100%').backgroundColor('#33000000')
-            .onClick(() => {
-              if (floatingLayerStore.replyConfirmOnCancel) {
-                floatingLayerStore.replyConfirmOnCancel()
-              }
-              floatingLayerStore.hideReplyConfirm()
-            })
-          Column() {
-            Text('放弃编辑？').fontSize(17).fontWeight(FontWeight.Bold).fontColor(AppColors.textPrimary)
-              .margin({ top: 20 })
-            Text('已输入的内容将丢失').fontSize(14).fontColor(AppColors.textSecondary)
-              .margin({ top: 8 })
-            Row() {
-              Text('继续编辑').fontSize(16).fontWeight(FontWeight.Medium).fontColor(AppColors.primary)
-                .layoutWeight(1).textAlign(TextAlign.Center).padding({ top: 14, bottom: 14 })
-                .onClick(() => {
-                  if (floatingLayerStore.replyConfirmOnCancel) {
-                    floatingLayerStore.replyConfirmOnCancel()
-                  }
-                  floatingLayerStore.hideReplyConfirm()
-                })
-              Divider().vertical(true).height(24).color(AppColors.separator).alignSelf(ItemAlign.Center)
-              Text('放弃').fontSize(16).fontWeight(FontWeight.Medium).fontColor(AppColors.destructive)
-                .layoutWeight(1).textAlign(TextAlign.Center).padding({ top: 14, bottom: 14 })
-                .onClick(() => {
-                  if (floatingLayerStore.replyConfirmOnConfirm) {
-                    floatingLayerStore.replyConfirmOnConfirm()
-                  }
-                  floatingLayerStore.hideReplyConfirm()
-                })
-            }.width('100%').margin({ top: 16 })
-            .border({ width: { top: 0.5 }, color: AppColors.separator })
-          }
-          .width(270)
-          .backgroundColor(AppColors.bg)
-          .borderRadius(14)
-          .alignItems(HorizontalAlign.Center)
-        }
-        .width('100%').height('100%')
-      }
-    }
-    .width('100%').height('100%')
-    .hitTestBehavior(
-      (this.showImageViewer || this.showProfileCard || this.showReplyDialog)
-        ? HitTestMode.Default : HitTestMode.None
-    )
-  }
-
-  // ============== sm: 全屏内容区, 无固定侧边栏 ==============
 
   @Builder
   SmLayout() {
-    if (this.topActivity) {
+    if (this.router.topActivity) {
       Column() {
-        this.ActivityPanel()
+        ActivityPanelComponent({ topActivity: this.router.topActivity })
       }
       .width('100%').height('100%')
       .transition(TransitionEffect.opacity(0).animation({ duration: 200 }))
-    } else if (this.boardSlot) {
+    } else if (this.router.boardSlot) {
       Column() {
-        this.BoardPanel()
+        BoardPanelComponent({ boardSlot: this.router.boardSlot })
       }
       .width('100%').height('100%')
       .transition(TransitionEffect.opacity(0).animation({ duration: 200 }))
     } else {
       Column() {
-        this.MobileHomeContent()
+        CommunityTabContent({ currentBreakpoint: 'sm' })
       }
       .width('100%').height('100%')
     }
   }
 
   @Builder
-  MobileHomeContent() {
-    Column() {
-      CommunityTabContent({ currentBreakpoint: 'sm' })
-    }
-    .width('100%').height('100%')
-  }
-
-  // ============== md: 侧边栏 + 单列内容区 ==============
-
-  @Builder
   MdLayout() {
     Row() {
-      this.SidebarContent()
+      SidebarComponent()
 
       Column() {
-        if (this.topActivity) {
+        if (this.router.topActivity) {
           Column() {
-            this.ActivityPanel()
+            ActivityPanelComponent({ topActivity: this.router.topActivity })
           }
           .height('100%').width('100%')
           .transition(
@@ -273,9 +112,9 @@ struct MainPage {
                 .animation({ duration: 250 })
             )
           )
-        } else if (this.boardSlot) {
+        } else if (this.router.boardSlot) {
           Column() {
-            this.BoardPanel()
+            BoardPanelComponent({ boardSlot: this.router.boardSlot })
           }
           .height('100%').width('100%')
           .transition(
@@ -288,7 +127,7 @@ struct MainPage {
           )
         } else {
           Column() {
-            this.EmptyHint()
+            EmptyHint()
           }
           .height('100%').width('100%')
           .transition(TransitionEffect.opacity(0).animation({ duration: 150 }))
@@ -301,30 +140,28 @@ struct MainPage {
     .height('100%')
   }
 
-  // ============== lg: 侧边栏 + 板块列 + 活动列 ==============
-
   @Builder
   LgLayout() {
     Row() {
-      this.SidebarContent()
+      SidebarComponent()
 
       Row() {
-        if (this.boardSlot || !this.topActivity) {
+        if (this.router.boardSlot || !this.router.topActivity) {
           Column() {
-            if (this.boardSlot) {
-              this.BoardPanel()
+            if (this.router.boardSlot) {
+              BoardPanelComponent({ boardSlot: this.router.boardSlot })
             } else {
-              this.EmptyHint()
+              EmptyHint()
             }
           }
-          .width(this.topActivity ? '40%' : '100%')
+          .width(this.router.topActivity ? '40%' : '100%')
           .height('100%')
           .animation({ duration: 250, curve: Curve.FastOutLinearIn })
         }
 
-        if (this.topActivity) {
+        if (this.router.topActivity) {
           Column() {
-            this.ActivityPanel()
+            ActivityPanelComponent({ topActivity: this.router.topActivity })
           }
           .layoutWeight(1)
           .height('100%')
@@ -345,538 +182,16 @@ struct MainPage {
     .height('100%')
   }
 
-  // ============== 内容面板 ==============
-
-  @Builder
-  BoardPanel() {
-    if (this.boardSlot!.type === 'search') {
-      SearchPanel()
-    } else {
-      TopicListPanel({
-        boardFid: this.boardSlot!.fid,
-        boardName: this.boardSlot!.name,
-        boardStid: this.boardSlot!.stid,
-        isFavorites: this.boardSlot!.fid === -9999,
-        authorid: this.boardSlot!.authorid,
-        favor: this.boardSlot!.favor,
-        searchKey: this.boardSlot!.searchKey,
-        author: this.boardSlot!.author,
-        searchpost: this.boardSlot!.searchpost
-      })
+  private async checkAuth(): Promise<void> {
+    if (!appStore.auth.isAuthenticated) {
+      router.replaceUrl({ url: 'pages/LoginPage' })
+      return
     }
-  }
 
-  @Builder
-  ActivityPanel() {
-    if (this.topActivity!.screen.type === 'thread') {
-      ThreadPanel({
-        threadTid: this.topActivity!.screen.tid,
-        threadPid: this.topActivity!.screen.pid,
-        navEntryId: this.topActivity!.id
-      })
-    } else if (this.topActivity!.screen.type === 'profile') {
-      Column() {
-        this.PanelNavBar(this.topActivity!.screen.getTitle())
-        Column() {
-          ProfilePanel({ uid: this.topActivity!.screen.uid })
-        }
-        .layoutWeight(1).width('100%')
-      }
-      .width('100%').height('100%')
-    } else if (this.topActivity!.screen.type === 'notifications') {
-      Column() {
-        this.PanelNavBar(this.topActivity!.screen.getTitle())
-        Column() {
-          NotificationPanel()
-        }
-        .layoutWeight(1).width('100%')
-      }
-      .width('100%').height('100%')
-    } else if (this.topActivity!.screen.type === 'messages') {
-      Column() {
-        this.PanelNavBar(this.topActivity!.screen.getTitle())
-        Column() {
-          MessageListPanel({ composeToInit: this.topActivity!.screen.composeTo })
-        }
-        .layoutWeight(1).width('100%')
-      }
-      .width('100%').height('100%')
-    } else if (this.topActivity!.screen.type === 'messageDetail') {
-      Column() {
-        this.PanelNavBar(this.topActivity!.screen.getTitle())
-        Column() {
-          MessageDetailPanel({ mid: this.topActivity!.screen.mid })
-        }
-        .layoutWeight(1).width('100%')
-      }
-      .width('100%').height('100%')
-    } else if (this.topActivity!.screen.type === 'blacklist') {
-      Column() {
-        this.PanelNavBar(this.topActivity!.screen.getTitle())
-        Column() {
-          BlacklistPanel()
-        }
-        .layoutWeight(1).width('100%')
-      }
-      .width('100%').height('100%')
-    } else if (this.topActivity!.screen.type === 'settings') {
-      Column() {
-        this.PanelNavBar(this.topActivity!.screen.getTitle())
-        Column() {
-          SettingsPanel()
-        }
-        .layoutWeight(1).width('100%')
-      }
-      .width('100%').height('100%')
-    } else if (this.topActivity!.screen.type === 'browseHistory') {
-      Column() {
-        this.PanelNavBar(this.topActivity!.screen.getTitle())
-        Column() {
-          BrowseHistoryPanel()
-        }
-        .layoutWeight(1).width('100%')
-      }
-      .width('100%').height('100%')
-    } else if (this.topActivity!.screen.type === 'topicList') {
-      Column() {
-        this.PanelNavBar(this.topActivity!.screen.getTitle())
-        Column() {
-          TopicListPanel({
-            boardFid: this.topActivity!.screen.topicListFid,
-            boardName: this.topActivity!.screen.topicListName,
-            isFavorites: this.topActivity!.screen.topicListFavor === '1',
-            authorid: this.topActivity!.screen.topicListAuthorid,
-            favor: this.topActivity!.screen.topicListFavor,
-            searchpost: this.topActivity!.screen.topicListSearchpost
-          })
-        }
-        .layoutWeight(1).width('100%')
-      }
-      .width('100%').height('100%')
-    } else {
-      Column() {
-        this.PanelNavBar(this.topActivity!.screen.getTitle())
-        Column() {
-          Text('未知页面类型').fontSize(14).fontColor(AppColors.textTertiary)
-        }
-        .layoutWeight(1).width('100%')
-        .justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
-      }
-      .width('100%').height('100%')
-    }
-  }
-
-  @Builder
-  PanelNavBar(title: string) {
-    Row() {
-      Text('←').fontSize(22).fontColor(AppColors.primary)
-        .onClick(() => routerStore.back()).padding({ left: 8, right: 8 })
-      Text(title).fontSize(17).fontWeight(FontWeight.Bold).layoutWeight(1)
-        .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-    }
-    .width('100%').height(44).backgroundColor(AppColors.bgTertiary)
-    .border({ width: { bottom: 0.5 }, color: AppColors.separator }).alignItems(VerticalAlign.Center)
-  }
-
-  @Builder
-  EmptyHint() {
-    Column() {
-      Text('💬').fontSize(48).opacity(0.3).margin({ bottom: 12 })
-      Text('从左侧选择一个板块').fontSize(15).fontColor(AppColors.textTertiary)
-    }
-    .width('100%').height('100%')
-    .justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
-    .backgroundColor(AppColors.bg)
-  }
-
-  // ============== 侧边栏内容 ==============
-
-  @Builder
-  SidebarContent() {
-    Column() {
-      Column() {
-        Avatar({
-          avatar: appStore.auth.avatarUrl,
-          uid: appStore.auth.uid,
-          name: appStore.auth.nickName,
-          avatarSize: 36
-        })
-        Text(appStore.auth.nickName || '未登录')
-          .fontSize(13)
-          .fontWeight(FontWeight.Bold)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .margin({ top: 8 })
-      }
-      .width('100%')
-      .padding({ top: 14, bottom: 14 })
-      .alignItems(HorizontalAlign.Center)
-      .border({ width: { bottom: 0.5 }, color: AppColors.separator })
-      .onClick(() => {
-        if (appStore.auth.uid) {
-          routerStore.navigateActivity(Screen.profile(appStore.auth.uid))
-        }
-      })
-
-      Row() {
-        Text('🔍')
-          .fontSize(14).margin({ right: 6 })
-        Text('搜索板块、主题...')
-          .fontSize(12).fontColor(AppColors.textTertiary)
-      }
-      .width('100%').height(36).padding({ left: 10, right: 10 })
-      .backgroundColor(AppColors.bgSecondary).borderRadius(8)
-      .margin({ left: 8, right: 8, top: 8 })
-      .alignItems(VerticalAlign.Center)
-      .onClick(() => {
-        routerStore.navigateSearch()
-      })
-
-      Column() {
-        CommunityTabContent({ currentBreakpoint: this.currentBreakpoint })
-      }
-      .layoutWeight(1)
-    }
-    .width(180)
-    .height('100%')
-    .backgroundColor(AppColors.bgTertiary)
-    .border({ width: { right: 0.5 }, color: AppColors.separator })
-  }
-}
-
-// ============== 社区 Tab 内容 ==============
-
-@Component
-struct CommunityTabContent {
-  @State isLoading: boolean = true
-  @State collapsedCatIds: string[] = []
-  @State favoritesList: FavBoard[] = []
-  @Prop currentBreakpoint: string = 'sm'
-  @StorageProp('routerVersion') routerVersion: number = 0
-  @StorageProp('favVersion') @Watch('onFavVersionChange') favVersion: number = 0
-  categories: import('../model/Forum').Category[] = []
-  private categoriesDataSource: CategoryDataSource = new CategoryDataSource()
-
-  aboutToAppear(): void {
-    this.syncFavorites()
-    this.loadCategories()
-  }
-
-  private onFavVersionChange(): void {
-    this.syncFavorites()
-  }
-
-  private syncFavorites(): void {
-    this.favoritesList = [...appStore.settings.favorites]
-  }
-
-  private async loadCategories(): Promise<void> {
     try {
-      const result = await getForumCategories(appStore.auth.token)
-      if (result.ok) {
-        this.categories = result.data
-        this.categoriesDataSource.replaceAll(this.categories)
-      }
+      await getCurrentUser(appStore.auth.token)
     } catch (e) {
     }
-    this.isLoading = false
-  }
-
-  build() {
-    Scroll() {
-      Column() {
-        if (this.currentBreakpoint === 'sm') {
-          this.MobileContent()
-        } else {
-          this.SidebarListContent()
-        }
-      }
-      .width('100%')
-      .padding({ bottom: 8 })
-      .alignItems(HorizontalAlign.Center)
-    }
-    .width('100%')
-    .height('100%')
-    .scrollBar(BarState.Off)
-  }
-
-  private isFavBoard(fid: number): boolean {
-    for (const f of this.favoritesList) {
-      if (f.fid === fid) return true
-    }
-    return false
-  }
-
-  private handleToggleFav(fid: number, name: string): void {
-    if (this.isFavBoard(fid)) {
-      appStore.removeFavorite(fid)
-    } else {
-      const fb = new FavBoard()
-      fb.fid = fid
-      fb.stid = fid
-      fb.name = name
-      appStore.addFavorite(fb)
-    }
-  }
-
-  @Builder
-  SidebarListContent() {
-    if (this.favoritesList.length > 0) {
-      Column() {
-        Text('收藏板块')
-          .fontSize(11).fontWeight(FontWeight.Bold).fontColor(AppColors.textSecondary)
-          .width('100%').padding({ left: 8, top: 8, bottom: 4 })
-
-        ForEach(this.favoritesList, (fav: FavBoard) => {
-          Row() {
-            Image(`https://img4.nga.178.com/ngabbs/nga_classic/f/app/${fav.fid}.png`)
-              .width(20).height(20).borderRadius(5).objectFit(ImageFit.Cover)
-              .onError(() => {})
-            Text(fav.name)
-              .fontSize(12).maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-              .margin({ left: 6 }).layoutWeight(1)
-          }
-          .width('100%').height(32)
-          .padding({ left: 8, right: 8 })
-          .alignItems(VerticalAlign.Center)
-          .borderRadius(8)
-          .backgroundColor(this.isActiveBoard(fav.fid) ? AppColors.bgSecondary : Color.Transparent)
-          .onClick(() => {
-            routerStore.navigateForum(fav.fid, fav.name)
-          })
-        })
-      }
-      .width('100%')
-    }
-
-    if (this.isLoading) {
-      Column() {
-        LoadingProgress().width(24).height(24).color(AppColors.textTertiary)
-      }
-      .width('100%').height(60)
-      .justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
-    } else {
-      ForEach(this.categories, (cat: import('../model/Forum').Category) => {
-        this.SidebarCategorySection(cat)
-      })
-    }
-  }
-
-  @Builder
-  SidebarCategorySection(cat: import('../model/Forum').Category) {
-    Column() {
-      Row() {
-        Text('›')
-          .fontSize(14).fontColor(AppColors.textTertiary).margin({ right: 6 })
-          .rotate({ angle: this.isCatCollapsed(cat) ? 0 : 90 })
-        Text(cat.name)
-          .fontSize(13).fontWeight(FontWeight.Bold)
-        Text(this.collectBoardCount(cat).toString())
-          .fontSize(11).fontColor(AppColors.textTertiary).margin({ left: 6 })
-      }
-      .width('100%')
-      .padding({ left: 8, right: 8, top: 8, bottom: 8 })
-      .alignItems(VerticalAlign.Center)
-      .onClick(() => {
-        this.toggleCat(cat.name)
-      })
-
-      if (!this.isCatCollapsed(cat)) {
-        ForEach(this.collectBoards(cat), (board: import('../model/Forum').BoardContent) => {
-          Row() {
-            Image(`https://img4.nga.178.com/ngabbs/nga_classic/f/app/${board.fid}.png`)
-              .width(18).height(18).borderRadius(4).objectFit(ImageFit.Cover)
-              .onError(() => {})
-            Text(board.name)
-              .fontSize(12).maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-              .margin({ left: 6 }).layoutWeight(1)
-            Text(this.isFavBoard(board.fid) ? '★' : '☆')
-              .fontSize(12)
-              .fontColor(this.isFavBoard(board.fid) ? AppColors.primary : AppColors.textTertiary)
-              .margin({ left: 4 })
-              .onClick(() => {
-                this.handleToggleFav(board.fid, board.name)
-              })
-          }
-          .width('100%').height(30)
-          .padding({ left: 22, right: 8 })
-          .alignItems(VerticalAlign.Center)
-          .borderRadius(8)
-          .backgroundColor(this.isActiveBoard(board.fid) ? AppColors.bgSecondary : Color.Transparent)
-          .onClick(() => {
-            routerStore.navigateForum(board.fid, board.name)
-          })
-        })
-      }
-    }
-    .width('100%')
-    .border({ width: { top: 0.5 }, color: AppColors.separator })
-  }
-
-  // ============== 移动端网格模式 (sm) ==============
-
-  @Builder
-  MobileContent() {
-    Row() {
-      Text('🔍')
-        .fontSize(16).margin({ right: 8 })
-      Text('搜索板块、主题...')
-        .fontSize(15).fontColor(AppColors.textTertiary)
-    }
-    .width('92%').height(40).padding({ left: 12, right: 12 })
-    .backgroundColor(AppColors.bgSecondary).borderRadius(10)
-    .margin({ top: 12, bottom: 12 }).alignItems(VerticalAlign.Center)
-    .onClick(() => {
-      routerStore.navigateSearch()
-    })
-
-    if (this.favoritesList.length > 0) {
-      this.FavoritesGrid()
-    }
-
-    if (this.isLoading) {
-      Column() {
-        LoadingProgress().width(24).height(24).color(AppColors.textTertiary)
-        Text('加载中...').fontSize(14).fontColor(AppColors.textTertiary).margin({ top: 12 })
-      }
-      .width('100%').height(200)
-      .justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
-    } else {
-      List() {
-        LazyForEach(this.categoriesDataSource, (cat: import('../model/Forum').Category) => {
-          ListItem() {
-            this.CategoryGrid(cat)
-          }
-        }, (cat: import('../model/Forum').Category) => cat.id)
-      }
-      .width('100%')
-      .divider({ strokeWidth: 8, color: Color.Transparent })
-    }
-  }
-
-  @Builder
-  FavoritesGrid() {
-    Column() {
-      Row() {
-        Text('我的收藏')
-          .fontSize(13).fontWeight(FontWeight.Bold).fontColor(AppColors.primary)
-        Text(`${this.favoritesList.length} 个板块`)
-          .fontSize(11).fontColor(AppColors.textTertiary)
-      }
-      .width('100%')
-      .padding({ left: 16, right: 16, top: 14, bottom: 6 })
-      .justifyContent(FlexAlign.SpaceBetween)
-
-      GridRow({ columns: { sm: 4, md: 4, lg: 3 }, gutter: 8 }) {
-        ForEach(this.favoritesList, (fav: FavBoard) => {
-          GridCol() {
-            Column() {
-              Stack() {
-                Image(`https://img4.nga.178.com/ngabbs/nga_classic/f/app/${fav.fid}.png`)
-                  .width(44).height(44).borderRadius(12).objectFit(ImageFit.Cover)
-                  .onError(() => {})
-              }
-              .width(44).height(44).borderRadius(12).backgroundColor(AppColors.bgSecondary)
-
-              Text(fav.name)
-                .fontSize(11).maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis })
-                .constraintSize({ maxWidth: 56 })
-            }
-            .padding({ top: 8, bottom: 8 }).alignItems(HorizontalAlign.Center)
-            .onClick(() => {
-              routerStore.navigateForum(fav.fid, fav.name)
-            })
-          }
-        })
-      }
-      .width('100%').padding({ left: 8, right: 8, bottom: 14 })
-    }
-    .width('92%').backgroundColor(AppColors.bgTertiary).borderRadius(12).margin({ bottom: 8 })
-  }
-
-  @Builder
-  CategoryGrid(cat: import('../model/Forum').Category) {
-    Column() {
-      Row() {
-        Text(cat.name).fontSize(13).fontWeight(FontWeight.Bold)
-        Text(this.collectBoardCount(cat).toString())
-          .fontSize(11).fontColor(AppColors.textTertiary).margin({ left: 6 })
-      }
-      .width('100%').padding({ left: 16, right: 16, top: 12, bottom: 8 })
-
-      GridRow({ columns: { sm: 4, md: 4, lg: 3 }, gutter: 8 }) {
-        ForEach(this.collectBoards(cat), (board: import('../model/Forum').BoardContent) => {
-          GridCol() {
-            Column() {
-              Stack() {
-                Image(`https://img4.nga.178.com/ngabbs/nga_classic/f/app/${board.fid}.png`)
-                  .width(40).height(40).borderRadius(10).objectFit(ImageFit.Cover)
-                  .onError(() => {})
-              }
-              .width(40).height(40).borderRadius(10).backgroundColor(AppColors.bgSecondary)
-
-              Text(board.name)
-                .fontSize(11).maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis })
-                .constraintSize({ maxWidth: 52 })
-                .fontColor(AppColors.textPrimary)
-            }
-            .padding({ top: 10, bottom: 10 }).alignItems(HorizontalAlign.Center)
-            .onClick(() => {
-              routerStore.navigateForum(board.fid, board.name)
-            })
-          }
-        })
-      }
-      .width('100%').padding({ left: 6, right: 6 })
-      .backgroundColor(AppColors.bgTertiary).borderRadius(12)
-    }
-    .width('92%')
-  }
-
-  // ============== 工具方法 ==============
-
-  private isActiveBoard(fid: number): boolean {
-    return routerStore.boardSlot !== null && routerStore.boardSlot.fid === fid
-  }
-
-  private isCatCollapsed(cat: import('../model/Forum').Category): boolean {
-    return this.collapsedCatIds.indexOf(cat.name) >= 0
-  }
-
-  private toggleCat(catId: string): void {
-    const idx = this.collapsedCatIds.indexOf(catId)
-    if (idx >= 0) {
-      const next = [...this.collapsedCatIds]
-      next.splice(idx, 1)
-      this.collapsedCatIds = next
-    } else {
-      this.collapsedCatIds = [...this.collapsedCatIds, catId]
-    }
-  }
-
-  private collectBoards(cat: import('../model/Forum').Category): import('../model/Forum').BoardContent[] {
-    const seen = new Set<number>()
-    const boards: import('../model/Forum').BoardContent[] = []
-    if (cat.sub && Array.isArray(cat.sub)) {
-      for (const sub of cat.sub) {
-        if (sub.content && Array.isArray(sub.content)) {
-          for (const board of sub.content) {
-            if (!seen.has(board.fid)) {
-              seen.add(board.fid)
-              boards.push(board)
-            }
-          }
-        }
-      }
-    }
-    return boards
-  }
-
-  private collectBoardCount(cat: import('../model/Forum').Category): number {
-    return this.collectBoards(cat).length
+    appStore.fetchFavorites()
   }
 }

@@ -16,10 +16,7 @@ export struct ReplyDialog {
 
   private requestClose(): void {
     if (this.replyText.trim().length > 0) {
-      floatingLayerStore.showReplyConfirm(
-        () => { this.onClose() },
-        () => {}
-      )
+      floatingLayerStore.showReplyConfirm()
     } else {
       this.onClose()
     }
@@ -58,7 +55,6 @@ export struct ReplyDialog {
             if (this.onSend && this.replyText.trim()) {
               this.sending = true
               this.onSend(this.replyText.trim())
-              this.sending = false
             }
           })
       }.width('92%').margin({ top: 4 }).alignItems(VerticalAlign.Center)

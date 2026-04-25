@@ -2,7 +2,6 @@
  * 路由状态管理 - 复刻 React router.ts
  * 三列适配模式: boardSlot(中间列) + activityStack(右侧列)
  * 所有断点统一使用 RouterStore 导航, 不再使用 router.pushUrl
- * 使用 AppStorage 驱动 UI 响应式更新
  */
 
 export type LayoutMode = 'sm' | 'md' | 'lg'
@@ -168,36 +167,21 @@ export class NavEntry {
 
 let nextNavId = 0
 
-class RouterStoreClass {
-  private _sidebarTab: SidebarTab = 'community'
-  get sidebarTab(): SidebarTab { return this._sidebarTab }
+@Observed
+export class RouterStoreClass {
+  // 公开字段: 通过 @Observed 实现响应式
+  // 请勿直接修改, 统一通过 navigateForum/navigateActivity/back 等方法操作
+  boardSlot: BoardSlot | null = null
+  activityStack: NavEntry[] = []
+  sidebarTab: SidebarTab = 'community'
 
-  private _boardSlot: BoardSlot | null = null
-  get boardSlot(): BoardSlot | null { return this._boardSlot }
-
-  private _activityStack: NavEntry[] = []
-  get activityStack(): NavEntry[] { return this._activityStack }
   get topActivity(): NavEntry | null {
-    return this._activityStack.length > 0 ? this._activityStack[this._activityStack.length - 1] : null
-  }
-
-  private _version: number = 0
-  get version(): number { return this._version }
-
-  private bump(): void {
-    this._version++
-    AppStorage.setOrCreate('routerVersion', this._version)
+    return this.activityStack.length > 0 ? this.activityStack[this.activityStack.length - 1] : null
   }
 
   setSidebarTab(tab: SidebarTab): void {
-    if (this._sidebarTab === tab) return
-    this._sidebarTab = tab
-    this.bump()
-  }
-
-  setBoardSlot(board: BoardSlot | null): void {
-    this._boardSlot = board
-    this.bump()
+    if (this.sidebarTab === tab) return
+    this.sidebarTab = tab
   }
 
   navigateForum(
@@ -206,54 +190,50 @@ class RouterStoreClass {
     searchKey: string = '', author: string = '',
     searchpost: string = ''
   ): void {
-    this._boardSlot = new BoardSlot(fid, name, stid, authorid, favor, searchKey, author, searchpost)
-    this._activityStack = []
-    this.bump()
+    this.boardSlot = new BoardSlot(fid, name, stid, authorid, favor, searchKey, author, searchpost)
+    this.activityStack = []
   }
 
   navigateSearch(): void {
-    this._boardSlot = BoardSlot.search()
-    this._activityStack = []
-    this.bump()
+    this.boardSlot = BoardSlot.search()
+    this.activityStack = []
   }
 
   navigateActivity(screen: Screen, replace: boolean = false): void {
-    const stack = [...this._activityStack]
     const entry = new NavEntry(++nextNavId, screen)
 
-    if (replace && stack.length > 0) {
-      stack[stack.length - 1] = entry
+    if (replace && this.activityStack.length > 0) {
+      const next = [...this.activityStack]
+      next[next.length - 1] = entry
+      this.activityStack = next
     } else if (screen.type === 'thread') {
-      const top = stack.length > 0 ? stack[stack.length - 1] : null
+      const top = this.topActivity
       if (top && top.screen.type === 'thread') {
-        stack[stack.length - 1] = entry
+        const next = [...this.activityStack]
+        next[next.length - 1] = entry
+        this.activityStack = next
       } else {
-        stack.push(entry)
+        this.activityStack = [...this.activityStack, entry]
       }
     } else {
-      stack.push(entry)
+      this.activityStack = [...this.activityStack, entry]
     }
-    this._activityStack = stack
-    this.bump()
   }
 
   back(): void {
-    if (this._activityStack.length > 0) {
-      this._activityStack = this._activityStack.slice(0, -1)
-      this.bump()
+    if (this.activityStack.length > 0) {
+      this.activityStack = this.activityStack.slice(0, -1)
       return
     }
-    if (this._boardSlot) {
-      this._boardSlot = null
-      this.bump()
+    if (this.boardSlot) {
+      this.boardSlot = null
     }
   }
 
   reset(tab: SidebarTab = 'community'): void {
-    this._sidebarTab = tab
-    this._boardSlot = null
-    this._activityStack = []
-    this.bump()
+    this.sidebarTab = tab
+    this.boardSlot = null
+    this.activityStack = []
   }
 }
 
