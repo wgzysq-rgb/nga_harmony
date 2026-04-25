@@ -222,6 +222,65 @@ async function ngaGetRaw(path: string, params: Record<string, string>,
   return result;
 }
 
+async function ngaGetHtmlText(path: string, params: Record<string, string>,
+  cookies?: Cookies): Promise<string> {
+  const baseUrl: string = DOMAINS[activeDomainIndex];
+  const hostname: string = extractHostname(baseUrl);
+  let released: boolean = false;
+  let responseBuffer: ArrayBuffer = new ArrayBuffer(0);
+  let firstErrorMsg: string = '';
+
+  try {
+    await ngaThrottler.acquire(hostname);
+
+    const url: string = buildUrl(baseUrl, path, params);
+    const header: Record<string, string> = {
+      'User-Agent': 'NGA_WP_JW',
+      'X-User-Agent': 'Nga_Official',
+    };
+    if (cookies) {
+      header['Cookie'] = `ngaPassportUid=${cookies.uid}; ngaPassportCid=${cookies.cid}`;
+    }
+
+    try {
+      responseBuffer = await httpReq(url, http.RequestMethod.GET, header);
+    } catch (firstError) {
+      firstErrorMsg = (firstError as Error).message;
+      ngaThrottler.release(hostname);
+      released = true;
+
+      let retrySuccess = false;
+      for (let i = 1; i < DOMAINS.length; i++) {
+        const retryDomainIdx = (activeDomainIndex + i) % DOMAINS.length;
+        const retryBaseUrl = DOMAINS[retryDomainIdx];
+        const retryHostname = extractHostname(retryBaseUrl);
+
+        await ngaThrottler.acquire(retryHostname);
+        try {
+          const retryUrl = buildUrl(retryBaseUrl, path, params);
+          responseBuffer = await httpReq(retryUrl, http.RequestMethod.GET, header);
+          retrySuccess = true;
+          break;
+        } catch (retryError) {
+          firstErrorMsg = (retryError as Error).message;
+        } finally {
+          ngaThrottler.release(retryHostname);
+        }
+      }
+
+      if (!retrySuccess) {
+        throw new Error(`请求失败: ${firstErrorMsg}`);
+      }
+    }
+
+    return decodeGb18030(responseBuffer);
+  } finally {
+    if (!released) {
+      ngaThrottler.release(hostname);
+    }
+  }
+}
+
 async function ngaGetWithBaseUrl(path: string, params: Record<string, string>,
   baseUrl: string, cookies?: Cookies): Promise<object> {
   return ngaRequest(path, http.RequestMethod.GET, params, '', cookies, baseUrl, emptyStringRecord());
@@ -272,7 +331,7 @@ async function ngaRequest(path: string, method: http.RequestMethod,
       header['Content-Type'] = 'application/x-www-form-urlencoded';
     }
 
-    let responseBuffer: ArrayBuffer;
+    let responseBuffer: ArrayBuffer = new ArrayBuffer(0);
     let firstErrorMsg = '';
     try {
       responseBuffer = await httpReq(url, method, header, body || undefined);
@@ -281,18 +340,27 @@ async function ngaRequest(path: string, method: http.RequestMethod,
       ngaThrottler.release(hostname);
       released = true;
 
-      const retryDomainIdx = (activeDomainIndex + 1) % DOMAINS.length;
-      const retryBaseUrl = baseUrl || DOMAINS[retryDomainIdx];
-      const retryHostname = extractHostname(retryBaseUrl);
+      let retrySuccess = false;
+      for (let i = 1; i < DOMAINS.length; i++) {
+        const retryDomainIdx = (activeDomainIndex + i) % DOMAINS.length;
+        const retryBaseUrl = baseUrl || DOMAINS[retryDomainIdx];
+        const retryHostname = extractHostname(retryBaseUrl);
 
-      await ngaThrottler.acquire(retryHostname);
-      try {
-        const retryUrl = buildUrl(retryBaseUrl, path, params);
-        responseBuffer = await httpReq(retryUrl, method, header, body);
-      } catch (retryError) {
+        await ngaThrottler.acquire(retryHostname);
+        try {
+          const retryUrl = buildUrl(retryBaseUrl, path, params);
+          responseBuffer = await httpReq(retryUrl, method, header, body);
+          retrySuccess = true;
+          break;
+        } catch (retryError) {
+          firstErrorMsg = (retryError as Error).message;
+        } finally {
+          ngaThrottler.release(retryHostname);
+        }
+      }
+
+      if (!retrySuccess) {
         throw new Error(`请求失败: ${firstErrorMsg}`);
-      } finally {
-        ngaThrottler.release(retryHostname);
       }
     }
 
@@ -372,6 +440,8 @@ interface INgaClient {
     extraHeaders?: Record<string, string>) => Promise<ArrayBuffer>;
   getWithBaseUrl: (path: string, params: Record<string, string>,
     baseUrl: string, cookies?: Cookies) => Promise<object>;
+  getHtmlText: (path: string, params: Record<string, string>,
+    cookies?: Cookies) => Promise<string>;
   getCaptchaV2: (captchaId: string) => Promise<string>;
   loginPassword: (loginParams: LoginParams) => Promise<LoginResultData>;
   rotateDomain: () => void;
@@ -404,6 +474,11 @@ const client: INgaClient = {
   async getWithBaseUrl(path: string, params: Record<string, string>,
     baseUrl: string, cookies?: Cookies): Promise<object> {
     return ngaGetWithBaseUrl(path, params, baseUrl, cookies);
+  },
+
+  async getHtmlText(path: string, params: Record<string, string>,
+    cookies?: Cookies): Promise<string> {
+    return ngaGetHtmlText(path, params, cookies);
   },
 
   async getCaptchaV2(captchaId: string): Promise<string> {

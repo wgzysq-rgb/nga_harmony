@@ -8,13 +8,14 @@ import { sessionStore, type Session } from './SessionStore';
 import { parseForumCategories } from '../parser/ForumParser';
 import { parseTopicList } from '../parser/TopicParser';
 import { parseThreadData } from '../parser/ThreadParser';
+import { parseHtmlToRawJson } from '../parser/HtmlThreadParser';
 import { parseNotifications } from '../parser/NotificationParser';
 import { parseMessageList, parseMessageDetail } from '../parser/MessageParser';
 import { parseNgaError } from '../parser/ErrorParser';
 import { parseFromClient } from '../parser/ClientParser';
 import { resolveAttachUrl } from './ContentParser';
 import type { Category } from '../model/Forum';
-import type { ThreadRowInfo, Attachment } from '../model/Thread';
+import type { ThreadData, ThreadRowInfo, Attachment } from '../model/Thread';
 import type { TopicListInfo } from '../model/Topic';
 import type { NgaNotification } from '../model/Notification';
 import type { MessageListInfo, MessageDetailInfo } from '../model/Message';
@@ -506,6 +507,21 @@ export async function getTopicList(token: string, params: TopicListParams,
   return result;
 }
 
+// ============== 调试开关 ==============
+
+/** 调试开关：true 时 getThread 强制走 HTML 解析模式，跳过 JSON API */
+const HTML_MODE_KEY: string = 'nga_forceHtmlMode'
+
+function getForceHtmlMode(): boolean {
+  return true;
+  //const stored: boolean = AppStorage.get<boolean>(HTML_MODE_KEY) ?? false
+  //return stored
+}
+
+export function setForceHtmlMode(v: boolean): void {
+  AppStorage.setOrCreate<boolean>(HTML_MODE_KEY, v)
+}
+
 // ============== 帖子详情 ==============
 
 export async function getThread(token: string, tid: string, pid: string,
@@ -524,104 +540,163 @@ export async function getThread(token: string, tid: string, pid: string,
       return result;
     }
 
-    const ngaParams: Record<string, string> = {
-      'page': page || '1',
-      '__output': '8',
-      'noprefix': '',
-      'v2': '',
-    };
-    if (tid) ngaParams['tid'] = tid;
-    if (pid) ngaParams['pid'] = pid;
-    if (authorid) ngaParams['authorid'] = authorid;
+    if (getForceHtmlMode() || !tid) {
+      // 调试模式 / 强制走 HTML 解析
+      const htmlParams: Record<string, string> = {
+        'tid': tid || '',
+        'page': page || '1',
+      };
+      const html: string = await ngaClient.getHtmlText('/read.php', htmlParams, { uid: session.uid, cid: session.cid });
+      const rawHtml: object = parseHtmlToRawJson(html);
+      fillThreadResult(rawHtml as Record<string, Object>, result, blacklist);
+    } else {
+      // 优先尝试 JSON API (__output=8)
+      const ngaParams: Record<string, string> = {
+        'page': page || '1',
+        '__output': '8',
+        'noprefix': '',
+        'v2': '',
+      };
+      if (tid) ngaParams['tid'] = tid;
+      if (pid) ngaParams['pid'] = pid;
+      if (authorid) ngaParams['authorid'] = authorid;
 
-    const raw = await ngaClient.get('/read.php', ngaParams, { uid: session.uid, cid: session.cid }) as Record<string, Object>;
-    const error = parseNgaError(raw);
-    if (error) {
-      result.error = error;
-      return result;
-    }
+      const raw = await ngaClient.get('/read.php', ngaParams, { uid: session.uid, cid: session.cid }) as Record<string, Object>;
+      const error = parseNgaError(raw);
 
-    const data = parseThreadData(raw, blacklist);
-    const dataObj = raw?.['data'] as Record<string, Object> | undefined;
-
-    if (dataObj?.['__PAGE']) {
-      data.pagination.page = Number(dataObj['__PAGE']);
-    }
-
-    const __U = (dataObj?.['__U'] ?? {}) as Record<string, Object>;
-    const forumInfo = data.__F as Record<string, string>;
-    result.forumName = forumInfo?.['name'] ?? '';
-
-    const mapRowToPost = (row: ThreadRowInfo): PostInfo => {
-      const userInfo = __U[String(row.authorid)] as Record<string, Object> | undefined;
-      const post = new PostInfo();
-      post.pid = row.pid;
-      post.lou = row.lou;
-      post.authorid = row.authorid;
-      post.author = String(userInfo?.['username'] ?? row.author ?? '');
-      post.subject = row.subject;
-      post.content = row.content;
-      post.postdate = row.postdate;
-      post.level = String(userInfo?.['level'] ?? row.level ?? '');
-      post.yz = row.yz;
-      post.avatar = String(userInfo?.['avatar'] ?? row.js_escap_avatar ?? '');
-      post.signature = String(userInfo?.['signature'] ?? row.signature ?? '');
-      post.attachs = row.attachs.map((a: Attachment): PostAttachInfo => {
-        const info = new PostAttachInfo();
-        info.aid = a.aid;
-        info.attachurl = resolveAttachUrl(a.attachurl);
-        info.url_utf8_org_name = a.url_utf8_org_name;
-        info.name = a.name;
-        info.ext = a.ext;
-        info.type = a.type;
-        info.size = a.size;
-        info.thumb = a.thumb ? resolveAttachUrl(a.thumb) : '';
-        info.dscp = a.dscp;
-        info.subid = a.subid;
-        return info;
-      });
-      post.comments = row.comments.map(mapRowToPost);
-      post.hotReplies = row.hotReplies;
-      post.fromClient = parseFromClient(row.from_client);
-      post.from_client_model = row.from_client_model;
-      post.isanonymous = row.isanonymous;
-      post.alterinfo = row.alterinfo;
-      post.score = row.score;
-      post.score_2 = row.score_2;
-      post.isInBlackList = row.isInBlackList;
-      post.isMuted = row.isMuted;
-      post.reputation = Number(userInfo?.['reputation'] ?? row.reputation ?? 0);
-      post.memberGroup = String(userInfo?.['__groupName'] ?? row.memberGroup ?? '');
-      post.postCount = String(userInfo?.['postCount'] ?? row.postCount ?? '');
-      post.muteTime = row.muteTime;
-      return post;
-    };
-
-    result.posts = data.rowList.map(mapRowToPost);
-
-    // 提取 threadInfo
-    if (dataObj?.['__T']) {
-      const __T = dataObj['__T'] as Record<string, Object>;
-      if (__T['tid']) {
-        result.threadInfo = __T;
+      if (error) {
+        // JSON API 失败，降级为 HTML 解析
+        const htmlParams: Record<string, string> = {
+          'tid': tid || '',
+          'page': page || '1',
+        };
+        const html: string = await ngaClient.getHtmlText('/read.php', htmlParams, { uid: session.uid, cid: session.cid });
+        const rawHtml: object = parseHtmlToRawJson(html);
+        fillThreadResult(rawHtml as Record<string, Object>, result, blacklist);
       } else {
-        const tKeys = Object.keys(__T);
-        if (tKeys.length > 0) {
-          const first = __T[tKeys[0]] as Record<string, Object> | undefined;
-          if (first && typeof first === 'object' && first['tid']) {
-            result.threadInfo = first;
-          }
+        fillThreadResult(raw as Record<string, Object>, result, blacklist);
+      }
+    }
+  } catch (e) {
+    result.error = (e as Error).message ?? '获取帖子详情失败';
+  }
+  return result;
+}
+
+/**
+ * 从 NGA 原始 JSON 填充 ThreadResult（JSON API 与 HTML 降级共享）
+ */
+function fillThreadResult(raw: Record<string, Object>, result: ThreadResult,
+  blacklist: Set<string>): void {
+  const data: ThreadData = parseThreadData(raw, blacklist);
+  const dataObj: Record<string, Object> | undefined = raw?.['data'] as Record<string, Object> | undefined;
+
+  if (dataObj?.['__PAGE']) {
+    data.pagination.page = Number(dataObj['__PAGE']);
+  }
+
+  const __U: Record<string, Object> = (dataObj?.['__U'] ?? {}) as Record<string, Object>;
+  const forumInfo: Record<string, string> = data.__F as Record<string, string>;
+  result.forumName = forumInfo?.['name'] ?? '';
+
+  const mapRowToPost = (row: ThreadRowInfo): PostInfo => {
+    const userInfo: Record<string, Object> | undefined = __U[String(row.authorid)] as Record<string, Object> | undefined;
+    const post: PostInfo = new PostInfo();
+    post.pid = row.pid;
+    post.lou = row.lou;
+    post.authorid = row.authorid;
+    post.author = String(userInfo?.['username'] ?? row.author ?? '');
+    post.subject = row.subject;
+    post.content = row.content;
+    post.postdate = row.postdate;
+    post.level = String(userInfo?.['level'] ?? row.level ?? '');
+    post.yz = row.yz;
+    post.avatar = String(userInfo?.['avatar'] ?? row.js_escap_avatar ?? '');
+    post.signature = String(userInfo?.['signature'] ?? row.signature ?? '');
+    post.attachs = row.attachs.map((a: Attachment): PostAttachInfo => {
+      const info: PostAttachInfo = new PostAttachInfo();
+      info.aid = a.aid;
+      info.attachurl = resolveAttachUrl(a.attachurl);
+      info.url_utf8_org_name = a.url_utf8_org_name;
+      info.name = a.name;
+      info.ext = a.ext;
+      info.type = a.type;
+      info.size = a.size;
+      info.thumb = a.thumb ? resolveAttachUrl(a.thumb) : '';
+      info.dscp = a.dscp;
+      info.subid = a.subid;
+      return info;
+    });
+    post.comments = row.comments.map(mapRowToPost);
+    post.hotReplies = row.hotReplies;
+    post.fromClient = parseFromClient(row.from_client);
+    post.from_client_model = row.from_client_model;
+    post.isanonymous = row.isanonymous;
+    post.alterinfo = row.alterinfo;
+    post.score = row.score;
+    post.score_2 = row.score_2;
+    post.isInBlackList = row.isInBlackList;
+    post.isMuted = row.isMuted;
+    post.reputation = Number(userInfo?.['reputation'] ?? row.reputation ?? 0);
+    post.memberGroup = String(userInfo?.['__groupName'] ?? row.memberGroup ?? '');
+    post.postCount = String(userInfo?.['postCount'] ?? row.postCount ?? '');
+    post.muteTime = row.muteTime;
+    return post;
+  };
+
+  result.posts = data.rowList.map(mapRowToPost);
+
+  if (dataObj?.['__T']) {
+    const __T: Record<string, Object> = dataObj['__T'] as Record<string, Object>;
+    if (__T['tid']) {
+      result.threadInfo = __T;
+    } else {
+      const tKeys: string[] = Object.keys(__T);
+      if (tKeys.length > 0) {
+        const first: Record<string, Object> | undefined = __T[tKeys[0]] as Record<string, Object> | undefined;
+        if (first && typeof first === 'object' && first['tid']) {
+          result.threadInfo = first;
         }
       }
     }
+  }
 
-    result.pagination = new ThreadPagination();
-    result.pagination.page = data.pagination.page;
-    result.pagination.totalPages = data.pagination.totalPages;
-    result.pagination.totalRows = data.pagination.totalRows;
-    result.ok = true;
+  result.pagination = new ThreadPagination();
+  result.pagination.page = data.pagination.page;
+  result.pagination.totalPages = data.pagination.totalPages;
+  result.pagination.totalRows = data.pagination.totalRows;
+  result.ok = true;
+}
+
+/**
+ * 通过 HTML 响应体获取帖子详情（JSON API 降级方案）
+ * 当 __output=8 请求被 NGA 概率拒绝时使用
+ */
+export async function getThreadHtml(token: string, tid: string, page: string,
+  blacklist: Set<string> = new Set()): Promise<ThreadResult> {
+  const result: ThreadResult = new ThreadResult();
+  const session = sessionStore.get(token);
+  if (!session) {
+    result.error = '未登录';
+    return result;
+  }
+
+  try {
+    if (!tid) {
+      result.error = '缺少 tid';
+      return result;
+    }
+
+    const params: Record<string, string> = {
+      'tid': tid,
+      'page': page || '1',
+    };
+
+    const html: string = await ngaClient.getHtmlText('/read.php', params, { uid: session.uid, cid: session.cid });
+    const raw: object = parseHtmlToRawJson(html);
+    fillThreadResult(raw as Record<string, Object>, result, blacklist);
   } catch (e) {
-    result.error = (e as Error).message ?? '获取帖子详情失败';
+    result.error = (e as Error).message ?? '获取帖子详情失败(HTML降级)';
   }
   return result;
 }
