@@ -1,59 +1,14 @@
-/**
- * 嵌入式帖子详情面板 - 用于 md/lg 布局的右侧列
- * 复刻 React ThreadPage 的嵌入模式
- * 返回操作通过 routerStore.back() 实现
- */
-
+import { display } from '@kit.ArkUI'
 import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
 import { getThread, getPostAuth, postReply, addFavorite, ThreadResult, PostInfo, PostAttachInfo, PostAuthResult, PostReplyResult } from '../service/NgaApi'
 import { AppColors } from '../common/Constants'
 import { formatTime, escHtml } from '../common/Utils'
-import { componentUtils } from '@kit.ArkUI'
 import { Avatar } from '../common/Avatar'
 import { parseBBCode } from '../service/BBCodeParser'
-import { ProfileCardPopup } from '../common/ProfileCardPopup'
 import { BBCodeContentView } from '../common/BBCodeContentView'
 import { PostInfoDataSource } from '../common/LazyDataSource'
-
-@CustomDialog
-struct ThreadReplyDialog {
-  controller: CustomDialogController
-  @State replyText: string = ''
-  @State sending: boolean = false
-  dialogTitle: string = '回复'
-  onSend?: (text: string) => void
-  onClose?: () => void
-
-  build() {
-    Column() {
-      Divider().width(36).height(4).borderRadius(2).color('#D1D1D6').margin({ top: 8, bottom: 12 })
-      Row() {
-        Text(this.dialogTitle).fontSize(17).fontWeight(FontWeight.Bold).layoutWeight(1)
-        Button('取消').fontSize(15).fontColor(AppColors.textTertiary).backgroundColor(Color.Transparent)
-          .onClick(() => { if (this.onClose) { this.onClose() } else { this.controller.close() } })
-      }.width('100%').padding({ left: 16, right: 16 })
-
-      TextArea({ text: this.replyText, placeholder: '写回复...' })
-        .width('92%').height(120).margin({ top: 12 }).padding(12).fontSize(15)
-        .borderRadius(12).backgroundColor(AppColors.bgSecondary)
-        .onChange((value: string) => { this.replyText = value })
-
-      Button(this.sending ? '发送中...' : '发送')
-        .width('92%').height(44).margin({ top: 12, bottom: 20 }).fontSize(16)
-        .fontColor(Color.White).backgroundColor(AppColors.primary).borderRadius(12)
-        .enabled(!this.sending && this.replyText.trim().length > 0)
-        .onClick(() => {
-          if (this.onSend && this.replyText.trim()) {
-            this.sending = true
-            this.onSend(this.replyText.trim())
-            this.sending = false
-          }
-        })
-    }
-    .backgroundColor(AppColors.bg).borderRadius({ topLeft: 14, topRight: 14 }).alignItems(HorizontalAlign.Center)
-  }
-}
+import { floatingLayerStore, FloatingPage } from '../store/FloatingLayerStore'
 
 @Component
 export struct ThreadPanel {
@@ -76,56 +31,31 @@ export struct ThreadPanel {
   @State expandedSigs: Set<string> = new Set()
   @State expandedComments: Set<string> = new Set()
   @State expandedAttachs: Set<string> = new Set()
-  @State @Watch('onImageViewerChanged') imageViewerVisible: boolean = false
-  @State imageViewerUrls: string[] = []
-  @State imageViewerInitialIndex: number = 0
-  @State imageViewerCurrentIndex: number = 0
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'sm'
-  @StorageProp('profileCardVisible') @Watch('onExternalProfileCardClose') storageProfileCardVis: boolean = false
-
-  @State showReplyDialog: boolean = false
-  @State profileCardUid: string = ''
-  @State @Watch('onProfileCardVisChanged') profileCardVisible: boolean = false
-  @State profileCardScreenX: number = 0
-  @State profileCardScreenY: number = 0
   private scroller: Scroller = new Scroller()
   private replyTargetPid: number = 0
 
   private showProfileCard(uid: string, screenX: number, screenY: number): void {
-    this.profileCardUid = uid
     const cardW: number = 280
     const cardH: number = 400
     const pad: number = 8
+    let posX: number = screenX
+    let posY: number = screenY
     try {
-      const info = componentUtils.getRectangleById('threadPanelRoot')
       const context = this.getUIContext()
-      const rootX = context.px2vp(Number(info.windowOffset.x))
-      const rootY = context.px2vp(Number(info.windowOffset.y))
-      const rootW = context.px2vp(Number(info.size.width))
-      const rootH = context.px2vp(Number(info.size.height))
-      const localX = screenX - rootX
-      const localY = screenY - rootY
-      this.profileCardScreenX = Math.max(pad, Math.min(localX - cardW / 2, rootW - cardW - pad))
-      this.profileCardScreenY = Math.max(pad, Math.min(localY + pad, rootH - cardH - pad))
+      const displayInfo = display.getDefaultDisplaySync()
+      const screenW = context.px2vp(displayInfo.width)
+      const screenH = context.px2vp(displayInfo.height)
+      posX = Math.max(pad, Math.min(screenX - cardW / 2, screenW - cardW - pad))
+      posY = Math.max(pad, Math.min(screenY + pad, screenH - cardH - pad))
     } catch (e) {
-      this.profileCardScreenX = screenX - cardW / 2
-      this.profileCardScreenY = screenY + pad
+      posX = screenX - cardW / 2
+      posY = screenY + pad
     }
-    this.profileCardVisible = true
-  }
-
-  private onProfileCardVisChanged(): void {
-    AppStorage.setOrCreate('profileCardVisible', this.profileCardVisible)
-  }
-
-  private onExternalProfileCardClose(): void {
-    if (!this.storageProfileCardVis && this.profileCardVisible) {
-      this.profileCardVisible = false
-    }
-  }
-
-  private onImageViewerChanged(): void {
-    AppStorage.setOrCreate('imageViewerVisible', this.imageViewerVisible)
+    floatingLayerStore.profileCardUid = uid
+    floatingLayerStore.profileCardX = posX
+    floatingLayerStore.profileCardY = posY
+    floatingLayerStore.push(FloatingPage.PROFILE_CARD)
   }
 
   aboutToAppear(): void {
@@ -232,7 +162,7 @@ export struct ThreadPanel {
     } catch (e) {
       appStore.showToast((e as Error).message || '操作失败')
     }
-    this.showReplyDialog = false
+    floatingLayerStore.remove(FloatingPage.REPLY_DIALOG)
   }
 
   private async handleFavorite(): Promise<void> {
@@ -250,10 +180,15 @@ export struct ThreadPanel {
     }
   }
 
+  private openImageViewer(urls: string[], index: number): void {
+    floatingLayerStore.imageViewerUrls = urls
+    floatingLayerStore.imageViewerIndex = index
+    floatingLayerStore.push(FloatingPage.IMAGE_VIEWER)
+  }
+
   build() {
     Stack() {
       Column() {
-        // 嵌入式导航栏 - 返回使用 routerStore.back()
         Row() {
         Text('←').fontSize(22).fontColor(AppColors.primary)
           .onClick(() => routerStore.back()).padding({ left: 8, right: 8 })
@@ -265,7 +200,6 @@ export struct ThreadPanel {
       .width('100%').height(44).backgroundColor(AppColors.bgTertiary)
       .border({ width: { bottom: 0.5 }, color: AppColors.separator }).alignItems(VerticalAlign.Center)
 
-      // 只看楼主
       Row() {
         Text('只看楼主').fontSize(13)
           .fontColor(this.authorOnly ? AppColors.primary : AppColors.textTertiary)
@@ -316,7 +250,6 @@ export struct ThreadPanel {
     }
     .width('100%').height('100%')
 
-      // 浮动回复按钮
       Row() {
         Stack() {
           Image($r('app.media.icon_reply'))
@@ -326,54 +259,20 @@ export struct ThreadPanel {
         .width(40).height(40).borderRadius(20)
         .backgroundColor(Color.White)
         .shadow({ radius: 16, color: '#40000000', offsetY: 4 })
-        .onClick(() => { this.replyTargetPid = 0; this.showReplyDialog = true })
+        .onClick(() => {
+          this.replyTargetPid = 0
+          floatingLayerStore.replyOnSend = (text: string): void => { this.handleReplySend(text) }
+          floatingLayerStore.push(FloatingPage.REPLY_DIALOG)
+        })
       }.width('100%').justifyContent(FlexAlign.End).padding({ right: 16, bottom: 16 })
-
-      if (this.imageViewerVisible) {
-        this.ImageViewerBuilder()
-      }
-
-      if (this.profileCardVisible) {
-        this.ProfileCardOverlay()
-      }
     }
     .width('100%').height('100%').backgroundColor(AppColors.bg).alignContent(Alignment.BottomEnd)
     .id('threadPanelRoot')
-    .bindContentCover(this.showReplyDialog, this.ReplyDialogBuilder())
-  }
-
-  @Builder
-  ReplyDialogBuilder() {
-    ThreadReplyDialog({
-      dialogTitle: this.replyTargetPid > 0 ? '评论' : '回复',
-      onSend: (text: string) => this.handleReplySend(text),
-      onClose: () => { this.showReplyDialog = false }
-    })
-  }
-
-  @Builder
-  ProfileCardOverlay() {
-    Stack() {
-      ProfileCardPopup({
-        targetUid: this.profileCardUid,
-        currentBreakpoint: this.currentBreakpoint,
-        onClose: () => { this.profileCardVisible = false }
-      })
-        .position({
-          x: this.profileCardScreenX,
-          y: this.profileCardScreenY
-        })
-    }
-    .width('100%')
-    .height('100%')
-    .hitTestBehavior(HitTestMode.Transparent)
-    .onClick(() => { this.profileCardVisible = false })
   }
 
   @Builder
   PostItem(post: PostInfo) {
     if (this.authorOnly && this.threadAuthorId.length > 0 && String(post.authorid) !== this.threadAuthorId) {
-      // 不渲染
     } else {
       Column() {
         Row() {
@@ -407,10 +306,7 @@ export struct ThreadPanel {
           BBCodeContentView({
             nodes: parseBBCode(post.content),
             onImageClick: (urls: string[], index: number): void => {
-              this.imageViewerUrls = urls
-              this.imageViewerInitialIndex = index
-              this.imageViewerCurrentIndex = index
-              this.imageViewerVisible = true
+              this.openImageViewer(urls, index)
             },
             onLinkClick: (href: string) => {
               if (href.startsWith('#/thread?')) {
@@ -470,10 +366,7 @@ export struct ThreadPanel {
                             break
                           }
                         }
-                        this.imageViewerUrls = urls
-                        this.imageViewerInitialIndex = idx
-                        this.imageViewerCurrentIndex = idx
-                        this.imageViewerVisible = true
+                        this.openImageViewer(urls, idx)
                       }
                     })
                 })
@@ -496,10 +389,7 @@ export struct ThreadPanel {
                 BBCodeContentView({
                   nodes: parseBBCode(post.signature),
                   onImageClick: (urls: string[], index: number): void => {
-                    this.imageViewerUrls = urls
-                    this.imageViewerInitialIndex = index
-                    this.imageViewerCurrentIndex = index
-                    this.imageViewerVisible = true
+                    this.openImageViewer(urls, index)
                   },
                   onLinkClick: (href: string) => {
                     if (href.startsWith('#/thread?')) {
@@ -537,7 +427,8 @@ export struct ThreadPanel {
             Text('回复').fontSize(13).fontColor(AppColors.textTertiary)
               .onClick(() => {
                 this.replyTargetPid = post.pid
-                this.showReplyDialog = true
+                floatingLayerStore.replyOnSend = (text: string): void => { this.handleReplySend(text) }
+                floatingLayerStore.push(FloatingPage.REPLY_DIALOG)
               })
           }.width('100%').justifyContent(FlexAlign.End).margin({ top: 8 })
 
@@ -572,37 +463,5 @@ export struct ThreadPanel {
       }
       .width('100%').padding({ left: 16, right: 16, top: 12, bottom: 12 }).alignItems(HorizontalAlign.Start)
     }
-  }
-
-  @Builder
-  ImageViewerBuilder() {
-    Column() {
-      Row() {
-        Blank().layoutWeight(1)
-        Text('✕').fontSize(24).fontColor(Color.White).padding({ right: 16, top: 16 })
-          .onClick(() => { this.imageViewerVisible = false })
-      }.width('100%')
-
-      Swiper() {
-        ForEach(this.imageViewerUrls, (url: string) => {
-          Image(url).objectFit(ImageFit.Contain).width('100%').onError(() => {})
-        })
-      }
-      .index(this.imageViewerInitialIndex)
-      .indicator(this.imageViewerUrls.length > 1)
-      .loop(false)
-      .onChange((index: number) => { this.imageViewerCurrentIndex = index })
-      .layoutWeight(1)
-      .width('100%')
-
-      if (this.imageViewerUrls.length > 1) {
-        Text(`${this.imageViewerCurrentIndex + 1} / ${this.imageViewerUrls.length}`)
-          .fontSize(16).fontColor(Color.White).margin({ top: 12, bottom: 32 })
-      } else {
-        Blank().height(32)
-      }
-    }
-    .width('100%').height('100%')
-    .backgroundColor(Color.Black)
   }
 }

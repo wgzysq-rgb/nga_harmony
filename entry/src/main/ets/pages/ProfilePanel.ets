@@ -17,10 +17,24 @@ export struct ProfilePanel {
   @State checkinLoading: boolean = false
   @State checkinResult: string = ''
 
-  private uid: string = ''
+  @Prop @Watch('onUidChange') uid: string = ''
   private isOwnProfile: boolean = false
+  private uidInitialized: boolean = false
 
   aboutToAppear(): void {
+    this.uidInitialized = true
+    this.isOwnProfile = appStore.auth.uid === this.uid
+    this.loadProfile()
+    if (this.isOwnProfile) {
+      this.loadUnreadCount()
+    }
+  }
+
+  private onUidChange(): void {
+    if (!this.uidInitialized) {
+      return
+    }
+    this.profile = null
     this.isOwnProfile = appStore.auth.uid === this.uid
     this.loadProfile()
     if (this.isOwnProfile) {

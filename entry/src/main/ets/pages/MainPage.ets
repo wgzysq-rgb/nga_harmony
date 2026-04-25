@@ -28,6 +28,10 @@ import { SettingsPanel } from './SettingsPanel'
 import { BrowseHistoryPanel } from './BrowseHistoryPanel'
 import { Avatar } from '../common/Avatar'
 import router from '@ohos.router'
+import { floatingLayerStore, FloatingPage } from '../store/FloatingLayerStore'
+import { ImageViewer } from '../common/ImageViewer'
+import { ProfileCardPopup } from '../common/ProfileCardPopup'
+import { ReplyDialog } from '../common/ReplyDialog'
 
 @Entry
 @Component
@@ -35,21 +39,35 @@ struct MainPage {
   @State authInitialized: boolean = false
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'sm'
   @StorageProp('routerVersion') @Watch('onRouterVersionChange') routerVersion: number = 0
+  @StorageProp('floatingStackVersion') @Watch('syncFloatingLayer') floatingStackVersion: number = 0
+  @State showImageViewer: boolean = false
+  @State showProfileCard: boolean = false
+  @State showReplyDialog: boolean = false
+  @State confirmReplyActive: boolean = false
   @State boardSlot: BoardSlot | null = null
   @State topActivity: NavEntry | null = null
 
   aboutToAppear(): void {
     this.syncRouterState()
+    this.syncFloatingLayer()
     this.checkAuth()
   }
 
+  private syncFloatingLayer(): void {
+    const top = floatingLayerStore.top
+    this.showImageViewer = top === FloatingPage.IMAGE_VIEWER
+    this.showProfileCard = top === FloatingPage.PROFILE_CARD
+    this.showReplyDialog = top === FloatingPage.REPLY_DIALOG
+    this.confirmReplyActive = floatingLayerStore.replyConfirmActive
+  }
+
   onBackPress(): boolean {
-    if (AppStorage.get<boolean>('imageViewerVisible') ?? false) {
-      AppStorage.setOrCreate('imageViewerVisible', false)
-      return true
-    }
-    if (AppStorage.get<boolean>('profileCardVisible') ?? false) {
-      AppStorage.setOrCreate('profileCardVisible', false)
+    if (floatingLayerStore.size > 0) {
+      if (floatingLayerStore.top === FloatingPage.REPLY_DIALOG) {
+        floatingLayerStore.notifyReplyCloseRequested()
+      } else {
+        floatingLayerStore.pop()
+      }
       return true
     }
     if (routerStore.activityStack.length > 0) {
@@ -90,13 +108,116 @@ struct MainPage {
   }
 
   build() {
-    if (this.currentBreakpoint === 'sm') {
-      this.SmLayout()
-    } else if (this.currentBreakpoint === 'md') {
-      this.MdLayout()
-    } else {
-      this.LgLayout()
+    Stack() {
+      if (this.currentBreakpoint === 'sm') {
+        this.SmLayout()
+      } else if (this.currentBreakpoint === 'md') {
+        this.MdLayout()
+      } else {
+        this.LgLayout()
+      }
+
+      this.FloatingLayerContent()
     }
+    .width('100%').height('100%')
+  }
+
+  @Builder
+  FloatingLayerContent() {
+    Stack() {
+      if (this.showImageViewer) {
+        ImageViewer({
+          urls: floatingLayerStore.imageViewerUrls,
+          initialIndex: floatingLayerStore.imageViewerIndex,
+          onClose: () => { floatingLayerStore.remove(FloatingPage.IMAGE_VIEWER) }
+        })
+      }
+      if (this.showProfileCard) {
+        Stack() {
+          Column().width('100%').height('100%').backgroundColor('#33000000')
+            .onClick(() => { floatingLayerStore.remove(FloatingPage.PROFILE_CARD) })
+          ProfileCardPopup({
+            targetUid: floatingLayerStore.profileCardUid,
+            currentBreakpoint: this.currentBreakpoint,
+            onClose: () => { floatingLayerStore.remove(FloatingPage.PROFILE_CARD) }
+          })
+          .position({
+            x: floatingLayerStore.profileCardX,
+            y: floatingLayerStore.profileCardY
+          })
+        }
+        .width('100%').height('100%')
+      }
+      if (this.showReplyDialog) {
+        Stack() {
+          Column().width('100%').height('100%').backgroundColor('#33000000')
+
+          Column().width('100%').height('100%')
+            .onClick(() => { floatingLayerStore.notifyReplyCloseRequested() })
+
+          Column() {
+            ReplyDialog({
+              dialogTitle: floatingLayerStore.replyDialogTitle,
+              onSend: floatingLayerStore.replyOnSend,
+              onClose: () => {
+                floatingLayerStore.registerReplyCloseHandler(null)
+                floatingLayerStore.remove(FloatingPage.REPLY_DIALOG)
+              }
+            })
+          }
+          .align(Alignment.Center)
+        }
+        .width('100%').height('100%')
+      }
+
+      if (this.confirmReplyActive) {
+        Stack() {
+          Column().width('100%').height('100%').backgroundColor('#33000000')
+            .onClick(() => {
+              if (floatingLayerStore.replyConfirmOnCancel) {
+                floatingLayerStore.replyConfirmOnCancel()
+              }
+              floatingLayerStore.hideReplyConfirm()
+            })
+          Column() {
+            Text('放弃编辑？').fontSize(17).fontWeight(FontWeight.Bold).fontColor(AppColors.textPrimary)
+              .margin({ top: 20 })
+            Text('已输入的内容将丢失').fontSize(14).fontColor(AppColors.textSecondary)
+              .margin({ top: 8 })
+            Row() {
+              Text('继续编辑').fontSize(16).fontWeight(FontWeight.Medium).fontColor(AppColors.primary)
+                .layoutWeight(1).textAlign(TextAlign.Center).padding({ top: 14, bottom: 14 })
+                .onClick(() => {
+                  if (floatingLayerStore.replyConfirmOnCancel) {
+                    floatingLayerStore.replyConfirmOnCancel()
+                  }
+                  floatingLayerStore.hideReplyConfirm()
+                })
+              Divider().vertical(true).height(24).color(AppColors.separator).alignSelf(ItemAlign.Center)
+              Text('放弃').fontSize(16).fontWeight(FontWeight.Medium).fontColor(AppColors.destructive)
+                .layoutWeight(1).textAlign(TextAlign.Center).padding({ top: 14, bottom: 14 })
+                .onClick(() => {
+                  if (floatingLayerStore.replyConfirmOnConfirm) {
+                    floatingLayerStore.replyConfirmOnConfirm()
+                  }
+                  floatingLayerStore.hideReplyConfirm()
+                })
+            }.width('100%').margin({ top: 16 })
+            .border({ width: { top: 0.5 }, color: AppColors.separator })
+          }
+          .width(270)
+          .backgroundColor(AppColors.bg)
+          .borderRadius(14)
+          .alignItems(HorizontalAlign.Center)
+        }
+        .width('100%').height('100%')
+      }
+    }
+    .width('100%').height('100%')
+    .hitTestBehavior(
+      (this.showImageViewer || this.showProfileCard || this.showReplyDialog)
+        ? HitTestMode.Default : HitTestMode.None
+    )
   }
 
   // ============== sm: 全屏内容区, 无固定侧边栏 ==============
