@@ -197,26 +197,20 @@ export struct ReplyDialog {
         }.width('100%').padding({ top: 2, bottom: 2 })
       }
 
-      // 格式工具栏
-      Row() {
-        Scroll() {
-          Row() {
-            ForEach(FORMAT_ACTIONS, (action: FormatAction) => {
-              Text(action.label)
-                .fontSize(13).fontColor(AppColors.primary)
-                .fontWeight(FontWeight.Medium)
-                .padding({ left: 9, right: 9, top: 3, bottom: 3 })
-                .borderRadius(4)
-                .backgroundColor(AppColors.bgSecondary)
-                .margin({ right: 5 })
-                .onClick(() => { this.applyFormat(action) })
-            }, (action: FormatAction) => action.tag)
-          }
-        }
-        .scrollable(ScrollDirection.Horizontal)
-        .width('100%')
+      // 格式工具栏（自动换行）
+      Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.Start }) {
+        ForEach(FORMAT_ACTIONS, (action: FormatAction) => {
+          Text(action.label)
+            .fontSize(13).fontColor(AppColors.primary)
+            .fontWeight(FontWeight.Medium)
+            .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+            .borderRadius(4)
+            .backgroundColor(AppColors.bgSecondary)
+            .margin({ right: 5, bottom: 4 })
+            .onClick(() => { this.applyFormat(action) })
+        }, (action: FormatAction) => action.tag)
       }
-      .width('100%').padding({ top: 4, bottom: 4 })
+      .width('100%').padding({ top: 4, bottom: 2 })
 
       // 正文输入
       TextArea({ text: this.replyText, placeholder: '输入内容...', controller: this.textAreaController })
