@@ -1,19 +1,12 @@
-/**
- * 全局状态管理 - 替代 React Zustand stores
- * 使用 AppStorage + PersistentStorage 实现跨组件共享和持久化
- */
-
-import { preferences } from '@kit.ArkData'
 import { hilog } from '@kit.PerformanceAnalysisKit'
 import { Context } from '@kit.AbilityKit'
 import { fetchForumFavorites, getForumCategories, getUserProfile } from '../service/NgaApi'
 import type { Category } from '../model/Forum'
 import type { ProfileData } from '../model/User'
+import { PreferencesStore } from './PreferencesStore'
 
 const TAG = 'AppStore'
 const DOMAIN = 0x0000
-
-// ============== 认证状态 ==============
 
 export class AuthState {
   token: string = ''
@@ -23,8 +16,6 @@ export class AuthState {
   isAuthenticated: boolean = false
   initialized: boolean = false
 }
-
-// ============== 设置状态 ==============
 
 export interface BlacklistEntry {
   userId: string
@@ -45,34 +36,30 @@ export class SettingsState {
   theme: string = 'light'
 }
 
-// ============== Toast 状态 ==============
-
 export class ToastState {
   message: string = ''
   visible: boolean = false
 }
 
-// ============== 全局 Store 单例 ==============
+class PersistedAuth {
+  token: string = ''
+  uid: string = ''
+  nickName: string = ''
+  avatarUrl: string = ''
+}
 
 class AppStoreClass {
-  private pref: preferences.Preferences | null = null
+  private store: PreferencesStore = new PreferencesStore()
 
-  // 认证
   auth: AuthState = new AuthState()
-
-  // 设置
   settings: SettingsState = new SettingsState()
-
-  // Toast
   toast: ToastState = new ToastState()
   private toastTimer: number = -1
 
-  // Categories cache
   cachedCategories: Category[] = []
   private categoriesVersion: number = 0
   private categoriesRefreshing: boolean = false
 
-  // Profile cache (keyed by uid)
   private profileCache: Record<string, ProfileData> = {}
   private profileVersion: number = 0
   private refreshingUids: Set<string> = new Set()
@@ -81,20 +68,39 @@ class AppStoreClass {
 
   async init(context: Context): Promise<void> {
     try {
-      this.pref = await preferences.getPreferences(context, 'nga_app_store')
-      await this.loadSettings()
+      await this.store.init(context, 'nga_app_store')
+      await this.migrateAuthIfNeeded()
       await this.loadAuth()
       await this.loadCachedCategories()
-      await this.loadCachedProfiles()
+      if (this.auth.uid) {
+        await this.loadUserSettings()
+        await this.loadCachedProfiles()
+      }
       hilog.info(DOMAIN, TAG, 'AppStore initialized')
     } catch (e) {
       hilog.error(DOMAIN, TAG, 'AppStore init failed: %{public}s', JSON.stringify(e))
     }
   }
 
+  private settingsKey(): string {
+    return `settings_${this.auth.uid}`
+  }
+
+  private profilesKey(): string {
+    return `cached_profiles_${this.auth.uid}`
+  }
+
+  private resetUserState(): void {
+    this.settings = new SettingsState()
+    this.profileCache = {}
+    this.favoritesLoaded = false
+    this.refreshingUids = new Set()
+  }
+
   // ============== Auth ==============
 
-  setAuth(token: string, uid: string, nickName: string, avatarUrl: string): void {
+  async setAuth(token: string, uid: string, nickName: string, avatarUrl: string): Promise<void> {
+    const uidChanged = this.auth.uid !== uid
     this.auth.token = token
     this.auth.uid = uid
     this.auth.nickName = nickName
@@ -102,6 +108,11 @@ class AppStoreClass {
     this.auth.isAuthenticated = true
     this.auth.initialized = true
     this.persistAuth()
+    if (uidChanged) {
+      this.resetUserState()
+      await this.loadUserSettings()
+      await this.loadCachedProfiles()
+    }
   }
 
   clearAuth(): void {
@@ -111,37 +122,50 @@ class AppStoreClass {
     this.auth.avatarUrl = ''
     this.auth.isAuthenticated = false
     this.auth.initialized = true
-    this.favoritesLoaded = false
     this.persistAuth()
+    this.resetUserState()
   }
 
-  private async persistAuth(): Promise<void> {
-    if (!this.pref) return
-    try {
-      await this.pref.put('auth_token', this.auth.token)
-      await this.pref.put('auth_uid', this.auth.uid)
-      await this.pref.put('auth_nickName', this.auth.nickName)
-      await this.pref.put('auth_avatarUrl', this.auth.avatarUrl)
-      await this.pref.put('auth_isAuth', this.auth.isAuthenticated ? '1' : '0')
-      await this.pref.flush()
-    } catch (e) {
-      hilog.error(DOMAIN, TAG, 'persistAuth failed')
-    }
+  private persistAuth(): void {
+    const data = new PersistedAuth()
+    data.token = this.auth.token
+    data.uid = this.auth.uid
+    data.nickName = this.auth.nickName
+    data.avatarUrl = this.auth.avatarUrl
+    this.store.putJSON('auth', data)
   }
 
   private async loadAuth(): Promise<void> {
-    if (!this.pref) return
-    try {
-      this.auth.token = (await this.pref.get('auth_token', '')) as string
-      this.auth.uid = (await this.pref.get('auth_uid', '')) as string
-      this.auth.nickName = (await this.pref.get('auth_nickName', '')) as string
-      this.auth.avatarUrl = (await this.pref.get('auth_avatarUrl', '')) as string
-      const isAuth = (await this.pref.get('auth_isAuth', '0')) as string
-      this.auth.isAuthenticated = isAuth === '1' && this.auth.token !== ''
-      this.auth.initialized = true
-    } catch (e) {
-      this.auth.initialized = true
+    const saved = await this.store.getJSON<PersistedAuth>('auth')
+    if (saved) {
+      this.auth.token = saved.token
+      this.auth.uid = saved.uid
+      this.auth.nickName = saved.nickName
+      this.auth.avatarUrl = saved.avatarUrl
+      this.auth.isAuthenticated = this.auth.token !== ''
     }
+    this.auth.initialized = true
+  }
+
+  private async migrateAuthIfNeeded(): Promise<void> {
+    const oldToken = await this.store.getString('auth_token')
+    if (!oldToken) return
+    const uid = await this.store.getString('auth_uid')
+    const nickName = await this.store.getString('auth_nickName')
+    const avatarUrl = await this.store.getString('auth_avatarUrl')
+    const data = new PersistedAuth()
+    data.token = oldToken
+    data.uid = uid
+    data.nickName = nickName
+    data.avatarUrl = avatarUrl
+    await this.store.putJSON('auth', data, false)
+    await this.store.putString('auth_token', '', false)
+    await this.store.putString('auth_uid', '', false)
+    await this.store.putString('auth_nickName', '', false)
+    await this.store.putString('auth_avatarUrl', '', false)
+    await this.store.putString('auth_isAuth', '', false)
+    await this.store.flush()
+    hilog.info(DOMAIN, TAG, 'Auth migrated from old format')
   }
 
   // ============== Settings ==============
@@ -233,60 +257,37 @@ class AppStoreClass {
     this.persistSettings()
   }
 
-  private async persistSettings(): Promise<void> {
-    if (!this.pref) return
-    try {
-      await this.pref.put('settings', JSON.stringify(this.settings))
-      await this.pref.flush()
-    } catch (e) {
-      hilog.error(DOMAIN, TAG, 'persistSettings failed')
-    }
+  private persistSettings(): void {
+    if (!this.auth.uid) return
+    this.store.putJSON(this.settingsKey(), this.settings)
   }
 
-  private async loadSettings(): Promise<void> {
-    if (!this.pref) return
-    try {
-      const raw = (await this.pref.get('settings', '')) as string
-      if (raw) {
-        const obj = JSON.parse(raw) as Record<string, Object>
-        if (obj['favorites']) this.settings.favorites = obj['favorites'] as FavBoard[]
-        if (obj['blacklist']) this.settings.blacklist = obj['blacklist'] as BlacklistEntry[]
-        if (obj['fontSize']) this.settings.fontSize = Number(obj['fontSize'])
-        if (obj['domainIndex']) this.settings.domainIndex = Number(obj['domainIndex'])
-        if (obj['theme']) this.settings.theme = String(obj['theme'])
-      }
-    } catch (e) {
-      hilog.info(DOMAIN, TAG, 'No saved settings')
+  private async loadUserSettings(): Promise<void> {
+    if (!this.auth.uid) return
+    const saved = await this.store.getJSON<SettingsState>(this.settingsKey())
+    if (saved) {
+      if (saved.favorites) this.settings.favorites = saved.favorites
+      if (saved.blacklist) this.settings.blacklist = saved.blacklist
+      if (saved.fontSize) this.settings.fontSize = saved.fontSize
+      if (saved.domainIndex) this.settings.domainIndex = saved.domainIndex
+      if (saved.theme) this.settings.theme = saved.theme
     }
   }
 
   // ============== Categories Cache ==============
 
   private async loadCachedCategories(): Promise<void> {
-    if (!this.pref) return
-    try {
-      const raw = (await this.pref.get('cached_categories', '')) as string
-      if (raw) {
-        this.cachedCategories = JSON.parse(raw) as Category[]
-        if (this.cachedCategories.length > 0) {
-          this.categoriesVersion++
-          AppStorage.setOrCreate('catVersion', this.categoriesVersion)
-        }
-        hilog.info(DOMAIN, TAG, 'Loaded cached categories: %{public}d', this.cachedCategories.length)
-      }
-    } catch (e) {
-      hilog.info(DOMAIN, TAG, 'No cached categories')
+    const saved = await this.store.getJSON<Category[]>('cached_categories')
+    if (saved && saved.length > 0) {
+      this.cachedCategories = saved
+      this.categoriesVersion++
+      AppStorage.setOrCreate('catVersion', this.categoriesVersion)
+      hilog.info(DOMAIN, TAG, 'Loaded cached categories: %{public}d', saved.length)
     }
   }
 
-  private async persistCategories(): Promise<void> {
-    if (!this.pref) return
-    try {
-      await this.pref.put('cached_categories', JSON.stringify(this.cachedCategories))
-      await this.pref.flush()
-    } catch (e) {
-      hilog.error(DOMAIN, TAG, 'persistCategories failed')
-    }
+  private persistCategories(): void {
+    this.store.putJSON('cached_categories', this.cachedCategories)
   }
 
   ensureCategories(): void {
@@ -324,26 +325,17 @@ class AppStoreClass {
   // ============== Profile Cache ==============
 
   private async loadCachedProfiles(): Promise<void> {
-    if (!this.pref) return
-    try {
-      const raw = (await this.pref.get('cached_profiles', '')) as string
-      if (raw) {
-        this.profileCache = JSON.parse(raw) as Record<string, ProfileData>
-        hilog.info(DOMAIN, TAG, 'Loaded cached profiles: %{public}d', Object.keys(this.profileCache).length)
-      }
-    } catch (e) {
-      hilog.info(DOMAIN, TAG, 'No cached profiles')
+    if (!this.auth.uid) return
+    const saved = await this.store.getJSON<Record<string, ProfileData>>(this.profilesKey())
+    if (saved) {
+      this.profileCache = saved
+      hilog.info(DOMAIN, TAG, 'Loaded cached profiles: %{public}d', Object.keys(saved).length)
     }
   }
 
-  private async persistProfiles(): Promise<void> {
-    if (!this.pref) return
-    try {
-      await this.pref.put('cached_profiles', JSON.stringify(this.profileCache))
-      await this.pref.flush()
-    } catch (e) {
-      hilog.error(DOMAIN, TAG, 'persistProfiles failed')
-    }
+  private persistProfiles(): void {
+    if (!this.auth.uid) return
+    this.store.putJSON(this.profilesKey(), this.profileCache)
   }
 
   getCachedProfile(uid: string): ProfileData | null {

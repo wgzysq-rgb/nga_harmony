@@ -159,7 +159,7 @@ struct LoginPage {
         if (result.ok && result.token) {
           // 登录成功
           const user = result.user!
-          appStore.setAuth(result.token, user.uid, user.nickName, user.avatarUrl)
+          await appStore.setAuth(result.token, user.uid, user.nickName, user.avatarUrl)
           router.replaceUrl({ url: 'pages/MainPage' })
         } else if (result.needCaptcha) {
           // 需要重新输入验证码
