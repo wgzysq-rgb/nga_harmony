@@ -2,6 +2,7 @@ import { display } from '@kit.ArkUI'
 import { common } from '@kit.AbilityKit'
 import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
+import { browseHistoryStore, BrowseHistoryEntry } from '../store/BrowseHistoryStore'
 import { getThread, getPostAuth, postReply, postComment, addFavorite, ThreadResult, PostInfo, PostAttachInfo, PostAuthResult, PostReplyResult } from '../service/NgaApi'
 import { AppColors } from '../common/Constants'
 import { formatTime, escHtml } from '../common/Utils'
@@ -117,6 +118,15 @@ export struct ThreadPanel {
           this.totalPages = result.pagination.totalPages
         }
         this.currentPage = page
+        if (result.threadInfo) {
+          const info = result.threadInfo as Record<string, Object>
+          this.threadSubject = String(info['subject'] ?? '帖子')
+          this.threadFid = Number(info['fid'] ?? 0)
+          this.threadAuthorId = String(info['authorid'] ?? '')
+        }
+        if (replaceMode && appStore.auth.isAuthenticated) {
+          this.recordBrowseHistory(result)
+        }
         if (replaceMode) {
           for (let i = 0; i < result.posts.length; i++) {
             this.loadedLouSet.add(result.posts[i].lou)
@@ -175,6 +185,28 @@ export struct ThreadPanel {
       // 静默失败
     }
     this.isLoadingPrevious = false
+  }
+
+  private recordBrowseHistory(result: ThreadResult): void {
+    const entry = new BrowseHistoryEntry()
+    entry.tid = this.threadTid
+    entry.board = result.forumName
+    if (result.threadInfo) {
+      const info = result.threadInfo as Record<string, Object>
+      entry.subject = String(info['subject'] ?? '')
+      entry.author = String(info['author'] ?? '')
+      entry.authorid = String(info['authorid'] ?? '')
+      entry.replies = Number(info['replies'] ?? 0)
+    } else if (result.posts.length > 0) {
+      const firstPost = result.posts[0]
+      entry.subject = firstPost.subject
+      entry.author = firstPost.author
+      entry.authorid = String(firstPost.authorid)
+    }
+    if (entry.subject.length === 0) {
+      return
+    }
+    browseHistoryStore.add(appStore.auth.uid, entry)
   }
 
   private async handleReplySend(text: string): Promise<void> {

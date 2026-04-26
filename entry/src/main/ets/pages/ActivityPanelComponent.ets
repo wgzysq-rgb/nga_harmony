@@ -24,6 +24,8 @@ export struct ActivityPanelComponent {
             threadPid: this.topActivity.screen.pid,
             navEntryId: this.topActivity.id
           })
+        } else if (this.topActivity.screen.type === 'browseHistory') {
+          BrowseHistoryPanel()
         } else {
           Column() {
             PanelNavBar({ title: this.topActivity.screen.getTitle() })
@@ -53,8 +55,6 @@ export struct ActivityPanelComponent {
       BlacklistPanel()
     } else if (this.topActivity!.screen.type === 'settings') {
       SettingsPanel()
-    } else if (this.topActivity!.screen.type === 'browseHistory') {
-      BrowseHistoryPanel()
     } else if (this.topActivity!.screen.type === 'topicList') {
       TopicListPanel({
         boardFid: this.topActivity!.screen.topicListFid,

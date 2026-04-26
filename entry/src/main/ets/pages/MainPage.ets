@@ -46,6 +46,8 @@ struct MainPage {
     if (this.floating.size > 0) {
       if (this.floating.top === FloatingPage.REPLY_DIALOG) {
         this.floating.notifyReplyCloseRequested()
+      } else if (this.floating.top === FloatingPage.CONFIRM_DIALOG) {
+        this.floating.hideConfirm()
       } else {
         this.floating.pop()
       }

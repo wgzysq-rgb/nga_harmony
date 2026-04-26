@@ -56,6 +56,43 @@ export struct FloatingLayerComponent {
         .width('100%').height('100%')
       }
 
+      if (this.floating.top === FloatingPage.CONFIRM_DIALOG) {
+        Stack() {
+          Column().width('100%').height('100%').backgroundColor('#66000000')
+            .onClick(() => { this.floating.hideConfirm() })
+          Column() {
+            Text(this.floating.confirmTitle)
+              .fontSize(17).fontWeight(FontWeight.Bold)
+              .margin({ top: 20, bottom: 8 })
+            Text(this.floating.confirmMessage)
+              .fontSize(14).fontColor('#8E8E93')
+              .margin({ bottom: 20 })
+            Divider().color('#E5E5EA')
+            Row() {
+              Button('取消')
+                .layoutWeight(1).backgroundColor(Color.Transparent).fontColor('#007AFF')
+                .onClick(() => { this.floating.hideConfirm() })
+              Divider().vertical(true).height(20).color('#E5E5EA')
+              Button(this.floating.confirmLabel)
+                .layoutWeight(1).backgroundColor(Color.Transparent)
+                .fontColor(this.floating.confirmDestructive ? '#FF3B30' : '#007AFF')
+                .fontWeight(FontWeight.Bold)
+                .onClick(() => {
+                  const handler = this.floating.confirmOnConfirm
+                  this.floating.hideConfirm()
+                  if (handler) {
+                    handler()
+                  }
+                })
+            }.height(44)
+          }
+          .width(300).padding({ left: 20, right: 20 })
+          .backgroundColor(Color.White).borderRadius(14)
+          .alignItems(HorizontalAlign.Center)
+        }
+        .width('100%').height('100%')
+      }
+
       if (this.floating.replyConfirmActive) {
         Stack() {
           Column().width('100%').height('100%').backgroundColor('#33000000')
@@ -94,7 +131,8 @@ export struct FloatingLayerComponent {
     .hitTestBehavior(
       (this.floating.top === FloatingPage.IMAGE_VIEWER ||
        this.floating.top === FloatingPage.PROFILE_CARD ||
-       this.floating.top === FloatingPage.REPLY_DIALOG)
+       this.floating.top === FloatingPage.REPLY_DIALOG ||
+       this.floating.top === FloatingPage.CONFIRM_DIALOG)
         ? HitTestMode.Default : HitTestMode.None
     )
   }

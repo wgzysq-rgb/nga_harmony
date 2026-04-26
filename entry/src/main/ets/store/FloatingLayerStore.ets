@@ -2,7 +2,8 @@ export enum FloatingPage {
   NONE = '',
   IMAGE_VIEWER = 'imageViewer',
   PROFILE_CARD = 'profileCard',
-  REPLY_DIALOG = 'replyDialog'
+  REPLY_DIALOG = 'replyDialog',
+  CONFIRM_DIALOG = 'confirmDialog'
 }
 
 @Observed
@@ -19,6 +20,12 @@ export class FloatingLayerStoreClass {
   replyDialogTitle: string = '回复'
   replyTargetLou: number = 0
   replyOnSend?: (text: string) => Promise<void>
+
+  confirmTitle: string = ''
+  confirmMessage: string = ''
+  confirmLabel: string = '确定'
+  confirmDestructive: boolean = false
+  confirmOnConfirm?: () => void
 
   get top(): string {
     return this.stack.length > 0 ? this.stack[this.stack.length - 1] : ''
@@ -84,6 +91,20 @@ export class FloatingLayerStoreClass {
     this.registerReplyCloseHandler(null)
     this.stack = this.stack.filter(p => p !== FloatingPage.REPLY_DIALOG)
     this.replyConfirmActive = false
+  }
+
+  showConfirm(title: string, message: string, confirmLabel: string, destructive: boolean,
+    onConfirm: () => void): void {
+    this.confirmTitle = title
+    this.confirmMessage = message
+    this.confirmLabel = confirmLabel
+    this.confirmDestructive = destructive
+    this.confirmOnConfirm = onConfirm
+    this.push(FloatingPage.CONFIRM_DIALOG)
+  }
+
+  hideConfirm(): void {
+    this.remove(FloatingPage.CONFIRM_DIALOG)
   }
 }
 
