@@ -167,8 +167,8 @@ export struct BBCodeContentView {
     } else if (node.type === BBNodeType.EMOTION) {
       if (getEmotionResource(node.emotionCat, node.emotionCode) !== null) {
         ImageSpan(getEmotionResource(node.emotionCat, node.emotionCode))
-          .width(ctx.inQuote ? 26 : 35)
-          .height(ctx.inQuote ? 26 : 35)
+          .width(ctx.inQuote ? 26 : 50)
+          .height(ctx.inQuote ? 26 : 50)
           .objectFit(ImageFit.Contain)
       } else {
         Span(`[表情:${node.emotionCat}:${node.emotionCode}]`)
@@ -216,8 +216,8 @@ export struct BBCodeContentView {
     } else if (child.type === BBNodeType.EMOTION) {
       if (getEmotionResource(child.emotionCat, child.emotionCode) !== null) {
         ImageSpan(getEmotionResource(child.emotionCat, child.emotionCode))
-          .width(ctx.inQuote ? 26 : 35)
-          .height(ctx.inQuote ? 26 : 35)
+          .width(ctx.inQuote ? 26 : 50)
+          .height(ctx.inQuote ? 26 : 50)
           .objectFit(ImageFit.Contain)
       } else {
         Span(`[表情:${child.emotionCat}:${child.emotionCode}]`)
