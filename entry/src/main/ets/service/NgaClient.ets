@@ -286,7 +286,7 @@ async function ngaGetWithBaseUrl(path: string, params: Record<string, string>,
   return ngaRequest(path, http.RequestMethod.GET, params, '', cookies, baseUrl, emptyStringRecord());
 }
 
-interface Cookies {
+export interface Cookies {
   uid: string;
   cid: string;
 }
@@ -603,3 +603,100 @@ const client: INgaClient = {
 };
 
 export const ngaClient: INgaClient = client;
+
+/**
+ * 上传附件到 img8.nga.cn （Multipart + 二进制）
+ * 对应 Java TopicPostModel.buildMultipartBody() + uploadFileInner()
+ */
+export async function ngaUploadFile(
+  imageData: ArrayBuffer,
+  fileName: string,
+  auth: string,
+  fid: number,
+  cookies: Cookies
+): Promise<string> {
+  const url: string = 'https://img8.nga.cn/attach.php'
+  const boundary: string = '----NGAFormBoundary' + Math.random().toString(36).slice(2, 12)
+  const encoder: util.TextEncoder = util.TextEncoder.create()
+
+  const textFields: string =
+    '--' + boundary + '\r\n' +
+    'Content-Disposition: form-data; name="attachment_file1_url_utf8_name"\r\n\r\n' + fileName + '\r\n' +
+    '--' + boundary + '\r\n' +
+    'Content-Disposition: form-data; name="fid"\r\n\r\n' + String(fid) + '\r\n' +
+    '--' + boundary + '\r\n' +
+    'Content-Disposition: form-data; name="auth"\r\n\r\n' + auth + '\r\n' +
+    '--' + boundary + '\r\n' +
+    'Content-Disposition: form-data; name="func"\r\n\r\nupload\r\n' +
+    '--' + boundary + '\r\n' +
+    'Content-Disposition: form-data; name="v2"\r\n\r\n1\r\n' +
+    '--' + boundary + '\r\n' +
+    'Content-Disposition: form-data; name="lite"\r\n\r\njs\r\n' +
+    '--' + boundary + '\r\n' +
+    'Content-Disposition: form-data; name="attachment_file1_auto_size"\r\n\r\n\r\n' +
+    '--' + boundary + '\r\n' +
+    'Content-Disposition: form-data; name="attachment_file1_watermark"\r\n\r\n\r\n' +
+    '--' + boundary + '\r\n' +
+    'Content-Disposition: form-data; name="attachment_file1_dscp"\r\n\r\n\r\n' +
+    '--' + boundary + '\r\n' +
+    'Content-Disposition: form-data; name="attachment_file1_img"\r\n\r\n1\r\n' +
+    '--' + boundary + '\r\n' +
+    'Content-Disposition: form-data; name="origin_domain"\r\n\r\nbbs.ngacn.cc\r\n'
+
+  const fileHeader: string =
+    '--' + boundary + '\r\n' +
+    'Content-Disposition: form-data; name="attachment_file1"; filename="' + fileName + '"\r\n' +
+    'Content-Type: image/jpeg\r\n\r\n'
+  const fileFooter: string = '\r\n--' + boundary + '--\r\n'
+
+  const textBytes: Uint8Array = encoder.encodeInto(textFields)
+  const headerBytes: Uint8Array = encoder.encodeInto(fileHeader)
+  const footerBytes: Uint8Array = encoder.encodeInto(fileFooter)
+  const imageU8: Uint8Array = new Uint8Array(imageData)
+
+  const totalLength: number = textBytes.byteLength + headerBytes.byteLength + imageU8.byteLength + footerBytes.byteLength
+  const fullBody: Uint8Array = new Uint8Array(totalLength)
+  let pos: number = 0
+  fullBody.set(textBytes, pos)
+  pos += textBytes.byteLength
+  fullBody.set(headerBytes, pos)
+  pos += headerBytes.byteLength
+  fullBody.set(imageU8, pos)
+  pos += imageU8.byteLength
+  fullBody.set(footerBytes, pos)
+
+  const contentType: string = 'multipart/form-data; boundary=' + boundary
+  const headers: Record<string, string> = {
+    'Content-Type': contentType,
+    'User-Agent': 'NGA_WP_JW',
+    'X-User-Agent': 'Nga_Official',
+  }
+  if (cookies) {
+    headers['Cookie'] = 'ngaPassportUid=' + cookies.uid + '; ngaPassportCid=' + cookies.cid
+  }
+
+  return new Promise<string>((resolve, reject) => {
+    const httpRequest = http.createHttp()
+    httpRequest.request(url, {
+      method: http.RequestMethod.POST,
+      header: headers,
+      extraData: fullBody.buffer as ArrayBuffer,
+      expectDataType: http.HttpDataType.ARRAY_BUFFER,
+      readTimeout: 120000,
+      connectTimeout: 30000,
+    }, (err, resp) => {
+      httpRequest.destroy()
+      if (err) {
+        reject(new Error('上传失败: ' + err.message))
+        return
+      }
+      if (resp.responseCode !== 200) {
+        reject(new Error('上传HTTP ' + String(resp.responseCode)))
+        return
+      }
+      const rawText: string = decodeGb18030(resp.result as ArrayBuffer)
+      resolve(rawText)
+    })
+  })
+}
+

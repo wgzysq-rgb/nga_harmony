@@ -4,6 +4,7 @@
  */
 
 import { ngaClient } from './NgaClient';
+import { ngaUploadFile, type Cookies } from './NgaClient';
 import { sessionStore, type Session } from './SessionStore';
 import { parseForumCategories } from '../parser/ForumParser';
 import { parseTopicList } from '../parser/TopicParser';
@@ -867,6 +868,47 @@ export async function postComment(token: string, tid: number, pid: number,
     result.error = (e as Error).message ?? '评论失败';
   }
   return result;
+}
+
+// ============== 附件上传 ==============
+
+export class UploadAttachmentResult extends ApiResult {
+  url: string = ''
+  attachments: string = ''
+  attachmentsCheck: string = ''
+}
+
+export async function uploadAttachment(token: string, auth: string,
+  fid: number, imageData: ArrayBuffer, fileName: string): Promise<UploadAttachmentResult> {
+  const result = new UploadAttachmentResult()
+  const session = sessionStore.get(token)
+  if (!session) {
+    result.error = '未登录'
+    return result
+  }
+
+  try {
+    const rawText: string = await ngaUploadFile(imageData, fileName, auth, fid, {
+      uid: session.uid,
+      cid: session.cid,
+    })
+    const cleaned: string = rawText.replace('window.script_muti_get_var_store=', '').trim()
+    const parsed = JSON.parse(cleaned) as Record<string, Object>
+    const dataObj = parsed['data'] as Record<string, Object> | undefined
+    if (!dataObj) {
+      result.error = '上传响应缺少 data'
+      return result
+    }
+    const attachUrl: string = String(dataObj['attach_url'] ?? '')
+    const attachment: string = String(dataObj['attachment'] ?? '')
+    result.url = String(dataObj['url'] ?? attachUrl + attachment)
+    result.attachments = String(dataObj['attachments'] ?? '')
+    result.attachmentsCheck = String(dataObj['attachments_check'] ?? '')
+    result.ok = true
+  } catch (e) {
+    result.error = (e as Error).message ?? '上传失败'
+  }
+  return result
 }
 
 // ============== 收藏 ==============

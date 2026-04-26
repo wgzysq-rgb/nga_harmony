@@ -102,7 +102,7 @@ export struct FloatingLayerComponent {
           Column() {
             Text('放弃编辑？').fontSize(17).fontWeight(FontWeight.Bold).fontColor(AppColors.textPrimary)
               .margin({ top: 20 })
-            Text('已输入的内容将丢失').fontSize(14).fontColor(AppColors.textSecondary)
+            Text('已保存为草稿，下次编辑可恢复').fontSize(14).fontColor(AppColors.textSecondary)
               .margin({ top: 8 })
             Row() {
               Text('继续编辑').fontSize(16).fontWeight(FontWeight.Medium).fontColor(AppColors.primary)

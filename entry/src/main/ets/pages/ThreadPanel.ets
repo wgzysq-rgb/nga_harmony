@@ -3,11 +3,12 @@ import { common } from '@kit.AbilityKit'
 import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
 import { browseHistoryStore, BrowseHistoryEntry } from '../store/BrowseHistoryStore'
-import { getThread, getPostAuth, postReply, postComment, addFavorite, votePost, ThreadResult, PostInfo, PostAuthResult, PostReplyResult, VoteResult } from '../service/NgaApi'
+import { getThread, addFavorite, votePost, ThreadResult, PostInfo, PostReplyResult, VoteResult } from '../service/NgaApi'
 import { AppColors } from '../common/Constants'
 import { PostItem } from '../common/PostItem'
 import { PostInfoDataSource } from '../common/LazyDataSource'
 import { floatingLayerStore, FloatingPage } from '../store/FloatingLayerStore'
+import { replyManager, ReplyType } from '../common/ReplyManager'
 import type { ThreadInfo } from '../model/Thread'
 
 @Component
@@ -37,7 +38,6 @@ export struct ThreadPanel {
   @StorageProp('statusBarHeight') statusBarHeight: number = 0
   @StorageProp('navBarHeight') navBarHeight: number = 0
   private scroller: Scroller = new Scroller()
-  private replyTargetPid: number = 0
   private loadedLouSet: Set<number> = new Set()
 
   private showProfileCard(uid: string, screenX: number, screenY: number): void {
@@ -205,24 +205,12 @@ export struct ThreadPanel {
     browseHistoryStore.add(appStore.auth.uid, entry)
   }
 
-  private async handleReplySend(text: string): Promise<void> {
-    if (!text || !this.threadTid) return
-    const isComment: boolean = floatingLayerStore.replyTargetLou > 0
+  private async handleReplySend(text: string, isAnony: boolean): Promise<void> {
     try {
-      const authResult: PostAuthResult = await getPostAuth(appStore.auth.token, this.threadFid, 'reply', Number(this.threadTid), 0, 0)
-      if (!authResult.ok) {
-        appStore.showToast(authResult.error || '无权回复')
-        return
-      }
-
-      let result: PostReplyResult
-      if (isComment) {
-        result = await postComment(appStore.auth.token, Number(this.threadTid), this.replyTargetPid, this.threadFid, text, 0)
-      } else {
-        result = await postReply(appStore.auth.token, Number(this.threadTid), this.threadFid, text, 0, '', '', 0, 'reply', 0, '')
-      }
+      const result: PostReplyResult = await replyManager.send(text, isAnony)
       if (result.ok) {
-        appStore.showToast(isComment ? '评论成功' : '回复成功')
+        const isComment: boolean = replyManager.type === ReplyType.COMMENT
+        appStore.showToast(isComment ? '贴条成功' : '回复成功')
         if (this.currentPage >= this.totalPages) {
           this.allPosts = []
           this.loadPage(1)
@@ -383,10 +371,9 @@ export struct ThreadPanel {
                   this.handleVote(p, value)
                 },
                 onReply: (p: PostInfo): void => {
-                  this.replyTargetPid = p.pid
-                  floatingLayerStore.replyTargetLou = p.lou
-                  floatingLayerStore.replyDialogTitle = `回复 #${p.lou}`
-                  floatingLayerStore.replyOnSend = (text: string): Promise<void> => { return this.handleReplySend(text) }
+                  replyManager.startFloorReply(p, Number(this.threadTid), this.threadFid, this.currentPage)
+                  floatingLayerStore.replyDialogTitle = replyManager.dialogTitle
+                  floatingLayerStore.replyOnSend = (text: string, isAnony: boolean): Promise<void> => { return this.handleReplySend(text, isAnony) }
                   floatingLayerStore.push(FloatingPage.REPLY_DIALOG)
                 },
               })
@@ -507,10 +494,9 @@ export struct ThreadPanel {
         .backgroundColor(Color.White)
         .shadow({ radius: 16, color: '#40000000', offsetY: 4 })
         .onClick(() => {
-          this.replyTargetPid = 0
-          floatingLayerStore.replyTargetLou = 0
-          floatingLayerStore.replyDialogTitle = '写回复'
-          floatingLayerStore.replyOnSend = (text: string): Promise<void> => { return this.handleReplySend(text) }
+          replyManager.startThreadReply(Number(this.threadTid), this.threadFid)
+          floatingLayerStore.replyDialogTitle = replyManager.dialogTitle
+          floatingLayerStore.replyOnSend = (text: string, isAnony: boolean): Promise<void> => { return this.handleReplySend(text, isAnony) }
           floatingLayerStore.push(FloatingPage.REPLY_DIALOG)
         })
       }

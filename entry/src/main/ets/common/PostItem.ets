@@ -21,6 +21,7 @@ export struct PostItem {
   onProfileClick: (uid: string, screenX: number, screenY: number) => void = (_uid: string, _x: number, _y: number) => {}
   onVote: (post: PostInfo, value: number) => void = (_post: PostInfo, _value: number) => {}
   onReply: (post: PostInfo) => void = (_post: PostInfo) => {}
+  onComment: (post: PostInfo) => void = (_post: PostInfo) => {}
 
   build() {
     if (this.authorOnly && this.threadAuthorId.length > 0 && String(this.post.authorid) !== this.threadAuthorId) {
@@ -174,7 +175,8 @@ export struct PostItem {
 
       Blank().layoutWeight(1)
 
-      Text('回复').fontSize(13).fontColor(AppColors.textTertiary)
+      Text('回复').fontSize(13).fontColor(AppColors.primary)
+        .fontWeight(FontWeight.Medium)
         .onClick(() => this.onReply(this.post))
     }.width('100%').margin({ top: 8 }).alignItems(VerticalAlign.Center)
   }
