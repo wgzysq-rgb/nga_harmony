@@ -12,6 +12,14 @@ function isInlineNode(type: BBNodeType): boolean {
     type === BBNodeType.MENTION || type === BBNodeType.EMOTION
 }
 
+function isInlineGroupBlank(nodes: BBNode[]): boolean {
+  for (let i = 0; i < nodes.length; i++) {
+    if (nodes[i].type !== BBNodeType.TEXT) return false
+    if (nodes[i].text.replace(/\s/g, '').length > 0) return false
+  }
+  return true
+}
+
 const QUOTE_BORDER_COLORS: string[] = [
   'rgba(0, 122, 255, 0.3)',
   'rgba(0, 122, 255, 0.2)',
@@ -108,16 +116,18 @@ export struct BBCodeContentView {
   RenderChildren(nodes: BBNode[], ctx: RenderContext) {
     ForEach(this.splitIntoGroups(nodes), (group: NodeGroup) => {
       if (group.kind === 'inline') {
-        Text() {
-          ForEach(group.nodes, (node: BBNode) => {
-            this.RenderInlineSpan(node, ctx)
-          })
+        if (!isInlineGroupBlank(group.nodes)) {
+          Text() {
+            ForEach(group.nodes, (node: BBNode) => {
+              this.RenderInlineSpan(node, ctx)
+            })
+          }
+          .fontSize(ctx.inQuote ? 14 : 15)
+          .fontColor(ctx.inQuote ? AppColors.textSecondary : AppColors.textPrimary)
+          .fontStyle(ctx.inQuote ? FontStyle.Italic : FontStyle.Normal)
+          .lineHeight(ctx.inQuote ? 20 : 22)
+          .width('100%')
         }
-        .fontSize(ctx.inQuote ? 14 : 15)
-        .fontColor(ctx.inQuote ? AppColors.textSecondary : AppColors.textPrimary)
-        .fontStyle(ctx.inQuote ? FontStyle.Italic : FontStyle.Normal)
-        .lineHeight(ctx.inQuote ? 20 : 22)
-        .width('100%')
       } else {
         this.RenderBlockNode(group.nodes[0], ctx)
       }

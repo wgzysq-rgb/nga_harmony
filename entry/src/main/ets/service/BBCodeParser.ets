@@ -71,9 +71,11 @@ class ParseState {
 
 function pushTextNode(into: BBNode[], text: string): void {
   if (text.length === 0) return
+  const normalized = text.replace(/\n{2,}/g, '\n')
+  if (normalized.length === 0) return
   const n = new BBNode()
   n.type = BBNodeType.TEXT
-  n.text = text
+  n.text = normalized
   into.push(n)
 }
 
