@@ -28,6 +28,10 @@ export class ApiResult {
   error: string = '';
 }
 
+export class VoteResult extends ApiResult {
+  message: string = '';
+}
+
 export class CaptchaResult extends ApiResult {
   image: string = '';
 }
@@ -860,6 +864,41 @@ export async function fetchForumFavorites(token: string): Promise<ForumFavorites
     result.error = (e as Error).message ?? '获取收藏板块失败'
   }
   return result
+}
+
+export async function votePost(token: string, tid: number, pid: number, value: number): Promise<VoteResult> {
+  const result = new VoteResult();
+  const session = sessionStore.get(token);
+  if (!session) {
+    result.error = '未登录';
+    return result;
+  }
+  try {
+    const fields: Record<string, string> = {
+      '__lib': 'topic_recommend',
+      '__act': 'add',
+      'raw': '3',
+      '__output': '8',
+      'value': String(value),
+      'tid': String(tid),
+      'pid': String(pid),
+    };
+    const raw = await ngaClient.post('/nuke.php', fields, { uid: session.uid, cid: session.cid });
+    const err = parseNgaError(raw);
+    if (err) {
+      result.error = err;
+      return result;
+    }
+    const rawObj = raw as Record<string, Object>;
+    const dataObj = rawObj['data'] as Record<string, Object>;
+    if (dataObj) {
+      result.message = String(dataObj['0'] ?? '');
+    }
+    result.ok = true;
+  } catch (e) {
+    result.error = (e as Error).message ?? '操作失败';
+  }
+  return result;
 }
 
 export async function addFavorite(token: string, tid: number, pid: number): Promise<ApiResult> {

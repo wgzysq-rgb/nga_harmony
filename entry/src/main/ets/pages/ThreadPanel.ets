@@ -3,7 +3,7 @@ import { common } from '@kit.AbilityKit'
 import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
 import { browseHistoryStore, BrowseHistoryEntry } from '../store/BrowseHistoryStore'
-import { getThread, getPostAuth, postReply, postComment, addFavorite, ThreadResult, PostInfo, PostAttachInfo, PostAuthResult, PostReplyResult } from '../service/NgaApi'
+import { getThread, getPostAuth, postReply, postComment, addFavorite, votePost, ThreadResult, PostInfo, PostAttachInfo, PostAuthResult, PostReplyResult, VoteResult } from '../service/NgaApi'
 import { AppColors } from '../common/Constants'
 import { formatTime, escHtml } from '../common/Utils'
 import { Avatar } from '../common/Avatar'
@@ -36,6 +36,8 @@ export struct ThreadPanel {
   @State expandedSigs: Set<string> = new Set()
   @State expandedComments: Set<string> = new Set()
   @State expandedAttachs: Set<string> = new Set()
+  @State votedUpPids: Set<string> = new Set()
+  @State votedDownPids: Set<string> = new Set()
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'sm'
   @StorageProp('statusBarHeight') statusBarHeight: number = 0
   @StorageProp('navBarHeight') navBarHeight: number = 0
@@ -82,6 +84,8 @@ export struct ThreadPanel {
     this.expandedSigs = new Set()
     this.expandedComments = new Set()
     this.expandedAttachs = new Set()
+    this.votedUpPids = new Set()
+    this.votedDownPids = new Set()
     this.loadPage(1)
   }
 
@@ -251,6 +255,38 @@ export struct ThreadPanel {
       }
     } catch (e) {
       appStore.showToast('收藏失败')
+    }
+  }
+
+  private async handleVote(post: PostInfo, value: number): Promise<void> {
+    if (!appStore.auth.isAuthenticated) {
+      appStore.showToast('请先登录')
+      return
+    }
+    const pidKey = String(post.pid)
+    const result: VoteResult = await votePost(appStore.auth.token, Number(this.threadTid), post.pid, value)
+    if (result.ok) {
+      const msg = result.message
+      const upPids = new Set(this.votedUpPids)
+      const downPids = new Set(this.votedDownPids)
+      if (msg.indexOf('取消了对这个帖子的支持') >= 0) {
+        upPids.delete(pidKey)
+      } else if (msg.indexOf('取消了对这个帖子的反对') >= 0) {
+        downPids.delete(pidKey)
+      } else if (msg.indexOf('表示支持') >= 0) {
+        upPids.add(pidKey)
+        downPids.delete(pidKey)
+      } else if (msg.indexOf('表示反对') >= 0) {
+        downPids.add(pidKey)
+        upPids.delete(pidKey)
+      }
+      this.votedUpPids = upPids
+      this.votedDownPids = downPids
+      if (msg.length > 0) {
+        appStore.showToast(msg)
+      }
+    } else {
+      appStore.showToast(result.error || '操作失败')
     }
   }
 
@@ -606,9 +642,41 @@ export struct ThreadPanel {
           }
 
           Row() {
-            if (post.score > 0) {
-              Text(`👍 ${post.score}`).fontSize(13).fontColor(AppColors.primary)
+            Row() {
+              Image($r('app.media.icon_thumb_up'))
+                .width(16).height(16)
+                .fillColor(this.votedUpPids.has(String(post.pid)) ? AppColors.primary : AppColors.textTertiary)
+              if (post.score > 0 || this.votedUpPids.has(String(post.pid))) {
+                Text(String(post.score + (this.votedUpPids.has(String(post.pid)) ? 1 : 0)))
+                  .fontSize(13)
+                  .fontColor(this.votedUpPids.has(String(post.pid)) ? AppColors.primary : AppColors.textSecondary)
+                  .margin({ left: 3 })
+              }
             }
+            .padding({ left: 6, right: 6, top: 4, bottom: 4 })
+            .borderRadius(6)
+            .alignItems(VerticalAlign.Center)
+            .onClick(() => this.handleVote(post, 1))
+
+            Row() {
+              Image($r('app.media.icon_thumb_down'))
+                .width(16).height(16)
+                .fillColor(this.votedDownPids.has(String(post.pid)) ? AppColors.destructive : AppColors.textTertiary)
+              if (post.score_2 > 0 || this.votedDownPids.has(String(post.pid))) {
+                Text(String(post.score_2 + (this.votedDownPids.has(String(post.pid)) ? 1 : 0)))
+                  .fontSize(13)
+                  .fontColor(this.votedDownPids.has(String(post.pid)) ? AppColors.destructive : AppColors.textSecondary)
+                  .margin({ left: 3 })
+              }
+            }
+            .padding({ left: 6, right: 6, top: 4, bottom: 4 })
+            .borderRadius(6)
+            .margin({ left: 12 })
+            .alignItems(VerticalAlign.Center)
+            .onClick(() => this.handleVote(post, -1))
+
+            Blank().layoutWeight(1)
+
             Text('回复').fontSize(13).fontColor(AppColors.textTertiary)
               .onClick(() => {
                 this.replyTargetPid = post.pid
@@ -617,7 +685,7 @@ export struct ThreadPanel {
                 floatingLayerStore.replyOnSend = (text: string): Promise<void> => { return this.handleReplySend(text) }
                 floatingLayerStore.push(FloatingPage.REPLY_DIALOG)
               })
-          }.width('100%').justifyContent(FlexAlign.End).margin({ top: 8 })
+          }.width('100%').margin({ top: 8 }).alignItems(VerticalAlign.Center)
 
           if (post.comments.length > 0) {
             Column() {
