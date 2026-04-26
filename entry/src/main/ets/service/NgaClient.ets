@@ -139,21 +139,21 @@ async function encryptPassword(password: string): Promise<string> {
 
 // ============== HTTP 请求 ==============
 
-const LOG_CHUNK_SIZE: number = 3800;
+const LOG_CHUNK_SIZE: number = 1500;
 
 function logChunks(prefix: string, text: string): void {
   if (text.length === 0) {
     return;
   }
   if (text.length <= LOG_CHUNK_SIZE) {
-    console.info(prefix, text);
+    console.info(prefix + text);
     return;
   }
   let offset = 0;
   let seq = 1;
   while (offset < text.length) {
     const end = Math.min(offset + LOG_CHUNK_SIZE, text.length);
-    console.info(prefix + `[${seq}]`, text.slice(offset, end));
+    console.info(prefix + `[${seq}]` + text.slice(offset, end));
     offset = end;
     seq++;
   }
