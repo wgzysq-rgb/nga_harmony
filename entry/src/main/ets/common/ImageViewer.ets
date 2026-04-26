@@ -13,6 +13,7 @@ export struct ImageViewer {
   @State containerH: number = 0
   @State imgNaturalW: number = 0
   @State imgNaturalH: number = 0
+  @StorageProp('statusBarHeight') statusBarHeight: number = 0
 
   private isPageAnimating: boolean = false
 
@@ -170,15 +171,15 @@ export struct ImageViewer {
       Row() {
         Text(`${this.currentIndex + 1} / ${this.urls.length}`)
           .fontSize(15).fontColor(Color.White)
-          .margin({ left: 16, top: 16 })
+          .margin({ left: 16 })
         Blank().layoutWeight(1)
         Text('✕')
           .fontSize(24).fontColor(Color.White)
-          .padding({ right: 16, top: 16 })
+          .padding({ right: 16 })
           .onClick(() => {
             this.onClose()
           })
-      }.width('100%')
+      }.width('100%').padding({ top: 16 + this.statusBarHeight })
 
       Stack() {
         Stack() {

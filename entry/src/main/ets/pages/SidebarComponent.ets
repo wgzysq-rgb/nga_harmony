@@ -7,6 +7,7 @@ import { CommunityTabContent } from './CommunityTabContent'
 @Component
 export struct SidebarComponent {
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'sm'
+  @StorageProp('statusBarHeight') statusBarHeight: number = 0
 
   build() {
     Column() {
@@ -25,7 +26,7 @@ export struct SidebarComponent {
           .margin({ top: 8 })
       }
       .width('100%')
-      .padding({ top: 14, bottom: 14 })
+      .padding({ top: 14 + this.statusBarHeight, bottom: 14 })
       .alignItems(HorizontalAlign.Center)
       .border({ width: { bottom: 0.5 }, color: AppColors.separator })
       .onClick(() => {

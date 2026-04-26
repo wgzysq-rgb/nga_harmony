@@ -27,6 +27,7 @@ export struct ToastOverlay {
 export struct ToastComponent {
   @State message: string = ''
   @State visible: boolean = false
+  @StorageProp('navBarHeight') navBarHeight: number = 0
   private pollTimer: number = -1
 
   aboutToAppear(): void {
@@ -67,7 +68,7 @@ export struct ToastComponent {
       .width('100%')
       .height('100%')
       .alignContent(Alignment.Bottom)
-      .margin({ bottom: 100 })
+      .margin({ bottom: 100 + this.navBarHeight })
       .hitTestBehavior(HitTestMode.Transparent)
     }
   }

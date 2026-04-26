@@ -36,6 +36,8 @@ export struct ThreadPanel {
   @State expandedComments: Set<string> = new Set()
   @State expandedAttachs: Set<string> = new Set()
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'sm'
+  @StorageProp('statusBarHeight') statusBarHeight: number = 0
+  @StorageProp('navBarHeight') navBarHeight: number = 0
   private scroller: Scroller = new Scroller()
   private replyTargetPid: number = 0
   private loadedLouSet: Set<number> = new Set()
@@ -273,7 +275,9 @@ export struct ThreadPanel {
         Text('⋯').fontSize(22).fontColor(AppColors.primary)
           .onClick(() => this.handleFavorite()).padding({ left: 4, right: 16 })
       }
-      .width('100%').height(44).backgroundColor(AppColors.bgTertiary)
+      .width('100%').height(44 + this.statusBarHeight)
+      .padding({ top: this.statusBarHeight })
+      .backgroundColor(AppColors.bgTertiary)
       .border({ width: { bottom: 0.5 }, color: AppColors.separator }).alignItems(VerticalAlign.Center)
 
       Row() {
@@ -425,7 +429,7 @@ export struct ThreadPanel {
           floatingLayerStore.push(FloatingPage.REPLY_DIALOG)
         })
       }
-      .width('100%').padding({ left: 16, right: 16, bottom: 16 }).alignItems(VerticalAlign.Center)
+      .width('100%').padding({ left: 16, right: 16, bottom: 16 + this.navBarHeight }).alignItems(VerticalAlign.Center)
 
       // 页数选择器弹出面板（定位在页数选择器正上方）
       if (this.totalPages > 1 && this.showPagePicker) {
@@ -452,7 +456,7 @@ export struct ThreadPanel {
         }
         .width(220).height(180).backgroundColor(Color.White).borderRadius(12)
           .shadow({ radius: 16, color: '#40000000', offsetY: 4 })
-          .position({ x: 16, y: '100%' }).translate({ y: -256 })
+          .position({ x: 16, y: '100%' }).translate({ y: -256 - this.navBarHeight })
       }
     }
     .width('100%').height('100%').backgroundColor(AppColors.bg).alignContent(Alignment.BottomEnd)

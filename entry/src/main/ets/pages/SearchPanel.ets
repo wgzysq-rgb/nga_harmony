@@ -25,6 +25,7 @@ export struct SearchPanel {
   @State isLoadingMore: boolean = false
   @State showEmpty: boolean = false
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'sm'
+  @StorageProp('statusBarHeight') statusBarHeight: number = 0
 
   private scroller: Scroller = new Scroller()
   private forumsDataSource: ThreadDataSource = new ThreadDataSource()
@@ -187,7 +188,7 @@ export struct SearchPanel {
         }.layoutWeight(1).height(40).padding({ left: 12, right: 12 })
         .backgroundColor(AppColors.bgSecondary).borderRadius(10).alignItems(VerticalAlign.Center)
         Text('取消').fontSize(15).fontColor(AppColors.primary).margin({ left: 12 }).onClick(() => routerStore.back())
-      }.width('100%').padding({ left: 16, right: 16, top: 8, bottom: 8 }).alignItems(VerticalAlign.Center)
+      }.width('100%').padding({ left: 16, right: 16, top: 8 + this.statusBarHeight, bottom: 8 }).alignItems(VerticalAlign.Center)
 
       Row() {
         Text('主题').fontSize(14).fontColor(this.currentTab === 0 ? AppColors.primary : AppColors.textSecondary)

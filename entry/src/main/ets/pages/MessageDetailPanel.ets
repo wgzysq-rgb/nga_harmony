@@ -19,6 +19,7 @@ export struct MessageDetailPanel {
   @State hasError: boolean = false
   @State replyText: string = ''
   @State sending: boolean = false
+  @StorageProp('navBarHeight') navBarHeight: number = 0
 
   private scroller: Scroller = new Scroller()
   private messagesDataSource: MessageArticleDataSource = new MessageArticleDataSource()
@@ -147,7 +148,7 @@ export struct MessageDetailPanel {
             .enabled(!this.sending && this.replyText.trim().length > 0)
             .onClick(() => this.handleReply())
         }
-        .width('100%').padding({ left: 12, right: 12, top: 8, bottom: 8 })
+        .width('100%').padding({ left: 12, right: 12, top: 8, bottom: 8 + this.navBarHeight })
         .backgroundColor(AppColors.bgTertiary)
         .border({ width: { top: 0.5 }, color: AppColors.separator })
         .alignItems(VerticalAlign.Center)

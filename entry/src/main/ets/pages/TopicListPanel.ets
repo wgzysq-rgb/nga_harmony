@@ -33,6 +33,8 @@ export struct TopicListPanel {
   @State sortMode: string = 'latest'
   @State showSort: boolean = true
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'sm'
+  @StorageProp('statusBarHeight') statusBarHeight: number = 0
+  @StorageProp('navBarHeight') navBarHeight: number = 0
 
   private scroller: Scroller = new Scroller()
 
@@ -142,7 +144,8 @@ export struct TopicListPanel {
             .fontSize(17).fontWeight(FontWeight.Bold).layoutWeight(1)
             .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         }
-        .width('100%').height(44).padding({ left: 16, right: 16 })
+        .width('100%').height(44 + this.statusBarHeight)
+        .padding({ left: 16, right: 16, top: this.statusBarHeight })
         .backgroundColor(AppColors.bgTertiary)
         .border({ width: { bottom: 0.5 }, color: AppColors.separator })
         .alignItems(VerticalAlign.Center)
@@ -231,7 +234,7 @@ export struct TopicListPanel {
         .backgroundColor(Color.White)
         .shadow({ radius: 16, color: '#40000000', offsetY: 4 })
         .onClick(() => this.loadTopics(1))
-      }.width('100%').justifyContent(FlexAlign.End).padding({ right: 16, bottom: 16 })
+      }.width('100%').justifyContent(FlexAlign.End).padding({ right: 16, bottom: 16 + this.navBarHeight })
     }
     .width('100%').height('100%').backgroundColor(AppColors.bg).alignContent(Alignment.BottomEnd)
   }

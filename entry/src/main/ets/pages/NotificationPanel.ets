@@ -23,6 +23,7 @@ export struct NotificationPanel {
   @State activeFilter: number = 0
   @State clearing: boolean = false
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'sm'
+  @StorageProp('statusBarHeight') statusBarHeight: number = 0
   private notificationsDataSource: NotificationDataSource = new NotificationDataSource()
 
   aboutToAppear(): void {
@@ -90,7 +91,8 @@ export struct NotificationPanel {
           .padding({ left: 8, right: 16 })
       }
       .width('100%')
-      .height(44)
+      .height(44 + this.statusBarHeight)
+      .padding({ top: this.statusBarHeight })
       .backgroundColor(AppColors.bgTertiary)
       .border({ width: { bottom: 0.5 }, color: AppColors.separator })
       .alignItems(VerticalAlign.Center)

@@ -24,6 +24,7 @@ class HistoryItem {
 export struct BrowseHistoryPanel {
   @State items: HistoryItem[] = []
   @State showClearConfirm: boolean = false
+  @StorageProp('statusBarHeight') statusBarHeight: number = 0
   clearDialogController?: CustomDialogController
   private historyDataSource: HistoryItemDataSource = new HistoryItemDataSource()
 
@@ -74,7 +75,9 @@ export struct BrowseHistoryPanel {
             .margin({ right: 16 })
             .onClick(() => { this.clearDialogController?.open() })
         }
-        .width('100%').height(44).backgroundColor(AppColors.bgTertiary)
+        .width('100%').height(44 + this.statusBarHeight)
+        .padding({ top: this.statusBarHeight })
+        .backgroundColor(AppColors.bgTertiary)
         .border({ width: { bottom: 0.5 }, color: AppColors.separator })
         .alignItems(VerticalAlign.Center).justifyContent(FlexAlign.End)
       }

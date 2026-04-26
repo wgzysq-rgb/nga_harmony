@@ -36,22 +36,38 @@ export default class EntryAbility extends UIAbility {
   onWindowStageCreate(windowStage: window.WindowStage): void {
     hilog.info(DOMAIN, TAG, '%{public}s', 'Ability onWindowStageCreate');
 
-    // 始终加载 Index 启动页，由 Index 页面等待初始化完成后再路由
     windowStage.loadContent('pages/Index', (err) => {
       if (err.code) {
         hilog.error(DOMAIN, TAG, 'Failed to load the content. Cause: %{public}s', JSON.stringify(err));
         return;
       }
 
-      // 加载完成后初始化断点监听
       try {
         const mainWindow = windowStage.getMainWindowSync()
+
+        mainWindow.setWindowLayoutFullScreen(true)
+
+        const sysBarProps: window.SystemBarProperties = {
+          statusBarColor: '#00000000',
+          statusBarContentColor: '#000000',
+          navigationBarColor: '#00000000',
+          navigationBarContentColor: '#000000'
+        }
+        mainWindow.setWindowSystemBarProperties(sysBarProps)
+
+        const avoidArea = mainWindow.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM)
+        const density = display.getDefaultDisplaySync().densityPixels
+        const topInset = avoidArea.topRect.height / density
+        const bottomInset = avoidArea.bottomRect.height / density
+        AppStorage.setOrCreate('statusBarHeight', topInset)
+        AppStorage.setOrCreate('navBarHeight', bottomInset)
+
         this.updateBreakpoint(mainWindow.getWindowProperties().windowRect.width)
         mainWindow.on('windowSizeChange', (size: window.Size) => {
           this.updateBreakpoint(size.width)
         })
       } catch (e) {
-        hilog.error(DOMAIN, TAG, 'Failed to register windowSizeChange. Cause: %{public}s', JSON.stringify(e))
+        hilog.error(DOMAIN, TAG, 'Failed to setup immersive mode. Cause: %{public}s', JSON.stringify(e))
       }
     });
   }

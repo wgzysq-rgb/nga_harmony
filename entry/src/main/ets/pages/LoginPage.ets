@@ -5,6 +5,7 @@
 
 import { loginStep1, loginStep2, getCurrentUser } from '../service/NgaApi'
 import { appStore } from '../store/AppStore'
+import { AppColors } from '../common/Constants'
 import router from '@ohos.router'
 
 @Entry
@@ -18,35 +19,33 @@ struct LoginPage {
   @State loginToken: string = ''
   @State captchaId: string = ''
   @State captchaImage: string = ''
+  @StorageProp('statusBarHeight') statusBarHeight: number = 0
 
   build() {
     Column() {
-      // 标题
       Text('N G A')
         .fontSize(28)
         .fontWeight(FontWeight.Bold)
         .letterSpacing(12)
         .margin({ top: 120, bottom: 50 })
 
-      // 用户名输入
       TextInput({ placeholder: '用户名', text: this.username })
         .width('85%')
         .height(48)
         .fontSize(17)
-        .backgroundColor('#F2F2F7')
+        .backgroundColor(AppColors.bgSecondary)
         .borderRadius(10)
         .padding({ left: 16, right: 16 })
         .onChange((value: string) => {
           this.username = value
         })
 
-      // 密码输入
       TextInput({ placeholder: '密码', text: this.password })
         .type(InputType.Password)
         .width('85%')
         .height(48)
         .fontSize(17)
-        .backgroundColor('#F2F2F7')
+        .backgroundColor(AppColors.bgSecondary)
         .borderRadius(10)
         .padding({ left: 16, right: 16 })
         .margin({ top: 12 })
@@ -54,11 +53,10 @@ struct LoginPage {
           this.password = value
         })
 
-      // 验证码区域
       if (this.loginToken) {
         Text('输入图形验证码(6字符)')
           .fontSize(13)
-          .fontColor('#8E8E93')
+          .fontColor(AppColors.textTertiary)
           .margin({ top: 16 })
 
         Row() {
@@ -66,7 +64,7 @@ struct LoginPage {
             .layoutWeight(1)
             .height(46)
             .fontSize(17)
-            .backgroundColor('#F2F2F7')
+            .backgroundColor(AppColors.bgSecondary)
             .borderRadius(10)
             .padding({ left: 16, right: 16 })
             .maxLength(6)
@@ -79,7 +77,7 @@ struct LoginPage {
               .width(120)
               .height(46)
               .borderRadius(10)
-              .backgroundColor('#F2F2F7')
+              .backgroundColor(AppColors.bgSecondary)
               .objectFit(ImageFit.Contain)
               .margin({ left: 8 })
               .onClick(() => {
@@ -91,23 +89,21 @@ struct LoginPage {
         .margin({ top: 12 })
       }
 
-      // 错误提示
       if (this.error) {
         Text(this.error)
           .fontSize(13)
-          .fontColor('#FF3B30')
+          .fontColor(AppColors.destructive)
           .margin({ top: 12 })
           .textAlign(TextAlign.Center)
       }
 
-      // 登录按钮
       Button(this.loading ? '...' : (this.loginToken ? '继 续' : '登 录'))
         .width('85%')
         .height(50)
         .fontSize(17)
         .fontWeight(FontWeight.Bold)
         .fontColor(Color.White)
-        .backgroundColor('#007AFF')
+        .backgroundColor(AppColors.primary)
         .borderRadius(12)
         .margin({ top: 20 })
         .enabled(!this.loading)
@@ -115,23 +111,22 @@ struct LoginPage {
           this.handleLogin()
         })
 
-      // 分隔线
       Row() {
-        Divider().layoutWeight(1).color('#E5E5EA')
-        Text('或').fontSize(11).fontColor('#AEAEB2').padding({ left: 8, right: 8 })
-        Divider().layoutWeight(1).color('#E5E5EA')
+        Divider().layoutWeight(1).color(AppColors.separator)
+        Text('或').fontSize(11).fontColor(AppColors.textTertiary).padding({ left: 8, right: 8 })
+        Divider().layoutWeight(1).color(AppColors.separator)
       }
       .width('85%')
       .margin({ top: 24, bottom: 24 })
 
-      // 凭据注入按钮（鸿蒙端改为提示）
       Text('鸿蒙端暂不支持凭据文件注入')
         .fontSize(13)
-        .fontColor('#8E8E93')
+        .fontColor(AppColors.textTertiary)
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#F2F2F7')
+    .backgroundColor(AppColors.bgSecondary)
+    .padding({ top: this.statusBarHeight })
     .alignItems(HorizontalAlign.Center)
   }
 

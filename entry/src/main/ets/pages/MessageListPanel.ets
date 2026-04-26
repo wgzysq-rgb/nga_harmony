@@ -23,6 +23,8 @@ export struct MessageListPanel {
   @State composeContent: string = ''
   @State sending: boolean = false
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'sm'
+  @StorageProp('statusBarHeight') statusBarHeight: number = 0
+  @StorageProp('navBarHeight') navBarHeight: number = 0
   private threadsDataSource: MessageThreadDataSource = new MessageThreadDataSource()
 
   aboutToAppear(): void {
@@ -85,7 +87,8 @@ export struct MessageListPanel {
           .onClick(() => { this.showCompose = true })
       }
       .width('100%')
-      .height(44)
+      .height(44 + this.statusBarHeight)
+      .padding({ top: this.statusBarHeight })
       .backgroundColor(AppColors.bgTertiary)
       .border({ width: { bottom: 0.5 }, color: AppColors.separator })
       .alignItems(VerticalAlign.Center)
@@ -147,7 +150,7 @@ export struct MessageListPanel {
           .shadow({ radius: 8, color: '#30007AFF', offsetY: 2 })
           .onClick(() => { this.showCompose = true })
         }
-        .width('100%').justifyContent(FlexAlign.End).padding({ right: 20, bottom: 20 })
+        .width('100%').justifyContent(FlexAlign.End).padding({ right: 20, bottom: 20 + this.navBarHeight })
       }
 
       if (this.showCompose) {
@@ -190,6 +193,7 @@ export struct MessageListPanel {
         }
         .width('100%').backgroundColor(AppColors.bg)
         .borderRadius({ topLeft: 14, topRight: 14 }).alignItems(HorizontalAlign.Center)
+        .padding({ bottom: this.navBarHeight })
         .position({ x: 0, y: '40%' })
       }
     }
