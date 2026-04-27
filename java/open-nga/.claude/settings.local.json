@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs grep:*)",
+      "Bash(npx tsx:*)",
+      "mcp__zai-mcp-server__extract_text_from_screenshot"
+    ]
+  }
+}
