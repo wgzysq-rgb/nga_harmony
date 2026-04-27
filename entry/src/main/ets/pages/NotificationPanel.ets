@@ -84,6 +84,10 @@ export struct NotificationPanel {
   build() {
     Column() {
       Row() {
+        Text('←').fontSize(22).fontColor(AppColors.primary)
+          .onClick(() => routerStore.back()).padding({ left: 8, right: 8 })
+        Text('通知').fontSize(17).fontWeight(FontWeight.Bold).layoutWeight(1)
+          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         Text('全部已读')
           .fontSize(14)
           .fontColor(this.clearing ? AppColors.textTertiary : AppColors.primary)
@@ -96,7 +100,6 @@ export struct NotificationPanel {
       .backgroundColor(AppColors.bgTertiary)
       .border({ width: { bottom: 0.5 }, color: AppColors.separator })
       .alignItems(VerticalAlign.Center)
-      .justifyContent(FlexAlign.End)
 
       Row() {
         ForEach(FILTER_LABELS, (label: string, index: number) => {

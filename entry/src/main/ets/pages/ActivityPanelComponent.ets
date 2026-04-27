@@ -26,6 +26,19 @@ export struct ActivityPanelComponent {
           })
         } else if (this.topActivity.screen.type === 'browseHistory') {
           BrowseHistoryPanel()
+        } else if (this.topActivity.screen.type === 'messages') {
+          MessageListPanel({ composeToInit: this.topActivity.screen.composeTo })
+        } else if (this.topActivity.screen.type === 'notifications') {
+          NotificationPanel()
+        } else if (this.topActivity.screen.type === 'topicList') {
+          TopicListPanel({
+            boardFid: this.topActivity.screen.topicListFid,
+            boardName: this.topActivity.screen.topicListName,
+            isFavorites: this.topActivity.screen.topicListFavor === '1',
+            authorid: this.topActivity.screen.topicListAuthorid,
+            favor: this.topActivity.screen.topicListFavor,
+            searchpost: this.topActivity.screen.topicListSearchpost
+          })
         } else {
           Column() {
             PanelNavBar({ title: this.topActivity.screen.getTitle() })
@@ -45,25 +58,12 @@ export struct ActivityPanelComponent {
   ContentBody() {
     if (this.topActivity!.screen.type === 'profile') {
       ProfilePanel({ uid: this.topActivity!.screen.uid })
-    } else if (this.topActivity!.screen.type === 'notifications') {
-      NotificationPanel()
-    } else if (this.topActivity!.screen.type === 'messages') {
-      MessageListPanel({ composeToInit: this.topActivity!.screen.composeTo })
     } else if (this.topActivity!.screen.type === 'messageDetail') {
       MessageDetailPanel({ mid: this.topActivity!.screen.mid })
     } else if (this.topActivity!.screen.type === 'blacklist') {
       BlacklistPanel()
     } else if (this.topActivity!.screen.type === 'settings') {
       SettingsPanel()
-    } else if (this.topActivity!.screen.type === 'topicList') {
-      TopicListPanel({
-        boardFid: this.topActivity!.screen.topicListFid,
-        boardName: this.topActivity!.screen.topicListName,
-        isFavorites: this.topActivity!.screen.topicListFavor === '1',
-        authorid: this.topActivity!.screen.topicListAuthorid,
-        favor: this.topActivity!.screen.topicListFavor,
-        searchpost: this.topActivity!.screen.topicListSearchpost
-      })
     } else {
       Column() {
         Text('未知页面类型').fontSize(14).fontColor(AppColors.textTertiary)

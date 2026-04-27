@@ -139,12 +139,14 @@ export struct TopicListPanel {
     Stack() {
       Column() {
         Row() {
+          Text('←').fontSize(22).fontColor(AppColors.primary)
+            .onClick(() => routerStore.back()).padding({ left: 8, right: 8 })
           Text(this.boardName)
             .fontSize(17).fontWeight(FontWeight.Bold).layoutWeight(1)
             .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         }
         .width('100%').height(44 + this.statusBarHeight)
-        .padding({ left: 16, right: 16, top: this.statusBarHeight })
+        .padding({ top: this.statusBarHeight })
         .backgroundColor(AppColors.bgTertiary)
         .border({ width: { bottom: 0.5 }, color: AppColors.separator })
         .alignItems(VerticalAlign.Center)

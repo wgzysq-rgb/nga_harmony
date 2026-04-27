@@ -80,11 +80,12 @@ export struct MessageListPanel {
   build() {
     Column() {
       Row() {
-        Text('✏️')
-          .fontSize(18)
-          .fontColor(AppColors.primary)
-          .margin({ right: 16 })
-          .onClick(() => { this.showCompose = true })
+        Text('←').fontSize(22).fontColor(AppColors.primary)
+          .onClick(() => routerStore.back()).padding({ left: 8, right: 8 })
+        Text('私信').fontSize(17).fontWeight(FontWeight.Bold).layoutWeight(1)
+          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text('✏️').fontSize(18).fontColor(AppColors.primary)
+          .margin({ right: 16 }).onClick(() => { this.showCompose = true })
       }
       .width('100%')
       .height(44 + this.statusBarHeight)
@@ -92,7 +93,6 @@ export struct MessageListPanel {
       .backgroundColor(AppColors.bgTertiary)
       .border({ width: { bottom: 0.5 }, color: AppColors.separator })
       .alignItems(VerticalAlign.Center)
-      .justifyContent(FlexAlign.End)
 
       if (this.isLoading) {
         Column() {
@@ -140,18 +140,7 @@ export struct MessageListPanel {
         .lanes(new BreakpointType(1, 2, 2).getValue(this.currentBreakpoint), 12)
       }
 
-      if (!this.showCompose) {
-        Row() {
-          Stack() {
-            Text('✏️').fontSize(22).fontColor(Color.White)
-          }
-          .width(56).height(56).borderRadius(28)
-          .backgroundColor(AppColors.primary)
-          .shadow({ radius: 8, color: '#30007AFF', offsetY: 2 })
-          .onClick(() => { this.showCompose = true })
-        }
-        .width('100%').justifyContent(FlexAlign.End).padding({ right: 20, bottom: 20 + this.navBarHeight })
-      }
+
 
       if (this.showCompose) {
         Column() {
