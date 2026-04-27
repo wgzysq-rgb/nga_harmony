@@ -23,6 +23,7 @@ export struct TopicListPanel {
   @Prop searchKey: string = ''
   @Prop author: string = ''
   @Prop searchpost: string = ''
+  @Prop showBack: boolean = true
   @State isLoading: boolean = true
   @State isLoadingMore: boolean = false
   @State hasError: boolean = false
@@ -139,7 +140,7 @@ export struct TopicListPanel {
   build() {
     Stack() {
       Column() {
-        PanelNavBar({ title: this.boardName, showBack: false })
+        PanelNavBar({ title: this.boardName, showBack: this.showBack })
 
         if (this.showSort) {
           Row() {

@@ -3,15 +3,15 @@ import { AppColors } from './Constants'
 
 @Component
 export struct PanelNavBar {
-  private title: string = ''
+  @Prop title: string = ''
   @StorageProp('statusBarHeight') statusBarHeight: number = 0
   onBack?: () => void
-  showBack: boolean = true
-  rightLabel: string = ''
-  rightLabelColor: string = ''
+  @Prop showBack: boolean = true
+  @Prop rightLabel: string = ''
+  @Prop rightLabelColor: string = ''
   onRightClick?: () => void
-  rightIcon?: Resource
-  rightIconColor: string = ''
+  @Prop rightIcon?: Resource
+  @Prop rightIconColor: string = ''
 
   build() {
     Row() {

@@ -16,6 +16,7 @@ export struct BoardPanelComponent {
             boardFid: this.boardSlot.fid,
             boardName: this.boardSlot.name,
             boardStid: this.boardSlot.stid,
+            showBack: false,
             isFavorites: this.boardSlot.fid === -9999,
             authorid: this.boardSlot.authorid,
             favor: this.boardSlot.favor,
