@@ -3,10 +3,7 @@ import type { NgaNotification, ReplyNotification, MessageNotification, VoteNotif
 export function parseNotifications(raw: object | null): NgaNotification[] {
   const result: NgaNotification[] = [];
   const rawObj = raw as Record<string, Object>;
-  const data = (rawObj?.['data'] as Record<string, Object>)?.['data'];
-  if (!data || typeof data !== 'object') return result;
-
-  const group = (data as Record<string, Object>)['0'] as Record<string, Object>;
+  const group = (rawObj?.['data'] as Record<string, Object>)?.['0'] as Record<string, Object>;
   if (!group || typeof group !== 'object') return result;
 
   // 回复通知
@@ -16,7 +13,7 @@ export function parseNotifications(raw: object | null): NgaNotification[] {
       const e = item as Record<string, Object>;
       if (!e || typeof e !== 'object') continue;
       result.push({
-        type: 0,
+        type: Number(e['0'] ?? 0),
         userId: String(e['1'] ?? ''),
         userName: String(e['2'] ?? ''),
         repliedId: String(e['3'] ?? ''),
@@ -38,7 +35,7 @@ export function parseNotifications(raw: object | null): NgaNotification[] {
       const e = item as Record<string, Object>;
       if (!e || typeof e !== 'object') continue;
       result.push({
-        type: 1,
+        type: Number(e['0'] ?? 0),
         userId: String(e['1'] ?? ''),
         userName: String(e['2'] ?? ''),
         mid: String(e['6'] ?? ''),
@@ -54,7 +51,7 @@ export function parseNotifications(raw: object | null): NgaNotification[] {
       const e = item as Record<string, Object>;
       if (!e || typeof e !== 'object') continue;
       result.push({
-        type: 2,
+        type: Number(e['0'] ?? 0),
         userId: String(e['3'] ?? ''),
         userName: '',
         title: String(e['5'] ?? ''),

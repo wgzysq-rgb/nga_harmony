@@ -49,14 +49,16 @@ export struct NotificationPanel {
     this.isLoading = false
   }
 
-  private get filteredNotifications(): NotificationInfo[] {
+  private getFilteredNotifications(): NotificationInfo[] {
+    const list = this.notifications
+    if (!list) return []
     const types = FILTER_TYPES[this.activeFilter]
-    if (types.length === 0) return this.notifications
-    return this.notifications.filter((n: NotificationInfo) => types.includes(n.type))
+    if (types.length === 0) return list
+    return list.filter((n: NotificationInfo) => types.includes(n.type))
   }
 
   private updateFilteredDataSource(): void {
-    this.notificationsDataSource.replaceAll(this.filteredNotifications)
+    this.notificationsDataSource.replaceAll(this.getFilteredNotifications())
   }
 
   private async handleClearAll(): Promise<void> {
@@ -134,7 +136,7 @@ export struct NotificationPanel {
             .onClick(() => this.loadNotifications())
         }
         .width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
-      } else if (this.filteredNotifications.length === 0) {
+      } else if (this.getFilteredNotifications().length === 0) {
         Column() {
           Text('🔔').fontSize(40).opacity(0.4)
           Text('暂无通知').fontSize(15).fontColor(AppColors.textTertiary).margin({ top: 8 })
