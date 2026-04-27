@@ -132,7 +132,6 @@ export struct TopicListPanel {
 
   private getTypeTags(type: number): string {
     if (type & 1024) return '[锁定]'
-    if (type & 8192) return '[附件]'
     return ''
   }
 
