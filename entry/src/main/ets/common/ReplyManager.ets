@@ -116,7 +116,8 @@ export class ReplyManagerClass {
       const hi: number = 0xD800 + ((code - 0x10000) >> 10)
       const lo: number = 0xDC00 + ((code - 0x10000) & 0x3FF)
       return String.fromCharCode(hi) + String.fromCharCode(lo)
-    }).trim()
+    })
+    cleanContent = cleanContent.replace(/<br\s*\/?>/gi, '\n').trim()
     if (cleanContent.length > 100) {
       cleanContent = cleanContent.substring(0, 100) + '...'
     }
