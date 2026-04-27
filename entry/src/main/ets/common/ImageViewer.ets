@@ -34,7 +34,6 @@ export struct ImageViewer {
   private prevPanY: number = 0
   private prevSampleTime: number = 0
 
-  private lastTapTime: number = 0
   private lastTouchX: number = 0
   private lastTouchY: number = 0
   private panStartOffsetX: number = 0
@@ -42,9 +41,8 @@ export struct ImageViewer {
 
   private readonly ZOOM_MAX: number = 5
   private readonly ZOOM_MIN: number = 1
-  private readonly SWIPE_THRESHOLD: number = 120
+  private readonly SWIPE_THRESHOLD: number = 80
   private readonly SWIPE_DISTANCE: number = 15
-  private readonly TAP_TIMEOUT: number = 300
   private readonly DOUBLE_TAP_SCALE: number = 2.5
 
   aboutToAppear(): void {
@@ -250,6 +248,41 @@ export struct ImageViewer {
                   this.zoomOffsetY = this.clampOffsetY(this.zoomScale, this.zoomOffsetY)
                 }
               }),
+            TapGesture({ count: 2 })
+              .onAction((event: GestureEvent) => {
+                if (this.isPageAnimating) return
+                if (this.zoomScale > 1.01) {
+                  animateTo({ duration: 250, curve: Curve.FastOutSlowIn }, () => {
+                    this.zoomScale = 1
+                    this.zoomOffsetX = 0
+                    this.zoomOffsetY = 0
+                  })
+                } else {
+                  let tapX: number = 0
+                  let tapY: number = 0
+                  if (event.fingerList && event.fingerList.length > 0) {
+                    tapX = event.fingerList[0].localX
+                    tapY = event.fingerList[0].localY
+                  }
+                  let imgW: number = this.calcImgContainedW()
+                  let imgH: number = this.calcImgContainedH()
+                  let cbx: number = (this.containerW - imgW) / 2
+                  let cby: number = (this.containerH - imgH) / 2
+                  let newScale: number = this.DOUBLE_TAP_SCALE
+                  let oldScale: number = this.zoomScale
+                  let imgX: number = (tapX - cbx * oldScale - this.zoomOffsetX) / oldScale
+                  let imgY: number = (tapY - cby * oldScale - this.zoomOffsetY) / oldScale
+                  let rawOX: number = tapX - cbx * newScale - imgX * newScale
+                  let rawOY: number = tapY - cby * newScale - imgY * newScale
+                  let clampedOX: number = this.clampOffsetX(newScale, rawOX)
+                  let clampedOY: number = this.clampOffsetY(newScale, rawOY)
+                  animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
+                    this.zoomScale = newScale
+                    this.zoomOffsetX = clampedOX
+                    this.zoomOffsetY = clampedOY
+                  })
+                }
+              }),
             PanGesture({ fingers: 1, direction: PanDirection.All, distance: this.SWIPE_DISTANCE })
               .onActionStart((event: GestureEvent) => {
                 let isZoomed: boolean = this.zoomScale > 1.01
@@ -286,16 +319,8 @@ export struct ImageViewer {
               })
               .onActionEnd((event: GestureEvent) => {
                 if (this.isPageAnimating) return
-                let dx: number = Math.abs(event.offsetX - this.panStartOffsetX)
-                let dy: number = Math.abs(event.offsetY - this.panStartOffsetY)
-                let isTap: boolean = dx < 6 && dy < 6
                 let isZoomed: boolean = this.zoomScale > 1.01
-
                 if (isZoomed) {
-                  if (isTap) {
-                    this.resetPanTracking()
-                    return
-                  }
                   let flickX: number = this.velX * 0.3
                   let flickY: number = this.velY * 0.3
                   let targetX: number = this.clampOffsetX(this.zoomScale,
@@ -308,43 +333,8 @@ export struct ImageViewer {
                   })
                   this.resetPanTracking()
                 } else {
-                  if (isTap) {
-                    let dt: number = event.timestamp - this.lastTapTime
-                    if (dt < this.TAP_TIMEOUT) {
-                      if (isZoomed) {
-                        animateTo({ duration: 250, curve: Curve.FastOutSlowIn }, () => {
-                          this.zoomScale = 1
-                          this.zoomOffsetX = 0
-                          this.zoomOffsetY = 0
-                        })
-                      } else {
-                        let imgW: number = this.calcImgContainedW()
-                        let imgH: number = this.calcImgContainedH()
-                        let cbx: number = (this.containerW - imgW) / 2
-                        let cby: number = (this.containerH - imgH) / 2
-                        let newScale: number = this.DOUBLE_TAP_SCALE
-                        let oldScale: number = this.zoomScale
-                        let tapX: number = this.lastTouchX
-                        let tapY: number = this.lastTouchY
-                        let imgX: number = (tapX - cbx * oldScale - this.zoomOffsetX) / oldScale
-                        let imgY: number = (tapY - cby * oldScale - this.zoomOffsetY) / oldScale
-                        let rawOX: number = tapX - cbx * newScale - imgX * newScale
-                        let rawOY: number = tapY - cby * newScale - imgY * newScale
-                        let clampedOX: number = this.clampOffsetX(newScale, rawOX)
-                        let clampedOY: number = this.clampOffsetY(newScale, rawOY)
-                        animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
-                          this.zoomScale = newScale
-                          this.zoomOffsetX = clampedOX
-                          this.zoomOffsetY = clampedOY
-                        })
-                      }
-                      this.lastTapTime = 0
-                    } else {
-                      this.lastTapTime = event.timestamp
-                    }
-                    this.resetPanTracking()
-                    return
-                  }
+                  let dx: number = Math.abs(event.offsetX - this.panStartOffsetX)
+                  let dy: number = Math.abs(event.offsetY - this.panStartOffsetY)
                   let hasPrev: boolean = this.currentIndex > 0
                   let hasNext: boolean = this.currentIndex < this.urls.length - 1
                   let swipeAbs: number = Math.abs(this.swipeTranslateX)
@@ -376,6 +366,6 @@ export struct ImageViewer {
       Blank().height(32)
     }
     .width('100%').height('100%')
-    .backgroundColor('#73000000')
+    .backgroundColor('#FF000000')
   }
 }
