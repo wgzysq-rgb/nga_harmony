@@ -567,7 +567,7 @@ export async function getThread(token: string, tid: string, pid: string,
       const rawHtml: object = parseHtmlToRawJson(html);
       fillThreadResult(rawHtml as Record<string, Object>, result, blacklist);
     } else {
-      // 优先尝试 JSON API (__output=8)
+      // 优先尝试 JSON API (__output=8)；失败时降级 HTML 解析
       const ngaParams: Record<string, string> = {
         'page': page || '1',
         '__output': '8',
@@ -578,21 +578,27 @@ export async function getThread(token: string, tid: string, pid: string,
       if (pid) ngaParams['pid'] = pid;
       if (authorid) ngaParams['authorid'] = authorid;
 
-      const raw = await ngaClient.get('/read.php', ngaParams, { uid: session.uid, cid: session.cid }) as Record<string, Object>;
-      const error = parseNgaError(raw);
+      let jsonOk: boolean = false;
+      try {
+        const raw = await ngaClient.get('/read.php', ngaParams, { uid: session.uid, cid: session.cid }) as Record<string, Object>;
+        const error = parseNgaError(raw);
+        if (!error) {
+          fillThreadResult(raw as Record<string, Object>, result, blacklist);
+          jsonOk = true;
+        }
+      } catch (e) {
+        // JSON 请求异常（含非200），降级 HTML
+      }
 
-      if (error) {
-        // JSON API 失败，降级为 HTML 解析
-        const htmlParams: Record<string, string> = {
+      if (!jsonOk) {
+        const fallbackParams: Record<string, string> = {
           'tid': tid || '',
           'page': page || '1',
         };
-        if (authorid) htmlParams['authorid'] = authorid;
-        const html: string = await ngaClient.getHtmlText('/read.php', htmlParams, { uid: session.uid, cid: session.cid });
+        if (authorid) fallbackParams['authorid'] = authorid;
+        const html: string = await ngaClient.getHtmlText('/read.php', fallbackParams, { uid: session.uid, cid: session.cid });
         const rawHtml: object = parseHtmlToRawJson(html);
         fillThreadResult(rawHtml as Record<string, Object>, result, blacklist);
-      } else {
-        fillThreadResult(raw as Record<string, Object>, result, blacklist);
       }
     }
   } catch (e) {
