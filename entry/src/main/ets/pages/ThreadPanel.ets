@@ -24,6 +24,8 @@ export struct ThreadPanel {
   @State allPosts: PostInfo[] = []
   private postsDataSource: PostInfoDataSource = new PostInfoDataSource()
   @State currentPage: number = 1
+  @State displayPage: number = 1
+  private indexToPage: number[] = []
   @State loadedPageStart: number = 1
   @State totalPages: number = 0
   @State isLoadingMore: boolean = false
@@ -74,6 +76,8 @@ export struct ThreadPanel {
     this.allPosts = []
     this.postsDataSource.clear()
     this.currentPage = 1
+    this.displayPage = 1
+    this.indexToPage = []
     this.loadedPageStart = 1
     this.totalPages = 0
     this.hasError = false
@@ -110,6 +114,7 @@ export struct ThreadPanel {
       this.allPosts = []
       this.postsDataSource.clear()
       this.loadedLouSet.clear()
+      this.indexToPage = []
       this.isLoading = true
       this.hasError = false
       this.loadedPageStart = page
@@ -140,6 +145,7 @@ export struct ThreadPanel {
           }
           this.allPosts = result.posts
           this.postsDataSource.replaceAll(result.posts)
+          this.indexToPage = result.posts.map(() => page)
         } else {
           let newLouCount: number = 0
           for (let i = 0; i < result.posts.length; i++) {
@@ -156,6 +162,7 @@ export struct ThreadPanel {
           for (let i = 0; i < result.posts.length; i++) arr.push(result.posts[i])
           this.allPosts = arr
           this.postsDataSource.appendAll(result.posts)
+          this.indexToPage.push(...result.posts.map(() => page))
         }
         if (replaceMode && this.threadPid.length > 0) {
           this.onScrollToPid()
@@ -185,6 +192,7 @@ export struct ThreadPanel {
       if (result.ok && result.posts.length > 0) {
         this.loadedPageStart = page
         this.allPosts = [...result.posts, ...this.allPosts]
+        this.indexToPage = [...result.posts.map(() => page), ...this.indexToPage]
         this.postsDataSource.prependAll(result.posts)
         // maintainVisibleContentPosition 自动保持可视位置不变
       }
@@ -414,6 +422,11 @@ export struct ThreadPanel {
         .divider({ strokeWidth: 0.5, color: AppColors.separator })
         .edgeEffect(EdgeEffect.Spring)
         .maintainVisibleContentPosition(true)
+        .onScrollIndex((start: number, end: number, center: number): void => {
+          if (center < this.indexToPage.length) {
+            this.displayPage = this.indexToPage[center]
+          }
+        })
         .onReachEnd(() => {
           if (!this.isLoadingMore && this.currentPage < this.totalPages) {
             this.loadPage(this.currentPage + 1)
@@ -434,23 +447,23 @@ export struct ThreadPanel {
           Row() {
             if (this.totalPages === 2) {
               Stack() {
-                Text('1').fontSize(14).fontColor(this.currentPage === 1 ? AppColors.primary : AppColors.textSecondary)
-                  .fontWeight(this.currentPage === 1 ? FontWeight.Bold : FontWeight.Regular)
-                if (this.currentPage === 1) {
+                Text('1').fontSize(14).fontColor(this.displayPage === 1 ? AppColors.primary : AppColors.textSecondary)
+                  .fontWeight(this.displayPage === 1 ? FontWeight.Bold : FontWeight.Regular)
+                if (this.displayPage === 1) {
                   Text('•').fontSize(10).fontColor(AppColors.primary)
                     .position({ x: '50%', y: 22 }).translate({ x: '-50%' })
                 }
               }.width(24).height(28).onClick(() => this.loadPage(1, true))
               Divider().vertical(true).height(16).color(AppColors.dividerStrong)
               Stack() {
-                Text('2').fontSize(14).fontColor(this.currentPage === 2 ? AppColors.primary : AppColors.textSecondary)
-                  .fontWeight(this.currentPage === 2 ? FontWeight.Bold : FontWeight.Regular)
-                if (this.currentPage === 2) {
+                Text('2').fontSize(14).fontColor(this.displayPage === 2 ? AppColors.primary : AppColors.textSecondary)
+                  .fontWeight(this.displayPage === 2 ? FontWeight.Bold : FontWeight.Regular)
+                if (this.displayPage === 2) {
                   Text('•').fontSize(10).fontColor(AppColors.primary)
                     .position({ x: '50%', y: 22 }).translate({ x: '-50%' })
                 }
               }.width(24).height(28).onClick(() => this.loadPage(2, true))
-            } else if (this.currentPage === 1) {
+            } else if (this.displayPage === 1) {
               Stack() {
                 Text('1').fontSize(14).fontColor(AppColors.primary).fontWeight(FontWeight.Bold)
                 Text('•').fontSize(10).fontColor(AppColors.primary)
@@ -460,7 +473,7 @@ export struct ThreadPanel {
               Stack() {
                 Text('2').fontSize(14).fontColor(AppColors.textSecondary).fontWeight(FontWeight.Regular)
               }.width(24).height(28).onClick(() => this.loadPage(2, true))
-            } else if (this.currentPage === this.totalPages) {
+            } else if (this.displayPage === this.totalPages) {
               Stack() {
                 Text(String(this.totalPages - 1)).fontSize(14).fontColor(AppColors.textSecondary)
                   .fontWeight(FontWeight.Regular)
@@ -474,27 +487,27 @@ export struct ThreadPanel {
               }.width(24).height(28).onClick(() => this.loadPage(this.totalPages, true))
             } else {
               Stack() {
-                Text(String(this.currentPage - 1)).fontSize(14).fontColor(AppColors.textSecondary)
+                Text(String(this.displayPage - 1)).fontSize(14).fontColor(AppColors.textSecondary)
                   .fontWeight(FontWeight.Regular)
-              }.width(24).height(28).onClick(() => this.loadPage(this.currentPage - 1, true))
+              }.width(24).height(28).onClick(() => this.loadPage(this.displayPage - 1, true))
               Divider().vertical(true).height(16).color(AppColors.dividerStrong)
               Stack() {
-                Text(String(this.currentPage)).fontSize(14).fontColor(AppColors.primary)
+                Text(String(this.displayPage)).fontSize(14).fontColor(AppColors.primary)
                   .fontWeight(FontWeight.Bold)
                 Text('•').fontSize(10).fontColor(AppColors.primary)
                   .position({ x: '50%', y: 22 }).translate({ x: '-50%' })
-              }.width(24).height(28).onClick(() => this.loadPage(this.currentPage, true))
+              }.width(24).height(28).onClick(() => this.loadPage(this.displayPage, true))
               Divider().vertical(true).height(16).color(AppColors.dividerStrong)
               Stack() {
-                Text(String(this.currentPage + 1)).fontSize(14).fontColor(AppColors.textSecondary)
+                Text(String(this.displayPage + 1)).fontSize(14).fontColor(AppColors.textSecondary)
                   .fontWeight(FontWeight.Regular)
-              }.width(24).height(28).onClick(() => this.loadPage(this.currentPage + 1, true))
+              }.width(24).height(28).onClick(() => this.loadPage(this.displayPage + 1, true))
             }
             Divider().vertical(true).height(16).color(AppColors.dividerStrong)
             Text('到').fontSize(13).fontColor(AppColors.primary).padding({ left: 4, right: 2 })
               .onClick(() => {
                 floatingLayerStore.pagePickerTotalPages = this.totalPages
-                floatingLayerStore.pagePickerCurrentPage = this.currentPage
+                floatingLayerStore.pagePickerCurrentPage = this.displayPage
                 try {
                   const ctx = this.getUIContext()
                   const info = componentUtils.getRectangleById('threadPanelRoot')
@@ -517,7 +530,7 @@ export struct ThreadPanel {
                   floatingLayerStore.pagePickerY = 400
                 }
                 floatingLayerStore.pagePickerOnSelect = (page: number): void => {
-                  if (page !== this.currentPage) {
+                  if (page !== this.displayPage) {
                     this.loadPage(page, true)
                   }
                 }
