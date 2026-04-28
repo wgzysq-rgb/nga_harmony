@@ -9,8 +9,6 @@ import { floatingLayerStore, FloatingPage } from '../store/FloatingLayerStore'
 @Component
 export struct PostItem {
   @Prop post: PostInfo = new PostInfo()
-  @Prop authorOnly: boolean = false
-  @Prop threadAuthorId: string = ''
   @Prop votedUpPids: Set<string> = new Set()
   @Prop votedDownPids: Set<string> = new Set()
   @State private sigExpanded: boolean = false
@@ -24,9 +22,7 @@ export struct PostItem {
   onComment: (post: PostInfo) => void = (_post: PostInfo) => {}
 
   build() {
-    if (this.authorOnly && this.threadAuthorId.length > 0 && String(this.post.authorid) !== this.threadAuthorId) {
-    } else {
-      Column() {
+    Column() {
         Row() {
           Row() {
             Avatar({ avatar: this.post.avatar, uid: String(this.post.authorid), name: this.post.author, avatarSize: 32 })
@@ -78,7 +74,6 @@ export struct PostItem {
         }
       }
       .width('100%').padding({ left: 16, right: 16, top: 12, bottom: 12 }).alignItems(HorizontalAlign.Start)
-    }
   }
 
   @Builder

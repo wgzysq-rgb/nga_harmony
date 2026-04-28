@@ -562,6 +562,7 @@ export async function getThread(token: string, tid: string, pid: string,
         'tid': tid || '',
         'page': page || '1',
       };
+      if (authorid) htmlParams['authorid'] = authorid;
       const html: string = await ngaClient.getHtmlText('/read.php', htmlParams, { uid: session.uid, cid: session.cid });
       const rawHtml: object = parseHtmlToRawJson(html);
       fillThreadResult(rawHtml as Record<string, Object>, result, blacklist);
@@ -586,6 +587,7 @@ export async function getThread(token: string, tid: string, pid: string,
           'tid': tid || '',
           'page': page || '1',
         };
+        if (authorid) htmlParams['authorid'] = authorid;
         const html: string = await ngaClient.getHtmlText('/read.php', htmlParams, { uid: session.uid, cid: session.cid });
         const rawHtml: object = parseHtmlToRawJson(html);
         fillThreadResult(rawHtml as Record<string, Object>, result, blacklist);

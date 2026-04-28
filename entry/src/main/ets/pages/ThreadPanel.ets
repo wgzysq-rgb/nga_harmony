@@ -124,7 +124,7 @@ export struct ThreadPanel {
     }
 
     try {
-      const result: ThreadResult = await getThread(appStore.auth.token, this.threadTid, '', '', String(page))
+      const result: ThreadResult = await getThread(appStore.auth.token, this.threadTid, '', this.authorOnly ? this.threadAuthorId : '', String(page))
       if (result.ok) {
         if (result.pagination) {
           this.totalPages = result.pagination.totalPages
@@ -188,7 +188,7 @@ export struct ThreadPanel {
   private async loadPreviousPage(page: number): Promise<void> {
     this.isLoadingPrevious = true
     try {
-      const result: ThreadResult = await getThread(appStore.auth.token, this.threadTid, '', '', String(page))
+      const result: ThreadResult = await getThread(appStore.auth.token, this.threadTid, '', this.authorOnly ? this.threadAuthorId : '', String(page))
       if (result.ok && result.posts.length > 0) {
         this.loadedPageStart = page
         this.allPosts = [...result.posts, ...this.allPosts]
@@ -379,8 +379,6 @@ export struct ThreadPanel {
             ListItem() {
               PostItem({
                 post: post,
-                authorOnly: this.authorOnly,
-                threadAuthorId: this.threadAuthorId,
                 votedUpPids: this.votedUpPids,
                 votedDownPids: this.votedDownPids,
                 onImageClick: (urls: string[], index: number): void => {
@@ -592,6 +590,7 @@ export struct ThreadPanel {
                 .onClick(() => {
                   this.authorOnly = !this.authorOnly
                   this.showMoreMenu = false
+                  this.loadPage(1, true)
                 })
             }
             .width('100%')
