@@ -149,7 +149,7 @@ export struct PostItem {
           .width(16).height(16)
           .fillColor(this.votedUpPids.has(String(this.post.pid)) ? AppColors.primary : AppColors.textTertiary)
         if (this.post.score > 0 || this.votedUpPids.has(String(this.post.pid))) {
-          Text(String(this.post.score + (this.votedUpPids.has(String(this.post.pid)) ? 1 : 0)))
+          Text(String(this.post.score))
             .fontSize(13)
             .fontColor(this.votedUpPids.has(String(this.post.pid)) ? AppColors.primary : AppColors.textSecondary)
             .margin({ left: 3 })
@@ -165,7 +165,7 @@ export struct PostItem {
           .width(16).height(16)
           .fillColor(this.votedDownPids.has(String(this.post.pid)) ? AppColors.destructive : AppColors.textTertiary)
         if (this.post.score_2 > 0 || this.votedDownPids.has(String(this.post.pid))) {
-          Text(String(this.post.score_2 + (this.votedDownPids.has(String(this.post.pid)) ? 1 : 0)))
+          Text(String(this.post.score_2))
             .fontSize(13)
             .fontColor(this.votedDownPids.has(String(this.post.pid)) ? AppColors.destructive : AppColors.textSecondary)
             .margin({ left: 3 })

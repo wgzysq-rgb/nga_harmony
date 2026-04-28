@@ -4,6 +4,7 @@ import { display, window } from '@kit.ArkUI';
 import { sessionStore } from '../service/SessionStore';
 import { appStore } from '../store/AppStore';
 import { browseHistoryStore } from '../store/BrowseHistoryStore';
+import { voteRecordStore } from '../store/VoteRecordStore';
 
 const DOMAIN = 0x0000;
 const TAG = 'EntryAbility';
@@ -19,7 +20,7 @@ export default class EntryAbility extends UIAbility {
     }
 
     // 初始化 SessionStore 和 AppStore（异步，Index 页面会等待 initialized 标志）
-    Promise.all([sessionStore.init(this.context), appStore.init(this.context), browseHistoryStore.init(this.context)])
+    Promise.all([sessionStore.init(this.context), appStore.init(this.context), browseHistoryStore.init(this.context), voteRecordStore.init(this.context)])
       .then(() => {
         hilog.info(DOMAIN, TAG, 'All stores initialized');
       })

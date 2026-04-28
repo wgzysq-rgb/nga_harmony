@@ -1021,10 +1021,15 @@ export async function addFavorite(token: string, tid: number, pid: number): Prom
     return result;
   }
   try {
-    const qs: string[] = ['__lib=topic_favor', '__act=topic_favor', 'lite=js', 'action=add', `tid=${tid}`];
-    if (pid) qs.push(`pid=${pid}`);
-    const emptyBody: Record<string, string> = {};
-    await ngaClient.post(`/nuke.php?${qs.join('&')}&noprefix`, emptyBody, { uid: session.uid, cid: session.cid });
+    const params: Record<string, string> = {
+      '__lib': 'topic_favor',
+      '__act': 'topic_favor',
+      'lite': 'js',
+      'action': 'add',
+      'tid': String(tid),
+    };
+    if (pid) params['pid'] = String(pid);
+    await ngaClient.postWithQuery('/nuke.php?noprefix', params, { uid: session.uid, cid: session.cid });
     result.ok = true;
   } catch (e) {
     result.error = (e as Error).message ?? '收藏失败';

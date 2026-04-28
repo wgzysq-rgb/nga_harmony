@@ -6,7 +6,7 @@
 
 import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
-import { getTopicList, createTopicListParams, TopicListParams, TopicListResult } from '../service/NgaApi'
+import { getTopicList, createTopicListParams, TopicListParams, TopicListResult, removeFavorite } from '../service/NgaApi'
 import { AppColors, FONT_COLORS, SORT_MODES, SortMode, BreakpointType } from '../common/Constants'
 import { formatTime, escHtml } from '../common/Utils'
 import { PanelNavBar } from '../common/PanelNavBar'
@@ -137,6 +137,22 @@ export struct TopicListPanel {
     return ''
   }
 
+  private async handleRemoveFav(tid: number): Promise<void> {
+    try {
+      const result = await removeFavorite(appStore.auth.token, tid, 0, 1)
+      if (result.ok) {
+        const filtered = this.threads.filter((t: object) => Number((t as Record<string, Object>)['tid']) !== tid)
+        this.threads = filtered
+        this.threadsDataSource.replaceAll(filtered)
+        appStore.showToast('已取消收藏')
+      } else {
+        appStore.showToast(result.error || '取消收藏失败')
+      }
+    } catch (e) {
+      appStore.showToast('取消收藏失败')
+    }
+  }
+
   build() {
     Stack() {
       Column() {
@@ -243,6 +259,11 @@ export struct TopicListPanel {
           .fontWeight(this.isSubjectBold(String(thread['titleFont'] ?? '')) ? FontWeight.Bold : FontWeight.Normal)
           .fontStyle(this.isSubjectItalic(String(thread['titleFont'] ?? '')) ? FontStyle.Italic : FontStyle.Normal)
           .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1)
+        if (this.isFavorites) {
+          Text('✕').fontSize(16).fontColor(AppColors.textTertiary)
+            .padding({ left: 8, right: 4 })
+            .onClick(() => { this.handleRemoveFav(Number(thread['tid'] ?? 0)) })
+        }
       }.width('100%').alignItems(VerticalAlign.Top)
 
       if (thread['previewSnippet']) {

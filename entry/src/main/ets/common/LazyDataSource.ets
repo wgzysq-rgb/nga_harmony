@@ -24,7 +24,7 @@ class PostInfoDataSource implements IDataSource {
   }
 
   unregisterDataChangeListener(listener: DataChangeListener): void {
-    const pos = this.listeners.indexOf(listener)
+    const pos: number = this.listeners.indexOf(listener)
     if (pos >= 0) {
       this.listeners.splice(pos, 1)
     }
@@ -56,6 +56,16 @@ class PostInfoDataSource implements IDataSource {
   clear(): void {
     this.dataList = []
     this.notifyReload()
+  }
+
+  updateAt(index: number, item: PostInfo): void {
+    if (index < 0 || index >= this.dataList.length) {
+      return
+    }
+    this.dataList[index] = item
+    for (let i = 0; i < this.listeners.length; i++) {
+      this.listeners[i].onDataChange(index)
+    }
   }
 
   length(): number {

@@ -3,12 +3,13 @@ import { common } from '@kit.AbilityKit'
 import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
 import { browseHistoryStore, BrowseHistoryEntry } from '../store/BrowseHistoryStore'
-import { getThread, addFavorite, votePost, ThreadResult, PostInfo, PostReplyResult, VoteResult } from '../service/NgaApi'
+import { getThread, addFavorite, removeFavorite, votePost, ThreadResult, PostInfo, PostReplyResult, VoteResult } from '../service/NgaApi'
 import { AppColors } from '../common/Constants'
 import { PanelNavBar } from '../common/PanelNavBar'
 import { PostItem } from '../common/PostItem'
 import { PostInfoDataSource } from '../common/LazyDataSource'
 import { floatingLayerStore, FloatingPage } from '../store/FloatingLayerStore'
+import { voteRecordStore } from '../store/VoteRecordStore'
 import { replyManager, ReplyType } from '../common/ReplyManager'
 import type { ThreadInfo } from '../model/Thread'
 
@@ -66,6 +67,7 @@ export struct ThreadPanel {
 
   aboutToAppear(): void {
     this.loadPage(1)
+    this.loadPersistedVotes()
   }
 
   private onThreadChanged(): void {
@@ -80,6 +82,14 @@ export struct ThreadPanel {
     this.votedUpPids = new Set()
     this.votedDownPids = new Set()
     this.loadPage(1)
+    this.loadPersistedVotes()
+  }
+
+  private async loadPersistedVotes(): Promise<void> {
+    if (!appStore.auth.isAuthenticated) return
+    const result = await voteRecordStore.load(appStore.auth.uid, this.threadTid)
+    this.votedUpPids = result[0]
+    this.votedDownPids = result[1]
   }
 
   private onScrollToPid(): void {
@@ -239,12 +249,29 @@ export struct ThreadPanel {
     }
   }
 
+  private async handleUnfavorite(): Promise<void> {
+    if (!this.favDone || !this.threadTid) return
+    try {
+      const result = await removeFavorite(appStore.auth.token, Number(this.threadTid), 0, 1)
+      if (result.ok) {
+        this.favDone = false
+        appStore.showToast('已取消收藏')
+      } else {
+        appStore.showToast(result.error || '取消收藏失败')
+      }
+    } catch (e) {
+      appStore.showToast('取消收藏失败')
+    }
+  }
+
   private async handleVote(post: PostInfo, value: number): Promise<void> {
     if (!appStore.auth.isAuthenticated) {
       appStore.showToast('请先登录')
       return
     }
     const pidKey = String(post.pid)
+    const wasUp: boolean = this.votedUpPids.has(pidKey)
+    const wasDown: boolean = this.votedDownPids.has(pidKey)
     const result: VoteResult = await votePost(appStore.auth.token, Number(this.threadTid), post.pid, value)
     if (result.ok) {
       const msg = result.message
@@ -263,11 +290,27 @@ export struct ThreadPanel {
       }
       this.votedUpPids = upPids
       this.votedDownPids = downPids
+      voteRecordStore.save(appStore.auth.uid, this.threadTid, upPids, downPids)
+      const isUp: boolean = upPids.has(pidKey)
+      const isDown: boolean = downPids.has(pidKey)
+      this.applyVoteToPost(post, (isUp ? 1 : 0) - (wasUp ? 1 : 0), (isDown ? 1 : 0) - (wasDown ? 1 : 0))
       if (msg.length > 0) {
         appStore.showToast(msg)
       }
     } else {
       appStore.showToast(result.error || '操作失败')
+    }
+  }
+
+  private applyVoteToPost(post: PostInfo, scoreDelta: number, score2Delta: number): void {
+    if (scoreDelta === 0 && score2Delta === 0) return
+    for (let i = 0; i < this.allPosts.length; i++) {
+      if (this.allPosts[i].pid === post.pid) {
+        this.allPosts[i].score += scoreDelta
+        this.allPosts[i].score_2 += score2Delta
+        this.postsDataSource.updateAt(i, this.allPosts[i])
+        break
+      }
     }
   }
 
@@ -512,12 +555,13 @@ export struct ThreadPanel {
 
           Column() {
             Column() {
-              Text('收藏帖子').fontSize(15).fontColor(AppColors.textPrimary)
+              Text(this.favDone ? '取消收藏' : '收藏帖子').fontSize(15)
+                .fontColor(AppColors.textPrimary)
                 .padding({ left: 16, right: 16, top: 12, bottom: 12 })
                 .width('100%')
                 .onClick(() => {
                   if (this.favDone) {
-                    appStore.showToast('已收藏')
+                    this.handleUnfavorite()
                   } else {
                     this.handleFavorite()
                   }
