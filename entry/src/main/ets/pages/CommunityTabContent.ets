@@ -266,20 +266,21 @@ export struct CommunityTabContent {
     Row() {
       Scroll() {
         Column() {
-          Row() {
+          Column() {
             Avatar({
               avatar: appStore.auth.avatarUrl,
               uid: appStore.auth.uid,
               name: appStore.auth.nickName,
-              avatarSize: 28
+              avatarSize: 36
             })
             Text(appStore.auth.nickName || '未登录')
               .fontSize(13).fontWeight(FontWeight.Bold)
               .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-              .margin({ left: 8 }).layoutWeight(1)
+              .margin({ top: 8 })
           }
-          .width('100%').height(44).padding({ left: 10, right: 10 })
-          .alignItems(VerticalAlign.Center)
+          .width('100%')
+          .padding({ top: 14 + this.statusBarHeight, bottom: 14 })
+          .alignItems(HorizontalAlign.Center)
           .onClick(() => {
             if (appStore.auth.uid) {
               routerStore.navigateActivity(Screen.profile(appStore.auth.uid))
@@ -287,12 +288,12 @@ export struct CommunityTabContent {
           })
 
           Row() {
-            Image($r('app.media.icon_search')).width(14).height(14).margin({ right: 6 })
-            Text('搜索板块、主题...').fontSize(12).fontColor(AppColors.textTertiary)
+            Image($r('app.media.icon_search')).width(14).height(14).margin({ right: 4 })
+            Text('搜索').fontSize(11).fontColor(AppColors.textTertiary)
           }
-          .width('100%').height(32).padding({ left: 10, right: 10 })
+          .width('100%').height(28).padding({ left: 6, right: 6 })
           .backgroundColor(AppColors.bgSecondary).borderRadius(8)
-          .margin({ left: 8, right: 8, top: 6, bottom: 6 })
+          .margin({ left: 4, right: 4, top: 6, bottom: 6 })
           .alignItems(VerticalAlign.Center)
           .onClick(() => {
             routerStore.navigateSearch()
@@ -301,18 +302,20 @@ export struct CommunityTabContent {
           Divider().width('100%').color(AppColors.separator).margin({ top: 4, bottom: 4 })
 
           if (this.favoritesList.length > 0) {
-            this.SidebarTabItem('__fav__', '收藏', this.favoritesList.length.toString())
+            this.SidebarTabItem('__fav__', '收藏')
           }
           ForEach(this.categories, (cat: Category) => {
-            this.SidebarTabItem(cat.id, cat.name, this.collectBoardCountForCat(cat).toString())
+            this.SidebarTabItem(cat.id, cat.name)
           }, (cat: Category) => cat.id)
         }
         .width('100%')
-        .padding({ top: this.statusBarHeight, bottom: 6 })
+        .constraintSize({ minHeight: '100%' })
+        .padding({ bottom: 6 })
       }
-      .width(150).height('100%')
+      .width(80).height('100%')
       .backgroundColor(AppColors.bgTertiary)
       .scrollBar(BarState.Off)
+      .align(Alignment.Top)
       .border({ width: { right: 0.5 }, color: AppColors.separator })
 
       if (this.selectedSectionId === '__fav__') {
@@ -325,20 +328,17 @@ export struct CommunityTabContent {
   }
 
   @Builder
-  SidebarTabItem(id: string, name: string, count: string) {
+  SidebarTabItem(id: string, name: string) {
     Row() {
       Text(name)
-        .fontSize(13)
+        .fontSize(12)
         .fontColor(this.selectedSectionId === id ? AppColors.primary : AppColors.textSecondary)
         .fontWeight(this.selectedSectionId === id ? FontWeight.Bold : FontWeight.Regular)
         .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         .layoutWeight(1)
-      if (count.length > 0) {
-        Text(count).fontSize(10).fontColor(AppColors.textTertiary).margin({ left: 4 })
-      }
     }
     .width('100%').height(36)
-    .padding({ left: 12, right: 12 })
+    .padding({ left: 8, right: 8 })
     .backgroundColor(this.selectedSectionId === id ? AppColors.bgSecondary : Color.Transparent)
     .borderRadius(6).margin({ top: 2 })
     .alignItems(VerticalAlign.Center)
@@ -366,6 +366,12 @@ export struct CommunityTabContent {
                   .fontSize(14).fontColor(AppColors.textPrimary).maxLines(1)
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
                   .margin({ left: 10 }).layoutWeight(1)
+                Text('★')
+                  .fontSize(16).fontColor(AppColors.primary)
+                  .margin({ left: 8 })
+                  .onClick(() => {
+                    this.handleToggleFav(fav.fid, fav.name)
+                  })
               }
               .width('100%').height(52).padding({ left: 12, right: 12 })
               .alignItems(VerticalAlign.Center)
@@ -404,6 +410,13 @@ export struct CommunityTabContent {
                       .fontSize(14).fontColor(AppColors.textPrimary).maxLines(1)
                       .textOverflow({ overflow: TextOverflow.Ellipsis })
                       .margin({ left: 10 }).layoutWeight(1)
+                    Text(this.isFavBoard(board.fid) ? '★' : '☆')
+                      .fontSize(16)
+                      .fontColor(this.isFavBoard(board.fid) ? AppColors.primary : AppColors.textTertiary)
+                      .margin({ left: 8 })
+                      .onClick(() => {
+                        this.handleToggleFav(board.fid, board.name)
+                      })
                   }
                   .width('100%').height(52).padding({ left: 12, right: 12 })
                   .alignItems(VerticalAlign.Center)

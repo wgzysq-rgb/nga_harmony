@@ -2,7 +2,7 @@ import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
 import { getNotifications, checkin } from '../service/NgaApi'
 import { ProfileData, ReputationData } from '../model/User'
-import { AppColors } from '../common/Constants'
+import { AppColors, BreakpointType } from '../common/Constants'
 import { formatTime, fmtNum, escHtml } from '../common/Utils'
 import { Avatar } from '../common/Avatar'
 
@@ -17,6 +17,7 @@ export struct ProfilePanel {
   @State checkinLoading: boolean = false
   @State checkinResult: string = ''
   @StorageProp('profileVersion') @Watch('onProfileVersionChange') profileVersion: number = 0
+  @StorageProp('currentBreakpoint') currentBreakpoint: string = 'sm'
 
   @Prop @Watch('onUidChange') uid: string = ''
   private isOwnProfile: boolean = false
@@ -98,6 +99,15 @@ export struct ProfilePanel {
     return String(count)
   }
 
+  private getStatGridTemplate(): string {
+    const cols: number = new BreakpointType(2, 3, 4).getValue(this.currentBreakpoint)
+    let template: string = ''
+    for (let i: number = 0; i < cols; i++) {
+      template += '1fr '
+    }
+    return template.trim()
+  }
+
   private dispatchAction(actionType: number): void {
     switch (actionType) {
       case 0:
@@ -121,28 +131,6 @@ export struct ProfilePanel {
       default:
         break
     }
-  }
-
-  @Builder
-  StatRow(iconRes: Resource, label: string, value: string) {
-    Row() {
-      Image(iconRes)
-        .width(16).height(16)
-        .margin({ right: 8 })
-        .fillColor(AppColors.textSecondary)
-      Text(label)
-        .fontSize(14)
-        .fontColor(AppColors.textSecondary)
-        .layoutWeight(1)
-      Text(value)
-        .fontSize(14)
-        .fontColor(AppColors.textPrimary)
-        .fontWeight(FontWeight.Medium)
-    }
-    .width('100%')
-    .height(44)
-    .padding({ left: 16, right: 16 })
-    .alignItems(VerticalAlign.Center)
   }
 
   @Builder
@@ -264,30 +252,113 @@ export struct ProfilePanel {
                   .margin({ top: 4 })
               }
             }
-            .width('100%')
+            .width('92%')
             .padding({ top: 24, bottom: 16 })
             .alignItems(HorizontalAlign.Center)
             .backgroundColor(AppColors.bgTertiary)
+            .borderRadius(12)
 
-            Column() {
-              this.StatRow($r('app.media.icon_chat_bubble'), '发帖数', fmtNum(this.profile!.posts))
-              Divider().margin({ left: 60 }).color(AppColors.separator)
-              this.StatRow($r('app.media.icon_money'), '金钱', fmtNum(this.profile!.money))
-              Divider().margin({ left: 60 }).color(AppColors.separator)
-              this.StatRow($r('app.media.icon_medal'), '威望', fmtNum(this.profile!.rvrc))
-              Divider().margin({ left: 60 }).color(AppColors.separator)
-              this.StatRow($r('app.media.icon_calendar'), '注册日期', this.profile!.regdate ? formatTime(Number(this.profile!.regdate)) : '未知')
-              Divider().margin({ left: 60 }).color(AppColors.separator)
-              this.StatRow($r('app.media.icon_people'), '会员组', this.profile!.group || '普通会员')
+            Grid() {
+              GridItem() {
+                Column() {
+                  Row() {
+                    Image($r('app.media.icon_chat_bubble')).width(16).height(16).fillColor(AppColors.textSecondary)
+                    Text('发帖数').fontSize(12).fontColor(AppColors.textSecondary).margin({ left: 4 })
+                  }
+                  .alignItems(VerticalAlign.Center)
+                  Text(fmtNum(this.profile!.posts)).fontSize(15).fontWeight(FontWeight.Medium).fontColor(AppColors.textPrimary).margin({ top: 6 })
+                }
+                .alignItems(HorizontalAlign.Center)
+                .width('100%')
+                .padding({ top: 12, bottom: 12 })
+              }
+              GridItem() {
+                Column() {
+                  Row() {
+                    Image($r('app.media.icon_money')).width(16).height(16).fillColor(AppColors.textSecondary)
+                    Text('金钱').fontSize(12).fontColor(AppColors.textSecondary).margin({ left: 4 })
+                  }
+                  .alignItems(VerticalAlign.Center)
+                  Text(fmtNum(this.profile!.money)).fontSize(15).fontWeight(FontWeight.Medium).fontColor(AppColors.textPrimary).margin({ top: 6 })
+                }
+                .alignItems(HorizontalAlign.Center)
+                .width('100%')
+                .padding({ top: 12, bottom: 12 })
+              }
+              GridItem() {
+                Column() {
+                  Row() {
+                    Image($r('app.media.icon_medal')).width(16).height(16).fillColor(AppColors.textSecondary)
+                    Text('威望').fontSize(12).fontColor(AppColors.textSecondary).margin({ left: 4 })
+                  }
+                  .alignItems(VerticalAlign.Center)
+                  Text(fmtNum(this.profile!.rvrc)).fontSize(15).fontWeight(FontWeight.Medium).fontColor(AppColors.textPrimary).margin({ top: 6 })
+                }
+                .alignItems(HorizontalAlign.Center)
+                .width('100%')
+                .padding({ top: 12, bottom: 12 })
+              }
+              GridItem() {
+                Column() {
+                  Row() {
+                    Image($r('app.media.icon_calendar')).width(16).height(16).fillColor(AppColors.textSecondary)
+                    Text('注册日期').fontSize(12).fontColor(AppColors.textSecondary).margin({ left: 4 })
+                  }
+                  .alignItems(VerticalAlign.Center)
+                  Text(this.profile!.regdate ? formatTime(Number(this.profile!.regdate)) : '未知').fontSize(15).fontWeight(FontWeight.Medium).fontColor(AppColors.textPrimary).margin({ top: 6 })
+                }
+                .alignItems(HorizontalAlign.Center)
+                .width('100%')
+                .padding({ top: 12, bottom: 12 })
+              }
+              GridItem() {
+                Column() {
+                  Row() {
+                    Image($r('app.media.icon_people')).width(16).height(16).fillColor(AppColors.textSecondary)
+                    Text('会员组').fontSize(12).fontColor(AppColors.textSecondary).margin({ left: 4 })
+                  }
+                  .alignItems(VerticalAlign.Center)
+                  Text(this.profile!.group || '普通会员').fontSize(15).fontWeight(FontWeight.Medium).fontColor(AppColors.textPrimary).margin({ top: 6 })
+                }
+                .alignItems(HorizontalAlign.Center)
+                .width('100%')
+                .padding({ top: 12, bottom: 12 })
+              }
               if (Number(this.profile!.fame) > 0) {
-                Divider().margin({ left: 60 }).color(AppColors.separator)
-                this.StatRow($r('app.media.icon_star'), '声望', fmtNum(this.profile!.fame))
+                GridItem() {
+                  Column() {
+                    Row() {
+                      Image($r('app.media.icon_star')).width(16).height(16).fillColor(AppColors.textSecondary)
+                      Text('声望').fontSize(12).fontColor(AppColors.textSecondary).margin({ left: 4 })
+                    }
+                    .alignItems(VerticalAlign.Center)
+                    Text(fmtNum(this.profile!.fame)).fontSize(15).fontWeight(FontWeight.Medium).fontColor(AppColors.textPrimary).margin({ top: 6 })
+                  }
+                  .alignItems(HorizontalAlign.Center)
+                  .width('100%')
+                  .padding({ top: 12, bottom: 12 })
+                }
               }
               if (Number(this.profile!.followByNum) > 0) {
-                Divider().margin({ left: 60 }).color(AppColors.separator)
-                this.StatRow($r('app.media.icon_shield'), '被关注', this.profile!.followByNum)
+                GridItem() {
+                  Column() {
+                    Row() {
+                      Image($r('app.media.icon_shield')).width(16).height(16).fillColor(AppColors.textSecondary)
+                      Text('被关注').fontSize(12).fontColor(AppColors.textSecondary).margin({ left: 4 })
+                    }
+                    .alignItems(VerticalAlign.Center)
+                    Text(this.profile!.followByNum).fontSize(15).fontWeight(FontWeight.Medium).fontColor(AppColors.textPrimary).margin({ top: 6 })
+                  }
+                  .alignItems(HorizontalAlign.Center)
+                  .width('100%')
+                  .padding({ top: 12, bottom: 12 })
+                }
               }
             }
+            .columnsTemplate(this.getStatGridTemplate())
+            .columnsGap(8)
+            .rowsGap(8)
+            .padding(16)
             .width('92%')
             .backgroundColor(AppColors.bgTertiary)
             .borderRadius(12)
