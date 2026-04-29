@@ -203,11 +203,17 @@ export struct CommunityTabContent {
           .fontSize(14).fontColor(AppColors.textTertiary).margin({ right: 6 })
           .rotate({ angle: section.collapsed ? 0 : 90 })
       }
+      if (section.collapsible && section.id !== '__fav__') {
+        Image(this.getCategoryIconUrl(section.id))
+          .width(18).height(18).borderRadius(4).objectFit(ImageFit.Cover)
+          .margin({ right: 6 })
+          .onError(() => {})
+      }
       Text(section.name)
         .fontSize(section.collapsible ? 13 : 11)
         .fontWeight(FontWeight.Bold)
         .fontColor(section.collapsible ? AppColors.textPrimary : AppColors.textSecondary)
-      if (section.collapsible) {
+      if (section.collapsible && this.currentBreakpoint !== 'lg') {
         Text(section.items.length.toString())
           .fontSize(11).fontColor(AppColors.textTertiary).margin({ left: 6 })
       }
@@ -302,7 +308,7 @@ export struct CommunityTabContent {
           Divider().width('100%').color(AppColors.separator).margin({ top: 4, bottom: 4 })
 
           if (this.favoritesList.length > 0) {
-            this.SidebarTabItem('__fav__', '收藏')
+            this.SidebarTabItem('__fav__', '收藏板块')
           }
           ForEach(this.categories, (cat: Category) => {
             this.SidebarTabItem(cat.id, cat.name)
@@ -329,19 +335,29 @@ export struct CommunityTabContent {
 
   @Builder
   SidebarTabItem(id: string, name: string) {
-    Row() {
+    Column() {
+      if (id === '__fav__') {
+        Image($r('app.media.icon_star'))
+          .width(26).height(26)
+          .fillColor(this.selectedSectionId === id ? AppColors.primary : AppColors.textSecondary)
+      } else {
+        Image(this.getCategoryIconUrl(id))
+          .width(26).height(26).borderRadius(6).objectFit(ImageFit.Cover)
+          .onError(() => {})
+      }
       Text(name)
         .fontSize(12)
         .fontColor(this.selectedSectionId === id ? AppColors.primary : AppColors.textSecondary)
         .fontWeight(this.selectedSectionId === id ? FontWeight.Bold : FontWeight.Regular)
         .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-        .layoutWeight(1)
+        .margin({ top: 4 })
     }
-    .width('100%').height(36)
-    .padding({ left: 8, right: 8 })
+    .width('100%').aspectRatio(1)
+    .padding({ left: 2, right: 2, top: 10, bottom: 6 })
     .backgroundColor(this.selectedSectionId === id ? AppColors.bgSecondary : Color.Transparent)
-    .borderRadius(6).margin({ top: 2 })
-    .alignItems(VerticalAlign.Center)
+    .borderRadius(8).margin({ top: 2 })
+    .alignItems(HorizontalAlign.Center)
+    .justifyContent(FlexAlign.Center)
     .onClick(() => {
       this.selectedSectionId = id
     })
@@ -394,9 +410,16 @@ export struct CommunityTabContent {
     Column() {
       ForEach(this.categories, (cat: Category) => {
         if (cat.id === this.selectedSectionId) {
-          Text(cat.name)
-            .fontSize(15).fontWeight(FontWeight.Bold).fontColor(AppColors.textPrimary)
-            .width('100%').padding({ left: 12, top: this.statusBarHeight + 8, bottom: 6 })
+          Row() {
+            Image(this.getCategoryIconUrl(cat.id))
+              .width(18).height(18).borderRadius(4).objectFit(ImageFit.Cover)
+              .margin({ right: 8 })
+              .onError(() => {})
+            Text(cat.name)
+              .fontSize(15).fontWeight(FontWeight.Bold).fontColor(AppColors.textPrimary)
+          }
+          .width('100%').padding({ left: 12, top: this.statusBarHeight + 8, bottom: 6 })
+          .alignItems(VerticalAlign.Center)
 
           if (this.collectBoardsFromCat(cat).length > 0) {
             List() {
@@ -485,11 +508,16 @@ export struct CommunityTabContent {
   CategoryGrid(cat: Category) {
     Column() {
       Row() {
+        Image(this.getCategoryIconUrl(cat.id))
+          .width(16).height(16).borderRadius(4).objectFit(ImageFit.Cover)
+          .margin({ right: 6 })
+          .onError(() => {})
         Text(cat.name).fontSize(13).fontWeight(FontWeight.Bold)
         Text(this.collectBoardCountForCat(cat).toString())
           .fontSize(11).fontColor(AppColors.textTertiary).margin({ left: 6 })
       }
       .width('100%').padding({ left: 16, right: 16, top: 12, bottom: 8 })
+      .alignItems(VerticalAlign.Center)
 
       GridRow({ columns: { sm: 4, md: 4, lg: 3 }, gutter: 8 }) {
         ForEach(this.collectBoardsFromCat(cat), (board: BoardContent) => {
@@ -519,6 +547,10 @@ export struct CommunityTabContent {
       .backgroundColor(AppColors.bgTertiary).borderRadius(12)
     }
     .width('92%')
+  }
+
+  private getCategoryIconUrl(catId: string): string {
+    return `https://img4.nga.178.com/ngabbs/nga_classic/f/app/c/${catId}.android_xh.png`
   }
 
   private isActiveBoard(fid: number): boolean {
