@@ -5,6 +5,7 @@ import { SearchPanel } from './SearchPanel'
 @Component
 export struct BoardPanelComponent {
   @Prop boardSlot: BoardSlot | null
+  @StorageProp('currentBreakpoint') currentBreakpoint: string = 'sm'
 
   build() {
     Column() {
@@ -16,7 +17,7 @@ export struct BoardPanelComponent {
             boardFid: this.boardSlot.fid,
             boardName: this.boardSlot.name,
             boardStid: this.boardSlot.stid,
-            showBack: false,
+            showBack: this.currentBreakpoint === 'sm',
             isFavorites: this.boardSlot.fid === -9999,
             authorid: this.boardSlot.authorid,
             favor: this.boardSlot.favor,

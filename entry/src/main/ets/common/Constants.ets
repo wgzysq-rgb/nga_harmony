@@ -4,19 +4,19 @@
 
 // 主题色
 export class AppColors {
-  static readonly primary: string = '#007AFF'
-  static readonly primaryLight: string = '#E8F2FF'
-  static readonly destructive: string = '#FF3B30'
-  static readonly warning: string = '#FF9500'
-  static readonly success: string = '#34C759'
-  static readonly bg: string = '#FFFFFF'
-  static readonly bgSecondary: string = '#F2F2F7'
-  static readonly bgTertiary: string = '#F9F9F9'
-  static readonly textPrimary: string = '#1C1C1E'
-  static readonly textSecondary: string = '#8E8E93'
-  static readonly textTertiary: string = '#AEAEB2'
-  static readonly separator: string = '#E5E5EA'
-  static readonly dividerStrong: string = '#C0C0C4'
+  static readonly primary: string = '#C08A4A'
+  static readonly primaryLight: string = '#FDF3E7'
+  static readonly destructive: string = '#E45D4C'
+  static readonly warning: string = '#E8933A'
+  static readonly success: string = '#7BA05B'
+  static readonly bg: string = '#FEFAF6'
+  static readonly bgSecondary: string = '#F5EDE3'
+  static readonly bgTertiary: string = '#FDF7F0'
+  static readonly textPrimary: string = '#3E2A1D'
+  static readonly textSecondary: string = '#9C8B7A'
+  static readonly textTertiary: string = '#C4B5A0'
+  static readonly separator: string = '#E8DCC8'
+  static readonly dividerStrong: string = '#D0C0A8'
   static readonly white: string = '#FFFFFF'
   static readonly black: string = '#000000'
   static readonly overlay: string = '#33000000'
@@ -25,15 +25,15 @@ export class AppColors {
   static readonly shadowLight: string = '#30000000'
   static readonly toastBg: string = '#CC000000'
   static readonly imageViewerBg: string = '#FF000000'
-  static readonly warnBg: string = '#FFF3E0'
-  static readonly warnBorder: string = '#FFB74D'
-  static readonly warnText: string = '#8B0000'
-  static readonly chevron: string = '#C7C7CC'
-  static readonly sheetIndicator: string = '#D1D1D6'
+  static readonly warnBg: string = '#FFF2E5'
+  static readonly warnBorder: string = '#E8B98A'
+  static readonly warnText: string = '#A65D2E'
+  static readonly chevron: string = '#C4B5A0'
+  static readonly sheetIndicator: string = '#D4C8B0'
   static readonly quoteBorders: string[] = [
-    'rgba(0, 122, 255, 0.3)',
-    'rgba(0, 122, 255, 0.2)',
-    'rgba(0, 122, 255, 0.12)',
+    'rgba(192, 138, 74, 0.3)',
+    'rgba(192, 138, 74, 0.2)',
+    'rgba(192, 138, 74, 0.12)',
   ]
 }
 
@@ -114,7 +114,7 @@ export const DOMAIN_OPTIONS: DomainOption[] = [
 // 标题字体颜色映射
 export const FONT_COLORS: Record<number, string> = {
   1: '#FF3B30',  // red
-  2: '#007AFF',  // blue
+  2: '#C08A4A',  // gold
   4: '#34C759',  // green
   8: '#FF9500',  // orange
   16: '#8E8E93', // gray

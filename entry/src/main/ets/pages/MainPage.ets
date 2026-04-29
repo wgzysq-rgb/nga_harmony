@@ -17,6 +17,7 @@ import { appStore } from '../store/AppStore'
 import { routerStore, RouterStoreClass } from '../store/RouterStore'
 import router from '@ohos.router'
 import { floatingLayerStore, FloatingLayerStoreClass, FloatingPage } from '../store/FloatingLayerStore'
+import { AppColors } from '../common/Constants'
 import { ActivityPanelComponent } from './ActivityPanelComponent'
 import { BoardPanelComponent } from './BoardPanelComponent'
 import { SidebarComponent } from './SidebarComponent'
@@ -95,6 +96,7 @@ struct MainPage {
           }
           .height('100%')
           .width(this.getBoardColWidth())
+          .backgroundColor(AppColors.bg)
           .visibility(this.getBoardColVisibility())
 
           Column() {
@@ -104,10 +106,12 @@ struct MainPage {
           }
           .layoutWeight(1)
           .height('100%')
+          .backgroundColor(AppColors.bg)
           .visibility(this.getActivityColVisibility())
         }
         .layoutWeight(1)
         .height('100%')
+        .backgroundColor(AppColors.bg)
       }
       .width('100%')
       .height('100%')
