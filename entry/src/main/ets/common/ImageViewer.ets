@@ -1,6 +1,9 @@
 import { http } from '@kit.NetworkKit';
-import { fileIo } from '@kit.CoreFileKit';
+import { fileIo, fileUri } from '@kit.CoreFileKit';
 import { photoAccessHelper } from '@kit.MediaLibraryKit';
+import { systemShare } from '@kit.ShareKit';
+import { uniformTypeDescriptor as utd } from '@kit.ArkData';
+import { common } from '@kit.AbilityKit';
 import { appStore } from '../store/AppStore';
 import { AppColors } from './Constants';
 
@@ -20,7 +23,9 @@ export struct ImageViewer {
   @State imgNaturalW: number = 0
   @State imgNaturalH: number = 0
   @StorageProp('statusBarHeight') statusBarHeight: number = 0
+  @StorageProp('navBarHeight') navBarHeight: number = 0
   @State saving: boolean = false
+  @State sharing: boolean = false
 
   private isPageAnimating: boolean = false
 
@@ -103,6 +108,55 @@ export struct ImageViewer {
       appStore.showToast('保存失败')
     } finally {
       this.saving = false
+    }
+  }
+
+  private async shareCurrentImage(): Promise<void> {
+    if (this.sharing) return
+    this.sharing = true
+    try {
+      let url: string = this.urls[this.currentIndex]
+      let ext: string = this.getExtension(url)
+      let ctx: Context = this.getUIContext().getHostContext() as Context
+      let sandboxDir: string = ctx.filesDir
+      let fileName: string = `share_${Date.now()}.${ext}`
+      let sandboxFileUri: string = `${sandboxDir}/${fileName}`
+
+      let httpRequest: http.HttpRequest = http.createHttp()
+      let response: http.HttpResponse = await httpRequest.request(url, {
+        method: http.RequestMethod.GET
+      })
+      httpRequest.destroy()
+
+      let result: ArrayBuffer = response.result as ArrayBuffer
+      let file: fileIo.File = await fileIo.open(sandboxFileUri,
+        fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE)
+      await fileIo.write(file.fd, result)
+      fileIo.close(file)
+
+      let fileUriStr: string = fileUri.getUriFromPath(sandboxFileUri)
+      let utdType: string = utd.getUniformDataTypeByFilenameExtension(`.${ext}`,
+        utd.UniformDataType.IMAGE)
+
+      let shareData: systemShare.SharedData = new systemShare.SharedData({
+        utd: utdType,
+        uri: fileUriStr,
+        title: fileName
+      })
+
+      let controller: systemShare.ShareController = new systemShare.ShareController(shareData)
+      controller.on('dismiss', () => {
+        console.info('[ImageViewer] share panel dismissed')
+      })
+      await controller.show(ctx as common.UIAbilityContext, {
+        previewMode: systemShare.SharePreviewMode.DETAIL,
+        selectionMode: systemShare.SelectionMode.SINGLE
+      })
+    } catch (err) {
+      console.error('[ImageViewer] share failed: ' + JSON.stringify(err))
+      appStore.showToast('分享失败')
+    } finally {
+      this.sharing = false
     }
   }
 
@@ -223,19 +277,6 @@ export struct ImageViewer {
 
   build() {
     Column() {
-      Row() {
-        Text(`${this.currentIndex + 1} / ${this.urls.length}`)
-          .fontSize(15).fontColor(AppColors.white)
-          .margin({ left: 16 })
-        Blank().layoutWeight(1)
-        Text('✕')
-          .fontSize(24).fontColor(AppColors.white)
-          .padding({ right: 16 })
-          .onClick(() => {
-            this.onClose()
-          })
-      }.width('100%').padding({ top: 16 + this.statusBarHeight })
-
       Stack() {
         Stack() {
           if (this.currentIndex > 0) {
@@ -416,26 +457,49 @@ export struct ImageViewer {
           if ((newValue.width as number) > 0) this.containerW = newValue.width as number
           if ((newValue.height as number) > 0) this.containerH = newValue.height as number
         })
+
+        Image($r('app.media.icon_close'))
+          .width(38).height(38)
+          .fillColor(AppColors.white)
+          .position({ top: 4, right: 16 })
+          .onClick(() => {
+            this.onClose()
+          })
       }
       .layoutWeight(1)
       .width('100%')
 
       Row() {
+        Text(`${this.currentIndex + 1} / ${this.urls.length}`)
+          .fontSize(15).fontColor(AppColors.white)
         Blank().layoutWeight(1)
-        SaveButton({ text: SaveDescription.SAVE_IMAGE, buttonType: ButtonType.Capsule })
+        Button(this.sharing ? '分享中...' : '分享')
+          .fontSize(14).fontColor(AppColors.white)
+          .backgroundColor('#33FFFFFF')
+          .borderRadius(16)
           .height(32)
-          .onClick(async (_event: ClickEvent, result: SaveButtonOnClickResult) => {
-            if (result === SaveButtonOnClickResult.SUCCESS) {
-              await this.saveCurrentImage()
-            } else {
-              appStore.showToast('保存已取消')
-            }
+          .type(ButtonType.Capsule)
+          .enabled(!this.sharing)
+          .onClick(async () => {
+            await this.shareCurrentImage()
+          })
+        Button(this.saving ? '保存中...' : '保存')
+          .fontSize(14).fontColor(AppColors.white)
+          .backgroundColor('#33FFFFFF')
+          .borderRadius(16)
+          .height(32)
+          .type(ButtonType.Capsule)
+          .margin({ left: 12 })
+          .enabled(!this.saving)
+          .onClick(async () => {
+            await this.saveCurrentImage()
           })
       }
       .width('100%')
-      .padding({ top: 6, bottom: 28, right: 16 })
+      .padding({ top: 6, bottom: 15 + this.navBarHeight, left: 16, right: 16 })
     }
     .width('100%').height('100%')
+    .padding({ top: this.statusBarHeight })
     .backgroundColor(AppColors.imageViewerBg)
   }
 }
