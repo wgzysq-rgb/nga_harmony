@@ -483,17 +483,21 @@ export struct ImageViewer {
           .onClick(async () => {
             await this.shareCurrentImage()
           })
-        Button(this.saving ? '保存中...' : '保存')
-          .fontSize(14).fontColor(AppColors.white)
-          .backgroundColor('#33FFFFFF')
-          .borderRadius(16)
-          .height(32)
-          .type(ButtonType.Capsule)
+        Stack() {
+          SaveButton({ text: SaveDescription.SAVE, buttonType: ButtonType.Normal })
+            .fontSize(14)
+            .fontColor(AppColors.white)
+            .backgroundColor('#33FFFFFF')
+            .borderRadius(16)
+            .height(32)
+            .padding({ left: 20, right: 20 })
+            .onClick(async (_event: ClickEvent, result: SaveButtonOnClickResult) => {
+              if (result === SaveButtonOnClickResult.SUCCESS) {
+                await this.saveCurrentImage()
+              }
+            })
+        }
           .margin({ left: 12 })
-          .enabled(!this.saving)
-          .onClick(async () => {
-            await this.saveCurrentImage()
-          })
       }
       .width('100%')
       .padding({ top: 6, bottom: 15 + this.navBarHeight, left: 16, right: 16 })
