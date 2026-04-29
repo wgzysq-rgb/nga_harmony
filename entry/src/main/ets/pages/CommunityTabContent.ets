@@ -352,8 +352,8 @@ export struct CommunityTabContent {
         .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         .margin({ top: 4 })
     }
-    .width('100%').aspectRatio(1)
-    .padding({ left: 2, right: 2, top: 10, bottom: 6 })
+    .width('100%').aspectRatio(1.3)
+    .padding({ left: 2, right: 2, top: 8, bottom: 4 })
     .backgroundColor(this.selectedSectionId === id ? AppColors.bgSecondary : Color.Transparent)
     .borderRadius(8).margin({ top: 2 })
     .alignItems(HorizontalAlign.Center)
