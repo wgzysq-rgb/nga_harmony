@@ -19,6 +19,22 @@ export class AppColors {
   static readonly dividerStrong: string = '#C0C0C4'
   static readonly white: string = '#FFFFFF'
   static readonly black: string = '#000000'
+  static readonly overlay: string = '#33000000'
+  static readonly overlayStrong: string = '#66000000'
+  static readonly shadow: string = '#40000000'
+  static readonly shadowLight: string = '#30000000'
+  static readonly toastBg: string = '#CC000000'
+  static readonly imageViewerBg: string = '#FF000000'
+  static readonly warnBg: string = '#FFF3E0'
+  static readonly warnBorder: string = '#FFB74D'
+  static readonly warnText: string = '#8B0000'
+  static readonly chevron: string = '#C7C7CC'
+  static readonly sheetIndicator: string = '#D1D1D6'
+  static readonly quoteBorders: string[] = [
+    'rgba(0, 122, 255, 0.3)',
+    'rgba(0, 122, 255, 0.2)',
+    'rgba(0, 122, 255, 0.12)',
+  ]
 }
 
 // 深色模式颜色
@@ -38,6 +54,36 @@ export class AppColorsDark {
   static readonly dividerStrong: string = '#545458'
   static readonly white: string = '#FFFFFF'
   static readonly black: string = '#000000'
+  static readonly overlay: string = '#33000000'
+  static readonly overlayStrong: string = '#66000000'
+  static readonly shadow: string = '#40000000'
+  static readonly shadowLight: string = '#30000000'
+  static readonly toastBg: string = '#CC000000'
+  static readonly imageViewerBg: string = '#FF000000'
+  static readonly warnBg: string = '#3D2E00'
+  static readonly warnBorder: string = '#665500'
+  static readonly warnText: string = '#FF9999'
+  static readonly chevron: string = '#48484A'
+  static readonly sheetIndicator: string = '#38383A'
+  static readonly quoteBorders: string[] = [
+    'rgba(10, 132, 255, 0.3)',
+    'rgba(10, 132, 255, 0.2)',
+    'rgba(10, 132, 255, 0.12)',
+  ]
+}
+
+// 品牌图标背景色（不随主题变化）
+export class IconColors {
+  static readonly mail: string = '#007AFF'
+  static readonly bell: string = '#FF3B30'
+  static readonly star: string = '#FF9500'
+  static readonly clock: string = '#8E8E93'
+  static readonly checkin: string = '#34C759'
+  static readonly settings: string = '#5856D6'
+  static readonly moon: string = '#5856D6'
+  static readonly textFields: string = '#FF2D55'
+  static readonly globe: string = '#5AC8FA'
+  static readonly block: string = '#8E8E93'
 }
 
 // 字号选项

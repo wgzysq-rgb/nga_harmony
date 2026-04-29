@@ -537,8 +537,8 @@ export struct ThreadPanel {
           }
           .padding({ left: 8, right: 8, top: 0, bottom: 0 })
           .height(40).alignItems(VerticalAlign.Center)
-          .backgroundColor(Color.White).borderRadius(20)
-          .shadow({ radius: 16, color: '#40000000', offsetY: 4 })
+          .backgroundColor(AppColors.white).borderRadius(20)
+          .shadow({ radius: 16, color: AppColors.shadow, offsetY: 4 })
         }
 
         Blank().layoutWeight(1)
@@ -549,8 +549,8 @@ export struct ThreadPanel {
             .fillColor(AppColors.primary)
         }
         .width(40).height(40).borderRadius(20)
-        .backgroundColor(Color.White)
-        .shadow({ radius: 16, color: '#40000000', offsetY: 4 })
+        .backgroundColor(AppColors.white)
+        .shadow({ radius: 16, color: AppColors.shadow, offsetY: 4 })
         .onClick(() => {
           replyManager.startThreadReply(Number(this.threadTid), this.threadFid)
           floatingLayerStore.replyDialogTitle = replyManager.dialogTitle
@@ -597,9 +597,9 @@ export struct ThreadPanel {
             .width('100%')
           }
           .width(150)
-          .backgroundColor(Color.White)
+          .backgroundColor(AppColors.white)
           .borderRadius(10)
-          .shadow({ radius: 16, color: '#30000000', offsetY: 4 })
+          .shadow({ radius: 16, color: AppColors.shadowLight, offsetY: 4 })
           .position({ top: this.statusBarHeight + 44 + 6, right: 16 })
         }
         .width('100%').height('100%')

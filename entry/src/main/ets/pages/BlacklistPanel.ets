@@ -84,7 +84,7 @@ export struct BlacklistPanel {
         }
         .width('100%').height('100%')
         .position({ x: 0, y: 0 })
-        .backgroundColor('#40000000')
+        .backgroundColor(AppColors.overlay)
         .onClick(() => { this.showAddDialog = false })
 
         Column() {

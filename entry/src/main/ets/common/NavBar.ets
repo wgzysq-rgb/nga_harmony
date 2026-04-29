@@ -1,6 +1,7 @@
 /**
  * 通用导航栏组件 - 从 React NavBar.tsx 迁移
  */
+import { AppColors } from '../common/Constants'
 
 @Component
 export struct NavBar {
@@ -17,7 +18,7 @@ export struct NavBar {
         if (this.showBack) {
           Text('< 返回')
             .fontSize(15)
-            .fontColor('#007AFF')
+            .fontColor(AppColors.primary)
             .onClick(() => {
               if (this.onBackClick) {
                 this.onBackClick()
@@ -42,7 +43,7 @@ export struct NavBar {
         if (this.rightLabel) {
           Text(this.rightLabel)
             .fontSize(15)
-            .fontColor('#007AFF')
+            .fontColor(AppColors.primary)
             .onClick(() => {
               if (this.onRightClick) {
                 this.onRightClick()
@@ -57,7 +58,7 @@ export struct NavBar {
     .width('100%')
     .height(44)
     .padding({ left: 16, right: 16 })
-    .backgroundColor('#F9F9F9')
-    .border({ width: { bottom: 0.5 }, color: '#E5E5EA' })
+    .backgroundColor(AppColors.bgTertiary)
+    .border({ width: { bottom: 0.5 }, color: AppColors.separator })
   }
 }

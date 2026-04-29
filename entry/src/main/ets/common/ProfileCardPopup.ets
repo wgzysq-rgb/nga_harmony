@@ -73,7 +73,7 @@ export struct ProfileCardPopup {
     .width(280)
     .backgroundColor(AppColors.bg)
     .borderRadius(14)
-    .shadow({ radius: 16, color: '#30000000', offsetY: 4 })
+    .shadow({ radius: 16, color: AppColors.shadowLight, offsetY: 4 })
     .clip(true)
   }
 
@@ -118,7 +118,7 @@ export struct ProfileCardPopup {
             }
             if (profile.muteTime && profile.muteTime.length > 0) {
               Text('禁言中')
-                .fontSize(10).fontColor(Color.White)
+                .fontSize(10).fontColor(AppColors.white)
                 .backgroundColor(AppColors.destructive).borderRadius(4)
                 .padding({ left: 5, right: 5, top: 2, bottom: 2 }).margin({ left: 4 })
             }

@@ -171,7 +171,7 @@ export struct ReplyDialog {
           Row() {
             Text('回复')
               .fontSize(14).fontWeight(this.isCommentMode ? FontWeight.Regular : FontWeight.Bold)
-              .fontColor(this.isCommentMode ? AppColors.textTertiary : Color.White)
+              .fontColor(this.isCommentMode ? AppColors.textTertiary : AppColors.white)
               .padding({ left: 14, right: 14, top: 5, bottom: 5 })
               .backgroundColor(this.isCommentMode ? AppColors.bgSecondary : AppColors.primary)
               .borderRadius({ topLeft: 14, bottomLeft: 14 })
@@ -179,7 +179,7 @@ export struct ReplyDialog {
 
             Text('贴条')
               .fontSize(14).fontWeight(this.isCommentMode ? FontWeight.Bold : FontWeight.Regular)
-              .fontColor(this.isCommentMode ? Color.White : AppColors.textTertiary)
+              .fontColor(this.isCommentMode ? AppColors.white : AppColors.textTertiary)
               .padding({ left: 14, right: 14, top: 5, bottom: 5 })
               .backgroundColor(this.isCommentMode ? AppColors.primary : AppColors.bgSecondary)
               .borderRadius({ topRight: 14, bottomRight: 14 })
@@ -228,7 +228,7 @@ export struct ReplyDialog {
             ForEach(CATEGORY_KEYS, (key: string) => {
               Text(getCategoryLabel(key))
                 .fontSize(12)
-                .fontColor(key === this.selectedCatKey ? Color.White : AppColors.textSecondary)
+                .fontColor(key === this.selectedCatKey ? AppColors.white : AppColors.textSecondary)
                 .padding({ left: 12, right: 12, top: 5, bottom: 5 })
                 .backgroundColor(key === this.selectedCatKey ? AppColors.primary : AppColors.bgSecondary)
                 .borderRadius(10)
@@ -294,7 +294,7 @@ export struct ReplyDialog {
 
         Button(this.sending ? '...' : '发送')
           .fontSize(14).fontWeight(FontWeight.Medium).height(34)
-          .fontColor(Color.White).backgroundColor(AppColors.primary)
+          .fontColor(AppColors.white).backgroundColor(AppColors.primary)
           .borderRadius(17).padding({ left: 20, right: 20 })
           .enabled(!this.sending && (this.replyText.trim().length > 0 || replyManager.shouldQuote))
           .onClick(() => { this.doSend() })

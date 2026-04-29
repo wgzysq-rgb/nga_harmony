@@ -135,11 +135,11 @@ export struct MessageListPanel {
         }
         .width('100%').height('100%')
         .position({ x: 0, y: 0 })
-        .backgroundColor('#40000000')
+        .backgroundColor(AppColors.overlay)
         .onClick(() => { this.showCompose = false })
 
         Column() {
-          Divider().width(36).height(4).borderRadius(2).color('#D1D1D6').margin({ top: 8, bottom: 12 })
+          Divider().width(36).height(4).borderRadius(2).color(AppColors.sheetIndicator).margin({ top: 8, bottom: 12 })
           Row() {
             Text('写私信').fontSize(17).fontWeight(FontWeight.Bold).layoutWeight(1)
             Text('✕').fontSize(20).fontColor(AppColors.textTertiary)
@@ -162,7 +162,7 @@ export struct MessageListPanel {
             .onChange((value: string) => { this.composeContent = value })
 
           Button(this.sending ? '发送中...' : '发送')
-            .width('92%').height(44).fontSize(16).fontColor(Color.White)
+            .width('92%').height(44).fontSize(16).fontColor(AppColors.white)
             .backgroundColor(AppColors.primary).borderRadius(12).margin({ top: 12, bottom: 20 })
             .enabled(!this.sending && this.composeTo.trim().length > 0 &&
               this.composeSubject.trim().length > 0 && this.composeContent.trim().length > 0)

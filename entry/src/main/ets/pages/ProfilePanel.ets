@@ -2,7 +2,7 @@ import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
 import { getNotifications, checkin } from '../service/NgaApi'
 import { ProfileData, ReputationData } from '../model/User'
-import { AppColors, BreakpointType } from '../common/Constants'
+import { AppColors, IconColors, BreakpointType } from '../common/Constants'
 import { formatTime, fmtNum, escHtml, unescapeHtml } from '../common/Utils'
 import { Avatar } from '../common/Avatar'
 import { AnonymousName } from '../common/AnonymousName'
@@ -138,9 +138,9 @@ export struct ProfilePanel {
   ActionRow(iconRes: Resource, iconColor: string, label: string, badge: string, actionType: number) {
     Row() {
       Stack() {
-        Image(iconRes)
-          .width(17).height(17)
-          .fillColor(Color.White)
+      Image(iconRes)
+        .width(17).height(17)
+        .fillColor(AppColors.white)
       }
       .width(29)
       .height(29)
@@ -155,8 +155,8 @@ export struct ProfilePanel {
       if (badge) {
         Text(badge)
           .fontSize(12)
-          .fontColor(Color.White)
-          .backgroundColor('#FF3B30')
+          .fontColor(AppColors.white)
+          .backgroundColor(AppColors.destructive)
           .borderRadius(10)
           .padding({ left: 6, right: 6, top: 2, bottom: 2 })
           .fontWeight(FontWeight.Bold)
@@ -165,7 +165,7 @@ export struct ProfilePanel {
 
       Text('>')
         .fontSize(16)
-        .fontColor('#C7C7CC')
+        .fontColor(AppColors.chevron)
     }
     .width('100%')
     .height(44)
@@ -467,13 +467,13 @@ export struct ProfilePanel {
 
             if (this.isOwnProfile) {
               Column() {
-                this.ActionRow($r('app.media.icon_mail'), '#007AFF', '私信', this.formatBadge(this.unreadMessages), 0)
+                this.ActionRow($r('app.media.icon_mail'), IconColors.mail, '私信', this.formatBadge(this.unreadMessages), 0)
                 Divider().margin({ left: 60 }).color(AppColors.separator)
-                this.ActionRow($r('app.media.icon_bell'), '#FF3B30', '通知', this.formatBadge(this.unreadNotifications), 1)
+                this.ActionRow($r('app.media.icon_bell'), IconColors.bell, '通知', this.formatBadge(this.unreadNotifications), 1)
                 Divider().margin({ left: 60 }).color(AppColors.separator)
-                this.ActionRow($r('app.media.icon_star'), '#FF9500', '收藏主题', '', 2)
+                this.ActionRow($r('app.media.icon_star'), IconColors.star, '收藏主题', '', 2)
                 Divider().margin({ left: 60 }).color(AppColors.separator)
-                this.ActionRow($r('app.media.icon_clock'), '#8E8E93', '浏览历史', '', 3)
+                this.ActionRow($r('app.media.icon_clock'), IconColors.clock, '浏览历史', '', 3)
                 Divider().margin({ left: 60 }).color(AppColors.separator)
 
                 // 签到行 - 内联，不使用 @Builder
@@ -481,12 +481,12 @@ export struct ProfilePanel {
                   Stack() {
                     Image($r('app.media.icon_check'))
                       .width(17).height(17)
-                      .fillColor(Color.White)
+                      .fillColor(AppColors.white)
                   }
                   .width(29)
                   .height(29)
                   .borderRadius(6)
-                  .backgroundColor('#34C759')
+                  .backgroundColor(IconColors.checkin)
                   .margin({ right: 12 })
 
                   Text(this.checkinLoading ? '签到中...' : this.checkinResult || '每日签到')
@@ -495,7 +495,7 @@ export struct ProfilePanel {
 
                   Text('>')
                     .fontSize(16)
-                    .fontColor('#C7C7CC')
+                    .fontColor(AppColors.chevron)
                 }
                 .width('100%')
                 .height(44)
@@ -520,7 +520,7 @@ export struct ProfilePanel {
                 })
 
                 Divider().margin({ left: 60 }).color(AppColors.separator)
-                this.ActionRow($r('app.media.icon_settings'), '#5856D6', '设置', '', 5)
+                this.ActionRow($r('app.media.icon_settings'), IconColors.settings, '设置', '', 5)
               }
               .width('92%')
               .backgroundColor(AppColors.bgTertiary)
@@ -530,7 +530,7 @@ export struct ProfilePanel {
               Row() {
                 Button('发私信')
                   .fontSize(15)
-                  .fontColor(Color.White)
+                  .fontColor(AppColors.white)
                   .backgroundColor(AppColors.primary)
                   .borderRadius(12)
                   .layoutWeight(1)

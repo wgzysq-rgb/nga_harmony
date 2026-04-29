@@ -1,6 +1,7 @@
 /**
  * 确认对话框 + ActionSheet 组件
  */
+import { AppColors } from '../common/Constants'
 
 // 确认对话框
 @CustomDialog
@@ -22,27 +23,27 @@ export struct ConfirmDialog {
 
       Text(this.message)
         .fontSize(14)
-        .fontColor('#8E8E93')
+        .fontColor(AppColors.textSecondary)
         .margin({ bottom: 20 })
 
-      Divider().color('#E5E5EA')
+      Divider().color(AppColors.separator)
 
       Row() {
         Button('取消')
           .layoutWeight(1)
           .backgroundColor(Color.Transparent)
-          .fontColor('#007AFF')
+          .fontColor(AppColors.primary)
           .onClick(() => {
             this.controller.close()
             if (this.onCancel) this.onCancel()
           })
 
-        Divider().vertical(true).height(20).color('#E5E5EA')
+        Divider().vertical(true).height(20).color(AppColors.separator)
 
         Button(this.confirmLabel)
           .layoutWeight(1)
           .backgroundColor(Color.Transparent)
-          .fontColor(this.destructive ? '#FF3B30' : '#007AFF')
+          .fontColor(this.destructive ? AppColors.destructive : AppColors.primary)
           .fontWeight(FontWeight.Bold)
           .onClick(() => {
             this.controller.close()
@@ -53,7 +54,7 @@ export struct ConfirmDialog {
     }
     .width(300)
     .padding({ left: 20, right: 20 })
-    .backgroundColor(Color.White)
+    .backgroundColor(AppColors.white)
     .borderRadius(14)
     .alignItems(HorizontalAlign.Center)
   }
@@ -82,12 +83,12 @@ export struct ActionSheetDialog {
         .width(36)
         .height(4)
         .borderRadius(2)
-        .color('#D1D1D6')
+        .color(AppColors.sheetIndicator)
         .margin({ top: 8, bottom: 12 })
 
       Text(this.title)
         .fontSize(13)
-        .fontColor('#8E8E93')
+        .fontColor(AppColors.textSecondary)
         .margin({ bottom: 8 })
 
       // 选项列表
@@ -101,7 +102,7 @@ export struct ActionSheetDialog {
 
               if (opt.value === this.selected) {
                 Image($r('app.media.icon_checkmark'))
-                  .width(17).height(17).fillColor('#007AFF')
+                  .width(17).height(17).fillColor(AppColors.primary)
               }
             }
             .width('100%')
@@ -115,22 +116,22 @@ export struct ActionSheetDialog {
         })
       }
       .width('100%')
-      .divider({ strokeWidth: 0.5, color: '#E5E5EA' })
+      .divider({ strokeWidth: 0.5, color: AppColors.separator })
 
       // 取消按钮
-      Divider().color('#E5E5EA').margin({ top: 8 })
+      Divider().color(AppColors.separator).margin({ top: 8 })
       Button('取消')
         .width('100%')
         .height(50)
         .backgroundColor(Color.Transparent)
-        .fontColor('#007AFF')
+        .fontColor(AppColors.primary)
         .fontWeight(FontWeight.Bold)
         .onClick(() => {
           this.controller.close()
           if (this.onCancel) this.onCancel()
         })
     }
-    .backgroundColor(Color.White)
+    .backgroundColor(AppColors.white)
     .borderRadius({ topLeft: 14, topRight: 14 })
     .padding({ bottom: 20 })
   }

@@ -4,6 +4,7 @@
  */
 
 import { appStore } from '../store/AppStore'
+import { AppColors } from './Constants'
 
 @CustomDialog
 export struct ToastOverlay {
@@ -13,10 +14,10 @@ export struct ToastOverlay {
   build() {
     Text(this.message)
       .fontSize(14)
-      .fontColor(Color.White)
+      .fontColor(AppColors.white)
       .padding({ left: 16, right: 16, top: 8, bottom: 8 })
       .borderRadius(20)
-      .backgroundColor('#CC000000')
+      .backgroundColor(AppColors.toastBg)
   }
 }
 
@@ -60,10 +61,10 @@ export struct ToastComponent {
       Stack() {
         Text(this.message)
           .fontSize(14)
-          .fontColor(Color.White)
+          .fontColor(AppColors.white)
           .padding({ left: 16, right: 16, top: 8, bottom: 8 })
           .borderRadius(20)
-          .backgroundColor('#CC000000')
+          .backgroundColor(AppColors.toastBg)
       }
       .width('100%')
       .height('100%')

@@ -20,11 +20,7 @@ function isInlineGroupBlank(nodes: BBNode[]): boolean {
   return true
 }
 
-const QUOTE_BORDER_COLORS: string[] = [
-  'rgba(0, 122, 255, 0.3)',
-  'rgba(0, 122, 255, 0.2)',
-  'rgba(0, 122, 255, 0.12)',
-]
+const QUOTE_BORDER_COLORS: string[] = AppColors.quoteBorders
 
 class RenderContext {
   inQuote: boolean = false
@@ -415,7 +411,7 @@ export struct BBCodeContentView {
     .margin({ top: 6, bottom: 4 })
     .border({
       width: { left: 2 },
-      color: { left: 'rgba(0, 122, 255, 0.2)' },
+      color: { left: AppColors.quoteBorders[1] },
       style: { left: BorderStyle.Solid }
     })
     .borderRadius({ topLeft: 4, bottomLeft: 4 })
@@ -520,7 +516,7 @@ export struct BBCodeContentView {
       } else {
         Text(node.text)
           .fontSize(15)
-          .fontColor('#8B0000')
+          .fontColor(AppColors.warnText)
           .lineHeight(22)
       }
     }
@@ -528,8 +524,8 @@ export struct BBCodeContentView {
     .padding(12)
     .margin({ top: 6, bottom: 4 })
     .borderRadius(8)
-    .backgroundColor('#FFF3E0')
-    .border({ width: 1, color: '#FFB74D' })
+    .backgroundColor(AppColors.warnBg)
+    .border({ width: 1, color: AppColors.warnBorder })
     .alignItems(HorizontalAlign.Start)
   }
 

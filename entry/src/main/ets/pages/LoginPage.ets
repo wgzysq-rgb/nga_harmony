@@ -102,7 +102,7 @@ struct LoginPage {
         .height(50)
         .fontSize(17)
         .fontWeight(FontWeight.Bold)
-        .fontColor(Color.White)
+        .fontColor(AppColors.white)
         .backgroundColor(AppColors.primary)
         .borderRadius(12)
         .margin({ top: 20 })

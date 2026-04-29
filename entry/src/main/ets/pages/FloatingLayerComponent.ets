@@ -1,6 +1,6 @@
 import { display, componentUtils } from '@kit.ArkUI'
 import { floatingLayerStore, FloatingLayerStoreClass, FloatingPage } from '../store/FloatingLayerStore'
-import { AppColors } from '../common/Constants'
+import { AppColors, IconColors } from '../common/Constants'
 import { ImageViewer } from '../common/ImageViewer'
 import { ProfileCardPopup } from '../common/ProfileCardPopup'
 import { ReplyDialog } from '../common/ReplyDialog'
@@ -23,7 +23,7 @@ export struct FloatingLayerComponent {
       }
       if (this.floating.top === FloatingPage.PROFILE_CARD) {
         Stack() {
-          Column().width('100%').height('100%').backgroundColor('#33000000')
+          Column().width('100%').height('100%').backgroundColor(AppColors.overlay)
             .onClick(() => { this.floating.remove(FloatingPage.PROFILE_CARD) })
           ProfileCardPopup({
             targetUid: this.floating.profileCardUid,
@@ -39,7 +39,7 @@ export struct FloatingLayerComponent {
       }
       if (this.floating.top === FloatingPage.REPLY_DIALOG) {
         Stack() {
-          Column().width('100%').height('100%').backgroundColor('#33000000')
+          Column().width('100%').height('100%').backgroundColor(AppColors.overlay)
 
           Column().width('100%').height('100%')
             .onClick(() => { this.floating.notifyReplyCloseRequested() })
@@ -61,24 +61,24 @@ export struct FloatingLayerComponent {
 
       if (this.floating.top === FloatingPage.CONFIRM_DIALOG) {
         Stack() {
-          Column().width('100%').height('100%').backgroundColor('#66000000')
+          Column().width('100%').height('100%').backgroundColor(AppColors.overlayStrong)
             .onClick(() => { this.floating.hideConfirm() })
           Column() {
             Text(this.floating.confirmTitle)
               .fontSize(17).fontWeight(FontWeight.Bold)
               .margin({ top: 20, bottom: 8 })
             Text(this.floating.confirmMessage)
-              .fontSize(14).fontColor('#8E8E93')
+              .fontSize(14).fontColor(AppColors.textSecondary)
               .margin({ bottom: 20 })
-            Divider().color('#E5E5EA')
+            Divider().color(AppColors.separator)
             Row() {
               Button('取消')
-                .layoutWeight(1).backgroundColor(Color.Transparent).fontColor('#007AFF')
+                .layoutWeight(1).backgroundColor(Color.Transparent).fontColor(AppColors.primary)
                 .onClick(() => { this.floating.hideConfirm() })
-              Divider().vertical(true).height(20).color('#E5E5EA')
+              Divider().vertical(true).height(20).color(AppColors.separator)
               Button(this.floating.confirmLabel)
                 .layoutWeight(1).backgroundColor(Color.Transparent)
-                .fontColor(this.floating.confirmDestructive ? '#FF3B30' : '#007AFF')
+                .fontColor(this.floating.confirmDestructive ? AppColors.destructive : AppColors.primary)
                 .fontWeight(FontWeight.Bold)
                 .onClick(() => {
                   const handler = this.floating.confirmOnConfirm
@@ -90,7 +90,7 @@ export struct FloatingLayerComponent {
             }.height(44)
           }
           .width(300).padding({ left: 20, right: 20 })
-          .backgroundColor(Color.White).borderRadius(14)
+          .backgroundColor(AppColors.white).borderRadius(14)
           .alignItems(HorizontalAlign.Center)
         }
         .width('100%').height('100%')
@@ -98,7 +98,7 @@ export struct FloatingLayerComponent {
 
       if (this.floating.top === FloatingPage.PAGE_PICKER) {
         Stack() {
-          Column().width('100%').height('100%').backgroundColor('#33000000')
+          Column().width('100%').height('100%').backgroundColor(AppColors.overlay)
             .onClick(() => { this.floating.remove(FloatingPage.PAGE_PICKER) })
           Column() {
             Text('选择页面').fontSize(14).fontColor(AppColors.textPrimary).fontWeight(FontWeight.Bold)
@@ -123,8 +123,8 @@ export struct FloatingLayerComponent {
               }.width('100%')
             }.width('100%').height(120).align(Alignment.TopStart)
           }
-          .width(220).height(180).padding({ left: 10, right: 10 }).backgroundColor(Color.White).borderRadius(12)
-            .shadow({ radius: 16, color: '#40000000', offsetY: 4 })
+          .width(220).height(180).padding({ left: 10, right: 10 }).backgroundColor(AppColors.white).borderRadius(12)
+            .shadow({ radius: 16, color: AppColors.shadow, offsetY: 4 })
             .position({ x: this.floating.pagePickerX, y: this.floating.pagePickerY })
         }
         .width('100%').height('100%').alignContent(Alignment.BottomEnd)
@@ -132,7 +132,7 @@ export struct FloatingLayerComponent {
 
       if (this.floating.replyConfirmActive) {
         Stack() {
-          Column().width('100%').height('100%').backgroundColor('#33000000')
+          Column().width('100%').height('100%').backgroundColor(AppColors.overlay)
             .onClick(() => {
               this.floating.hideReplyConfirm()
             })

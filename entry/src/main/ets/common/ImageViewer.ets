@@ -2,6 +2,7 @@ import { http } from '@kit.NetworkKit';
 import { fileIo } from '@kit.CoreFileKit';
 import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { appStore } from '../store/AppStore';
+import { AppColors } from './Constants';
 
 @Component
 export struct ImageViewer {
@@ -224,11 +225,11 @@ export struct ImageViewer {
     Column() {
       Row() {
         Text(`${this.currentIndex + 1} / ${this.urls.length}`)
-          .fontSize(15).fontColor(Color.White)
+          .fontSize(15).fontColor(AppColors.white)
           .margin({ left: 16 })
         Blank().layoutWeight(1)
         Text('✕')
-          .fontSize(24).fontColor(Color.White)
+          .fontSize(24).fontColor(AppColors.white)
           .padding({ right: 16 })
           .onClick(() => {
             this.onClose()
@@ -435,6 +436,6 @@ export struct ImageViewer {
       .padding({ top: 6, bottom: 28, right: 16 })
     }
     .width('100%').height('100%')
-    .backgroundColor('#FF000000')
+    .backgroundColor(AppColors.imageViewerBg)
   }
 }

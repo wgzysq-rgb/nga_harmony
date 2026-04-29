@@ -4,6 +4,7 @@
  */
 
 import { appStore } from '../store/AppStore'
+import { AppColors } from '../common/Constants'
 import router from '@ohos.router'
 
 @Entry
@@ -31,12 +32,12 @@ struct Index {
       LoadingProgress()
         .width(40)
         .height(40)
-        .color('#007AFF')
+        .color(AppColors.primary)
     }
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
-    .backgroundColor(Color.White)
+    .backgroundColor(AppColors.white)
   }
 }
