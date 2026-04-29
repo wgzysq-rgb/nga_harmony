@@ -7,7 +7,7 @@ import { routerStore, Screen } from '../store/RouterStore'
 import { getNotifications, clearNotifications } from '../service/NgaApi'
 import type { NotificationInfo } from '../model/Notification'
 import { AppColors, NOTI_TYPE_MAP, getNotiIcon } from '../common/Constants'
-import { formatTime, escHtml } from '../common/Utils'
+import { formatTime, escHtml, unescapeHtml } from '../common/Utils'
 import { BreakpointType } from '../common/Constants'
 import { PanelNavBar } from '../common/PanelNavBar'
 import { NotificationDataSource } from '../common/LazyDataSource'
@@ -135,7 +135,7 @@ export struct NotificationPanel {
                 Image(getNotiIcon(n.type)).width(20).height(20).fillColor(AppColors.textSecondary)
                 Column() {
                   Row() {
-                    Text(escHtml(n.userName)).fontSize(15).fontColor(AppColors.primary)
+                    Text(unescapeHtml(n.userName)).fontSize(15).fontColor(AppColors.primary)
                     Text(` ${escHtml(NOTI_TYPE_MAP[n.type] ? NOTI_TYPE_MAP[n.type].label : '通知')}`)
                       .fontSize(15).fontColor(AppColors.textSecondary)
                   }.width('100%')

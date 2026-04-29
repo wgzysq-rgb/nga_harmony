@@ -1,5 +1,5 @@
 import { AppColors } from '../common/Constants'
-import { escHtml, formatTime } from '../common/Utils'
+import { formatTime, unescapeHtml } from '../common/Utils'
 import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
 import { browseHistoryStore, BrowseHistoryEntry } from '../store/BrowseHistoryStore'
@@ -76,12 +76,12 @@ export struct BrowseHistoryPanel {
             ListItem() {
               Row() {
                 Column() {
-                  Text(escHtml((itemObj as BrowseHistoryEntry).subject))
+                  Text(unescapeHtml((itemObj as BrowseHistoryEntry).subject))
                     .fontSize(15).fontColor(AppColors.textPrimary).maxLines(2)
                     .textOverflow({ overflow: TextOverflow.Ellipsis }).width('100%')
                   Row() {
                     if ((itemObj as BrowseHistoryEntry).board) {
-                      Text(escHtml((itemObj as BrowseHistoryEntry).board))
+                      Text(unescapeHtml((itemObj as BrowseHistoryEntry).board))
                         .fontSize(12).fontColor(AppColors.textTertiary).margin({ right: 4 })
                     }
                     Row() {

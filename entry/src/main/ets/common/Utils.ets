@@ -37,6 +37,28 @@ export function escHtml(s: string): string {
     .replace(/"/g, '&quot;')
 }
 
+export function unescapeHtml(s: string): string {
+  if (!s) return ''
+  return s
+    .replace(/&#91;/g, '[')
+    .replace(/&#93;/g, ']')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#x27;/g, "'")
+    .replace(/&#x2F;/g, '/')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&#(\d+);/g, (_s: string, c: string): string => {
+      const code: number = parseInt(c, 10)
+      if (code <= 0xFFFF) return String.fromCharCode(code)
+      const hi: number = 0xD800 + ((code - 0x10000) >> 10)
+      const lo: number = 0xDC00 + ((code - 0x10000) & 0x3FF)
+      return String.fromCharCode(hi) + String.fromCharCode(lo)
+    })
+}
+
 export function getAvatarUrl(avatar: string, uid?: number | string): string {
   if (!avatar) return ''
   if (avatar.startsWith('http')) return avatar

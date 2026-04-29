@@ -6,7 +6,7 @@ import { appStore } from '../store/AppStore'
 import type { BlacklistEntry } from '../store/AppStore'
 import { ConfirmDialog } from '../common/Dialogs'
 import { AppColors } from '../common/Constants'
-import { escHtml } from '../common/Utils'
+import { escHtml, unescapeHtml } from '../common/Utils'
 import { BlacklistDataSource } from '../common/LazyDataSource'
 
 @Component
@@ -58,7 +58,7 @@ export struct BlacklistPanel {
                 .width(40).height(40).borderRadius(20).backgroundColor(AppColors.bgSecondary)
 
                 Column() {
-                  Text(escHtml(entry.nickName)).fontSize(15).fontColor(AppColors.textPrimary)
+                  Text(unescapeHtml(entry.nickName)).fontSize(15).fontColor(AppColors.textPrimary)
                     .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
                   Text(`UID: ${escHtml(entry.userId)}`).fontSize(13).fontColor(AppColors.textTertiary).margin({ top: 2 })
                 }

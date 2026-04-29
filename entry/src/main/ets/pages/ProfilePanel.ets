@@ -3,7 +3,7 @@ import { routerStore, Screen } from '../store/RouterStore'
 import { getNotifications, checkin } from '../service/NgaApi'
 import { ProfileData, ReputationData } from '../model/User'
 import { AppColors, BreakpointType } from '../common/Constants'
-import { formatTime, fmtNum, escHtml } from '../common/Utils'
+import { formatTime, fmtNum, escHtml, unescapeHtml } from '../common/Utils'
 import { Avatar } from '../common/Avatar'
 import { AnonymousName } from '../common/AnonymousName'
 
@@ -211,14 +211,14 @@ export struct ProfilePanel {
             Column() {
               Avatar({ avatar: this.profile!.avatarUrl, uid: String(this.profile!.uid), name: this.profile!.userName, avatarSize: 80 })
 
-              Text(escHtml(this.profile!.userName))
+              Text(unescapeHtml(this.profile!.userName))
                 .fontSize(20)
                 .fontWeight(FontWeight.Bold)
                 .margin({ top: 12 })
 
               Row() {
                 if (this.profile!.group) {
-                  Text(escHtml(this.profile!.group))
+                  Text(unescapeHtml(this.profile!.group))
                     .fontSize(12)
                     .fontColor(AppColors.primary)
                     .backgroundColor(AppColors.primaryLight)
@@ -233,20 +233,20 @@ export struct ProfilePanel {
                 if (this.profile!.ipLoc) {
                   Row() {
                     Image($r('app.media.icon_location')).width(13).height(13).fillColor(AppColors.textSecondary).margin({ right: 3 })
-                    Text(escHtml(this.profile!.ipLoc)).fontSize(13).fontColor(AppColors.textSecondary)
+                    Text(unescapeHtml(this.profile!.ipLoc)).fontSize(13).fontColor(AppColors.textSecondary)
                   }.margin({ left: 8 })
                 }
               }
               .margin({ top: 8 })
 
               if (this.profile!.title) {
-                Text(escHtml(this.profile!.title))
+                Text(unescapeHtml(this.profile!.title))
                   .fontSize(13)
                   .fontColor(AppColors.textTertiary)
                   .margin({ top: 6 })
               }
               if (this.profile!.honor) {
-                Text(escHtml(this.profile!.honor))
+                Text(unescapeHtml(this.profile!.honor))
                   .fontSize(12)
                   .fontColor(AppColors.warning)
                   .fontWeight(FontWeight.Medium)
@@ -422,7 +422,7 @@ export struct ProfilePanel {
                     }
                     .width('100%')
                     if (entry.topicSubject) {
-                      Text(escHtml(entry.topicSubject))
+                      Text(unescapeHtml(entry.topicSubject))
                         .fontSize(13)
                         .fontColor(AppColors.textPrimary)
                         .maxLines(1)
@@ -431,7 +431,7 @@ export struct ProfilePanel {
                         .width('100%')
                     }
                     if (entry.postContent) {
-                      Text(escHtml(entry.postContent))
+                      Text(unescapeHtml(entry.postContent))
                         .fontSize(12)
                         .fontColor(AppColors.textTertiary)
                         .maxLines(2)

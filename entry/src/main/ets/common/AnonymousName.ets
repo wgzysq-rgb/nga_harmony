@@ -1,5 +1,5 @@
 import { AppColors } from './Constants'
-import { escHtml } from './Utils'
+import { unescapeHtml } from './Utils'
 import { decodeAnonymousName } from '../parser/AnonymousParser'
 
 @Component
@@ -11,7 +11,7 @@ export struct AnonymousName {
 
   build() {
     Row() {
-      Text(this.isAnonymous ? decodeAnonymousName(this.author) : escHtml(this.author))
+      Text(this.isAnonymous ? decodeAnonymousName(this.author) : unescapeHtml(this.author))
         .fontSize(this.fontSize)
         .fontColor(this.isAnonymous ? AppColors.textTertiary : this.normalColor)
         .fontWeight(FontWeight.Medium)

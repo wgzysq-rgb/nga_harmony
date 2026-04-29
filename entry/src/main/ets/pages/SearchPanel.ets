@@ -6,7 +6,7 @@ import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
 import { getTopicList, createTopicListParams, searchForum, TopicListParams, TopicListResult, SearchForumResult } from '../service/NgaApi'
 import { AppColors, FONT_COLORS, BreakpointType } from '../common/Constants'
-import { formatTime, escHtml } from '../common/Utils'
+import { formatTime, escHtml, unescapeHtml } from '../common/Utils'
 import { ThreadDataSource } from '../common/LazyDataSource'
 import { AnonymousName } from '../common/AnonymousName'
 import { preferences } from '@kit.ArkData'
@@ -252,7 +252,7 @@ export struct SearchPanel {
                   Image(`https://img4.nga.178.com/ngabbs/nga_classic/f/app/${(forum as Record<string, Object>)['fid']}.png`)
                     .width(40).height(40).borderRadius(10).objectFit(ImageFit.Cover).backgroundColor(AppColors.bgSecondary).margin({ right: 12 }).onError(() => {})
                   Column() {
-                    Text(escHtml(String((forum as Record<string, Object>)['name'] ?? ''))).fontSize(15).fontColor(AppColors.textPrimary)
+                    Text(unescapeHtml(String((forum as Record<string, Object>)['name'] ?? ''))).fontSize(15).fontColor(AppColors.textPrimary)
                       .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
                   }.layoutWeight(1).alignItems(HorizontalAlign.Start)
                 }.width('100%').padding({ left: 16, right: 16, top: 10, bottom: 10 }).alignItems(VerticalAlign.Center)
@@ -301,7 +301,7 @@ export struct SearchPanel {
       Row() {
         Text(this.getTypeTags(Number(thread['type'] ?? 0)))
           .fontSize(15).fontColor(AppColors.textTertiary)
-        Text(escHtml(String(thread['subject'] ?? '')))
+        Text(unescapeHtml(String(thread['subject'] ?? '')))
           .fontSize(15)
           .fontColor(this.getSubjectFontColor(String(thread['titleFont'] ?? '')))
           .fontWeight(this.isSubjectBold(String(thread['titleFont'] ?? '')) ? FontWeight.Bold : FontWeight.Normal)
@@ -310,7 +310,7 @@ export struct SearchPanel {
       }.width('100%').alignItems(VerticalAlign.Top)
 
       if (thread['previewSnippet']) {
-        Text(escHtml(String(thread['previewSnippet'] ?? '')))
+        Text(unescapeHtml(String(thread['previewSnippet'] ?? '')))
           .fontSize(13).fontColor(AppColors.textSecondary).maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis }).margin({ top: 6 }).width('100%')
       }

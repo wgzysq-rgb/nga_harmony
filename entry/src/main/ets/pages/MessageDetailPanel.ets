@@ -6,7 +6,7 @@ import { appStore } from '../store/AppStore'
 import { getMessageDetail, sendMessage } from '../service/NgaApi'
 import type { MessageArticle } from '../model/Message'
 import { AppColors } from '../common/Constants'
-import { formatTime, escHtml } from '../common/Utils'
+import { formatTime, unescapeHtml } from '../common/Utils'
 import { Avatar } from '../common/Avatar'
 import { MessageArticleDataSource } from '../common/LazyDataSource'
 
@@ -100,7 +100,7 @@ export struct MessageDetailPanel {
         .width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
       } else {
         if (this.title && this.title !== '私信详情') {
-          Text(escHtml(this.title))
+          Text(unescapeHtml(this.title))
             .fontSize(17).fontWeight(FontWeight.Bold).width('100%')
             .padding({ left: 16, right: 16, top: 10, bottom: 8 })
             .backgroundColor(AppColors.bgTertiary)
@@ -114,14 +114,14 @@ export struct MessageDetailPanel {
                 Avatar({ name: msg.author || msg.from || '未知', avatarSize: 36 })
                 Column() {
                   Row() {
-                    Text(escHtml(msg.author || msg.from || '未知'))
+                    Text(unescapeHtml(msg.author || msg.from || '未知'))
                       .fontSize(14).fontColor(AppColors.primary).fontWeight(FontWeight.Medium)
                     Text(formatTime(Number(msg.time))).fontSize(12).fontColor(AppColors.textTertiary).margin({ left: 8 })
                   }
                   if (msg.formated_html_data) {
                     RichText(msg.formated_html_data).width('100%').margin({ top: 4 })
                   } else {
-                    Text(escHtml(msg.content)).fontSize(15).fontColor(AppColors.textPrimary)
+                    Text(unescapeHtml(msg.content)).fontSize(15).fontColor(AppColors.textPrimary)
                       .margin({ top: 4 }).lineHeight(22)
                   }
                 }

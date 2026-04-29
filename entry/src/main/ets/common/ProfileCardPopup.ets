@@ -2,7 +2,7 @@ import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
 import { ProfileData, AdminForumsData } from '../model/User'
 import { AppColors } from '../common/Constants'
-import { formatTime, fmtNum, escHtml } from '../common/Utils'
+import { formatTime, fmtNum, escHtml, unescapeHtml } from '../common/Utils'
 import { Avatar } from '../common/Avatar'
 
 @Component
@@ -108,10 +108,10 @@ export struct ProfileCardPopup {
 
         Column() {
           Row() {
-            Text(escHtml(profile.userName))
+            Text(unescapeHtml(profile.userName))
               .fontSize(16).fontWeight(FontWeight.Bold).fontColor(AppColors.textPrimary)
             if (profile.group && profile.group.length > 0) {
-              Text(escHtml(profile.group))
+              Text(unescapeHtml(profile.group))
                 .fontSize(10).fontColor(AppColors.textSecondary)
                 .backgroundColor(AppColors.bgSecondary).borderRadius(4)
                 .padding({ left: 5, right: 5, top: 2, bottom: 2 }).margin({ left: 6 })
@@ -126,7 +126,7 @@ export struct ProfileCardPopup {
           .alignItems(VerticalAlign.Center)
 
           if (profile.title || profile.honor) {
-            Text(escHtml(this.joinTitleHonor(profile.title, profile.honor)))
+            Text(unescapeHtml(this.joinTitleHonor(profile.title, profile.honor)))
               .fontSize(12).fontColor(AppColors.textSecondary).margin({ top: 3 })
           }
 
@@ -167,7 +167,7 @@ export struct ProfileCardPopup {
         this.DetailRows(profile)
 
         if (profile.sign && profile.sign.length > 0) {
-          Text(escHtml(profile.sign))
+          Text(unescapeHtml(profile.sign))
             .fontSize(12).fontColor(AppColors.textTertiary)
             .margin({ top: 8 })
             .maxLines(3)
@@ -233,7 +233,7 @@ export struct ProfileCardPopup {
   DetailRow(label: string, value: string) {
     Row() {
       Text(label).fontSize(12).fontColor(AppColors.textSecondary)
-      Text(escHtml(value)).fontSize(12).fontColor(AppColors.textPrimary).fontWeight(FontWeight.Medium)
+      Text(unescapeHtml(value)).fontSize(12).fontColor(AppColors.textPrimary).fontWeight(FontWeight.Medium)
         .layoutWeight(1).textAlign(TextAlign.End).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
     }
     .width('100%')

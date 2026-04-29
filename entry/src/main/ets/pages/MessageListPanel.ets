@@ -7,7 +7,7 @@ import { routerStore, Screen } from '../store/RouterStore'
 import { getMessageList, sendMessage, MessageListResult, MessageSendResult } from '../service/NgaApi'
 import type { MessageThreadInfo } from '../model/Message'
 import { AppColors, BreakpointType } from '../common/Constants'
-import { formatTime, escHtml } from '../common/Utils'
+import { formatTime, unescapeHtml } from '../common/Utils'
 import { Avatar } from '../common/Avatar'
 import { PanelNavBar } from '../common/PanelNavBar'
 import { MessageThreadDataSource } from '../common/LazyDataSource'
@@ -108,9 +108,9 @@ export struct MessageListPanel {
               Row() {
                 Avatar({ name: thread.last_from_username || thread.from_username, avatarSize: 44 })
                 Column() {
-                  Text(escHtml(thread.subject)).fontSize(15).fontWeight(FontWeight.Medium)
+                  Text(unescapeHtml(thread.subject)).fontSize(15).fontWeight(FontWeight.Medium)
                     .fontColor(AppColors.textPrimary).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-                  Text(`${escHtml(thread.last_from_username || thread.from_username)} · ${thread.posts}条消息 · ${formatTime(Number(thread.lasttime))}`)
+                  Text(`${unescapeHtml(thread.last_from_username || thread.from_username)} · ${thread.posts}条消息 · ${formatTime(Number(thread.lasttime))}`)
                     .fontSize(13).fontColor(AppColors.textTertiary).maxLines(1)
                     .textOverflow({ overflow: TextOverflow.Ellipsis }).margin({ top: 2 })
                 }.layoutWeight(1).margin({ left: 12 }).alignItems(HorizontalAlign.Start)

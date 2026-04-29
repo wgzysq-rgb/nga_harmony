@@ -11,6 +11,7 @@ import { PostInfoDataSource } from '../common/LazyDataSource'
 import { floatingLayerStore, FloatingPage } from '../store/FloatingLayerStore'
 import { voteRecordStore } from '../store/VoteRecordStore'
 import { replyManager, ReplyType } from '../common/ReplyManager'
+import { unescapeHtml } from '../common/Utils'
 import type { ThreadInfo } from '../model/Thread'
 
 @Component
@@ -132,7 +133,7 @@ export struct ThreadPanel {
         this.currentPage = page
         if (result.threadInfo) {
           const info: ThreadInfo = result.threadInfo
-          this.threadSubject = info.subject || '帖子'
+          this.threadSubject = unescapeHtml(info.subject) || '帖子'
           this.threadFid = info.fid
           this.threadAuthorId = String(info.authorid)
         }

@@ -8,7 +8,7 @@ import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
 import { getTopicList, createTopicListParams, TopicListParams, TopicListResult, removeFavorite } from '../service/NgaApi'
 import { AppColors, FONT_COLORS, SORT_MODES, SortMode, BreakpointType } from '../common/Constants'
-import { formatTime, escHtml } from '../common/Utils'
+import { formatTime, unescapeHtml } from '../common/Utils'
 import { PanelNavBar } from '../common/PanelNavBar'
 import { ThreadDataSource } from '../common/LazyDataSource'
 import { AnonymousName } from '../common/AnonymousName'
@@ -254,7 +254,7 @@ export struct TopicListPanel {
       Row() {
         Text(this.getTypeTags(Number(thread['type'] ?? 0)))
           .fontSize(15).fontColor(AppColors.textTertiary)
-        Text(escHtml(String(thread['subject'] ?? '')))
+        Text(unescapeHtml(String(thread['subject'] ?? '')))
           .fontSize(15)
           .fontColor(this.getSubjectFontColor(String(thread['titleFont'] ?? '')))
           .fontWeight(this.isSubjectBold(String(thread['titleFont'] ?? '')) ? FontWeight.Bold : FontWeight.Normal)
@@ -268,7 +268,7 @@ export struct TopicListPanel {
       }.width('100%').alignItems(VerticalAlign.Top)
 
       if (thread['previewSnippet']) {
-        Text(escHtml(String(thread['previewSnippet'] ?? '')))
+        Text(unescapeHtml(String(thread['previewSnippet'] ?? '')))
           .fontSize(13).fontColor(AppColors.textSecondary).maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis }).margin({ top: 6 }).width('100%')
       }
