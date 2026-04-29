@@ -41,7 +41,7 @@ export struct PostItem {
           }.layoutWeight(1)
           .onClick((event: ClickEvent) => {
             if (this.post.isanonymous) {
-              appStore.showToast('这白痴匿名了,神马都看不到')
+              appStore.showToast('该用户已匿名')
               return
             }
             const uid = String(this.post.authorid)
@@ -194,7 +194,7 @@ export struct PostItem {
           Avatar({ avatar: c.avatar, uid: String(c.authorid), name: c.author, avatarSize: 24 })
             .onClick((event: ClickEvent) => {
               if (c.isanonymous) {
-                appStore.showToast('这白痴匿名了,神马都看不到')
+                appStore.showToast('该用户已匿名')
                 return
               }
               const uid = String(c.authorid)
