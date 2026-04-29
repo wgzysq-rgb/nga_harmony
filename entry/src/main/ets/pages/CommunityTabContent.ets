@@ -429,10 +429,20 @@ export struct CommunityTabContent {
                     Image(`https://img4.nga.178.com/ngabbs/nga_classic/f/app/${board.fid}.png`)
                       .width(36).height(36).borderRadius(8).objectFit(ImageFit.Cover)
                       .onError(() => {})
-                    Text(board.name)
-                      .fontSize(14).fontColor(AppColors.textPrimary).maxLines(1)
-                      .textOverflow({ overflow: TextOverflow.Ellipsis })
-                      .margin({ left: 10 }).layoutWeight(1)
+                    Column() {
+                      Text(board.name)
+                        .fontSize(14).fontColor(AppColors.textPrimary).maxLines(1)
+                        .textOverflow({ overflow: TextOverflow.Ellipsis })
+                      if (board.info.length > 0) {
+                        Text(board.info)
+                          .fontSize(11).fontColor(AppColors.textTertiary).maxLines(1)
+                          .textOverflow({ overflow: TextOverflow.Ellipsis })
+                          .margin({ top: 2 })
+                      }
+                    }
+                    .margin({ left: 10 }).layoutWeight(1)
+                    .alignItems(HorizontalAlign.Start)
+                    .justifyContent(FlexAlign.Center)
                     Text(this.isFavBoard(board.fid) ? '★' : '☆')
                       .fontSize(16)
                       .fontColor(this.isFavBoard(board.fid) ? AppColors.primary : AppColors.textTertiary)
@@ -441,7 +451,7 @@ export struct CommunityTabContent {
                         this.handleToggleFav(board.fid, board.name)
                       })
                   }
-                  .width('100%').height(52).padding({ left: 12, right: 12 })
+                  .width('100%').height(60).padding({ left: 12, right: 12 })
                   .alignItems(VerticalAlign.Center)
                   .onClick(() => {
                     routerStore.navigateForum(board.fid, board.name)
