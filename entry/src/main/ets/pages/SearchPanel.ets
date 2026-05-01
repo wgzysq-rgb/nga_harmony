@@ -179,6 +179,7 @@ export struct SearchPanel {
           Image($r('app.media.icon_search')).width(16).height(16).margin({ right: 8 })
           TextInput({ text: this.keyword, placeholder: '搜索板块、主题、内容...' })
             .layoutWeight(1).fontSize(15).backgroundColor(Color.Transparent).type(InputType.Normal)
+            .keyboardAppearance(KeyboardAppearance.IMMERSIVE)
             .onChange((value: string) => { this.keyword = value })
             .onSubmit(() => this.handleSubmit())
           if (this.keyword.length > 0) {

@@ -274,6 +274,7 @@ export struct ReplyDialog {
       TextArea({ text: this.replyText, placeholder: '输入内容...', controller: this.textAreaController })
         .width('100%').height(220).padding(12).fontSize(15)
         .borderRadius(8).backgroundColor(AppColors.bgSecondary)
+        .keyboardAppearance(KeyboardAppearance.IMMERSIVE)
         .onChange((value: string) => { this.replyText = value })
         .onTextSelectionChange((start: number, end: number) => {
           this.selStart = start

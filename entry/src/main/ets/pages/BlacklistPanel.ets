@@ -94,6 +94,7 @@ export struct BlacklistPanel {
           TextInput({ text: this.addUid, placeholder: '输入 UID' })
             .width('80%').height(44).fontSize(15).borderRadius(8)
             .backgroundColor(AppColors.bgSecondary).margin({ top: 16 })
+            .keyboardAppearance(KeyboardAppearance.IMMERSIVE)
             .onChange((value: string) => { this.addUid = value })
             .onSubmit(() => {
               if (this.addUid.trim()) {

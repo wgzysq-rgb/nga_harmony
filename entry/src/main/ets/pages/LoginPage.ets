@@ -37,6 +37,7 @@ struct LoginPage {
         .backgroundColor(AppColors.bgSecondary)
         .borderRadius(10)
         .padding({ left: 16, right: 16 })
+        .keyboardAppearance(KeyboardAppearance.IMMERSIVE)
         .onChange((value: string) => {
           this.username = value
         })
@@ -50,6 +51,7 @@ struct LoginPage {
         .borderRadius(10)
         .padding({ left: 16, right: 16 })
         .margin({ top: 12 })
+        .keyboardAppearance(KeyboardAppearance.IMMERSIVE)
         .onChange((value: string) => {
           this.password = value
         })
@@ -67,6 +69,7 @@ struct LoginPage {
             .fontSize(17)
             .backgroundColor(AppColors.bgSecondary)
             .borderRadius(10)
+            .keyboardAppearance(KeyboardAppearance.IMMERSIVE)
             .padding({ left: 16, right: 16 })
             .maxLength(6)
             .onChange((value: string) => {

@@ -149,16 +149,19 @@ export struct MessageListPanel {
           TextInput({ text: this.composeTo, placeholder: '收件人（用户名）' })
             .width('92%').height(44).fontSize(15).borderRadius(12)
             .backgroundColor(AppColors.bgSecondary).margin({ top: 12 })
+            .keyboardAppearance(KeyboardAppearance.IMMERSIVE)
             .onChange((value: string) => { this.composeTo = value })
 
           TextInput({ text: this.composeSubject, placeholder: '主题' })
             .width('92%').height(44).fontSize(15).borderRadius(12)
             .backgroundColor(AppColors.bgSecondary).margin({ top: 8 })
+            .keyboardAppearance(KeyboardAppearance.IMMERSIVE)
             .onChange((value: string) => { this.composeSubject = value })
 
           TextArea({ text: this.composeContent, placeholder: '内容' })
             .width('92%').height(100).fontSize(15).borderRadius(12)
             .backgroundColor(AppColors.bgSecondary).margin({ top: 8 })
+            .keyboardAppearance(KeyboardAppearance.IMMERSIVE)
             .onChange((value: string) => { this.composeContent = value })
 
           Button(this.sending ? '发送中...' : '发送')

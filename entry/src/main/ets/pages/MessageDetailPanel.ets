@@ -140,6 +140,7 @@ export struct MessageDetailPanel {
           TextInput({ text: this.replyText, placeholder: '写回复...' })
             .layoutWeight(1).fontSize(15).borderRadius(12)
             .backgroundColor(AppColors.bgSecondary).height(40).padding({ left: 12, right: 12 })
+            .keyboardAppearance(KeyboardAppearance.IMMERSIVE)
             .onChange((value: string) => { this.replyText = value })
             .onSubmit(() => this.handleReply())
           Button('发送')
