@@ -5,11 +5,12 @@
 import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
 import { getNotifications, clearNotifications } from '../service/NgaApi'
-import type { NotificationInfo } from '../model/Notification'
+import type { NotificationInfo, ReplyNotification, UpvoteNotification } from '../model/Notification'
 import { AppColors, NOTI_TYPE_MAP, getNotiIcon } from '../common/Constants'
 import { formatTime, escHtml, unescapeHtml } from '../common/Utils'
 import { BreakpointType } from '../common/Constants'
 import { PanelNavBar } from '../common/PanelNavBar'
+import { Avatar } from '../common/Avatar'
 import { NotificationDataSource } from '../common/LazyDataSource'
 
 interface FilterMode {
@@ -23,7 +24,7 @@ const FILTER_MODES: FilterMode[] = [
   { key: 2, label: '@我' },
   { key: 3, label: '私信' }
 ]
-const FILTER_TYPES: number[][] = [[], [1, 2, 3, 4], [7, 8], [10, 11]]
+const FILTER_TYPES: number[][] = [[], [1, 2, 3, 4, 15, 17], [7, 8], [10, 11, 12]]
 
 @Component
 export struct NotificationPanel {
@@ -69,6 +70,11 @@ export struct NotificationPanel {
     return list.filter((n: NotificationInfo) => types.includes(n.type))
   }
 
+  private getEmptyText(): string {
+    const texts: string[] = ['暂无通知', '暂无回复通知', '暂无@消息', '暂无私信通知']
+    return texts[this.activeFilter] || '暂无通知'
+  }
+
   private updateFilteredDataSource(): void {
     this.notificationsDataSource.replaceAll(this.getFilteredNotifications())
   }
@@ -90,8 +96,16 @@ export struct NotificationPanel {
     const info = NOTI_TYPE_MAP[n.type]
     if (info && info.category === 'message') {
       routerStore.navigateActivity(Screen.messages())
+    } else if (n.type === 17) {
+      const upvote = n as UpvoteNotification
+      if (upvote.tid.length > 0) {
+        routerStore.navigateActivity(Screen.thread(upvote.tid, 1, upvote.pid))
+      }
     } else {
-      routerStore.navigateActivity(Screen.topicList(n.userName + '的帖子', -1, n.userId))
+      const reply = n as ReplyNotification
+      if (reply.tid.length > 0) {
+        routerStore.navigateActivity(Screen.thread(reply.tid, 1, reply.replyPid))
+      }
     }
   }
 
@@ -137,10 +151,10 @@ export struct NotificationPanel {
               .onClick(() => this.loadNotifications())
           }
           .width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
-        } else if (this.notifications.length === 0) {
+        } else if (this.getFilteredNotifications().length === 0) {
           Column() {
             Image($r('app.media.icon_bell')).width(40).height(40).opacity(0.4)
-            Text('暂无通知').fontSize(15).fontColor(AppColors.textTertiary).margin({ top: 8 })
+            Text(this.getEmptyText()).fontSize(15).fontColor(AppColors.textTertiary).margin({ top: 8 })
           }
           .width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
         } else {
@@ -148,16 +162,39 @@ export struct NotificationPanel {
             LazyForEach(this.notificationsDataSource, (n: NotificationInfo) => {
               ListItem() {
                 Row() {
-                  Image(getNotiIcon(n.type)).width(20).height(20).fillColor(AppColors.textSecondary)
+                  if (n.type === 17) {
+                    // 支持/反对：无头像也无图标
+                  } else if (n.userName.length > 0) {
+                    Avatar({ name: n.userName, uid: n.userId, avatarSize: 40 })
+                      .margin({ right: 10 })
+                  } else {
+                    Image(getNotiIcon(n.type)).width(20).height(20).fillColor(AppColors.textSecondary)
+                      .margin({ right: 8 })
+                  }
                   Column() {
                     Row() {
-                      Text(unescapeHtml(n.userName)).fontSize(15).fontColor(AppColors.primary)
-                      Text(` ${escHtml(NOTI_TYPE_MAP[n.type] ? NOTI_TYPE_MAP[n.type].label : '通知')}`)
-                        .fontSize(15).fontColor(AppColors.textSecondary)
-                    }.width('100%')
-                    Text(formatTime(Number(n.timeStamp))).fontSize(12).fontColor(AppColors.textTertiary).margin({ top: 2 })
-                  }.layoutWeight(1).alignItems(HorizontalAlign.Start).margin({ left: 8 })
-                }.width('100%').padding({ left: 16, right: 16, top: 10, bottom: 10 }).alignItems(VerticalAlign.Center)
+                      Row() {
+                        if (n.userName.length > 0) {
+                          Text(unescapeHtml(n.userName)).fontSize(15).fontColor(AppColors.primary)
+                            .margin({ right: 4 })
+                            .fontWeight(n.unread ? FontWeight.Bold : FontWeight.Normal)
+                        }
+                        Text(escHtml(NOTI_TYPE_MAP[n.type] ? NOTI_TYPE_MAP[n.type].label : '通知'))
+                          .fontSize(15).fontColor(AppColors.textSecondary)
+                          .fontWeight(n.unread ? FontWeight.Bold : FontWeight.Normal)
+                      }.layoutWeight(1)
+                      Text(formatTime(Number(n.timeStamp))).fontSize(12).fontColor(AppColors.textTertiary)
+                        .fontWeight(n.unread ? FontWeight.Bold : FontWeight.Normal)
+                    }.width('100%').alignItems(VerticalAlign.Center)
+                    if (n.title.length > 0) {
+                      Text(unescapeHtml(n.title)).fontSize(14).fontColor(AppColors.textPrimary)
+                        .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).margin({ top: 4 })
+                        .width('100%')
+                        .fontWeight(n.unread ? FontWeight.Bold : FontWeight.Normal)
+                    }
+                  }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+                }.width('100%').padding({ left: 16, right: 16, top: 12, bottom: 12 })
+                .alignItems(VerticalAlign.Center)
                 .onClick(() => this.handleNotificationClick(n))
               }
             }, (n: NotificationInfo) => String(n.timeStamp) + String(n.userId))

@@ -250,8 +250,14 @@ export struct TopicListPanel {
             .fillColor(AppColors.primary)
         }
         .width(40).height(40).borderRadius(20)
-        .backgroundColor(AppColors.white)
+        .backgroundColor('rgba(255, 255, 255, 0.0)')
         .shadow({ radius: 16, color: AppColors.shadow, offsetY: 4 })
+        .backgroundEffect({
+          radius: 10,
+          saturation: 1.15,
+          brightness: 1.08,
+          color: 'rgba(255, 255, 255, 0.25)'
+        })
         .onClick(() => this.loadTopics(1))
       }.width('100%').justifyContent(FlexAlign.End).padding({ right: 16, bottom: 16 + this.navBarHeight })
     }

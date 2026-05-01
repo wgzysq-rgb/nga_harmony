@@ -160,12 +160,12 @@ function logChunks(prefix: string, text: string): void {
 }
 
 function httpReq(url: string, method: http.RequestMethod,
-  header: Record<string, string>, body?: string): Promise<ArrayBuffer> {
+  header: Record<string, string>, body?: string): Promise<HttpResponse> {
   console.info('[NGA][REQ]', method, url);
   if (body && body.length > 0) {
     logChunks('[NGA][REQ] body:', body);
   }
-  return new Promise<ArrayBuffer>((resolve, reject) => {
+  return new Promise<HttpResponse>((resolve, reject) => {
     const httpRequest = http.createHttp();
     const options: http.HttpRequestOptions = {
       method,
@@ -185,13 +185,14 @@ function httpReq(url: string, method: http.RequestMethod,
         return;
       }
       console.info('[NGA][RES]', response.responseCode, url);
-      if (response.responseCode === 200) {
-        resolve(response.result as ArrayBuffer);
-      } else {
-        reject(new Error(`HTTP ${response.responseCode}`));
-      }
+      resolve({ status: response.responseCode, body: response.result as ArrayBuffer });
     });
   });
+}
+
+interface HttpResponse {
+  status: number
+  body: ArrayBuffer
 }
 
 // ============== NGA 核心 ==============
@@ -237,7 +238,7 @@ async function ngaGetHtmlText(path: string, params: Record<string, string>,
   const baseUrl: string = DOMAINS[activeDomainIndex];
   const hostname: string = extractHostname(baseUrl);
   let released: boolean = false;
-  let responseBuffer: ArrayBuffer = new ArrayBuffer(0);
+  let response: HttpResponse = { status: 0, body: new ArrayBuffer(0) };
   let firstErrorMsg: string = '';
 
   try {
@@ -253,7 +254,7 @@ async function ngaGetHtmlText(path: string, params: Record<string, string>,
     }
 
     try {
-      responseBuffer = await httpReq(url, http.RequestMethod.GET, header);
+      response = await httpReq(url, http.RequestMethod.GET, header);
     } catch (firstError) {
       firstErrorMsg = (firstError as Error).message;
       ngaThrottler.release(hostname);
@@ -262,13 +263,13 @@ async function ngaGetHtmlText(path: string, params: Record<string, string>,
       let retrySuccess = false;
       for (let i = 1; i < DOMAINS.length; i++) {
         const retryDomainIdx = (activeDomainIndex + i) % DOMAINS.length;
-        const retryBaseUrl = DOMAINS[retryDomainIdx];
+        const retryBaseUrl = baseUrl || DOMAINS[retryDomainIdx];
         const retryHostname = extractHostname(retryBaseUrl);
 
         await ngaThrottler.acquire(retryHostname);
         try {
           const retryUrl = buildUrl(retryBaseUrl, path, params);
-          responseBuffer = await httpReq(retryUrl, http.RequestMethod.GET, header);
+          response = await httpReq(retryUrl, http.RequestMethod.GET, header);
           retrySuccess = true;
           break;
         } catch (retryError) {
@@ -283,7 +284,7 @@ async function ngaGetHtmlText(path: string, params: Record<string, string>,
       }
     }
 
-    return decodeGb18030(responseBuffer);
+    return decodeGb18030(response.body);
   } finally {
     if (!released) {
       ngaThrottler.release(hostname);
@@ -342,10 +343,10 @@ async function ngaRequest(path: string, method: http.RequestMethod,
       header['Content-Type'] = 'application/x-www-form-urlencoded';
     }
 
-    let responseBuffer: ArrayBuffer = new ArrayBuffer(0);
+    let response: HttpResponse = { status: 0, body: new ArrayBuffer(0) };
     let firstErrorMsg = '';
     try {
-      responseBuffer = await httpReq(url, method, header, body || undefined);
+      response = await httpReq(url, method, header, body || undefined);
     } catch (firstError) {
       firstErrorMsg = (firstError as Error).message;
       ngaThrottler.release(hostname);
@@ -360,7 +361,7 @@ async function ngaRequest(path: string, method: http.RequestMethod,
         await ngaThrottler.acquire(retryHostname);
         try {
           const retryUrl = buildUrl(retryBaseUrl, path, params);
-          responseBuffer = await httpReq(retryUrl, method, header, body);
+          response = await httpReq(retryUrl, method, header, body);
           retrySuccess = true;
           break;
         } catch (retryError) {
@@ -376,7 +377,7 @@ async function ngaRequest(path: string, method: http.RequestMethod,
     }
 
     // GB18030 解码
-    const rawText = decodeGb18030(responseBuffer);
+    const rawText = decodeGb18030(response.body);
     logChunks('[NGA][RES] body:', rawText);
 
     // 处理 HTML 错误页
@@ -432,7 +433,8 @@ async function rawRequest(path: string, method: http.RequestMethod,
       header[keys[i]] = extraHeaders[keys[i]];
     }
   }
-  return httpReq(url, method, header, body || undefined);
+  const httpResult = await httpReq(url, method, header, body || undefined);
+  return httpResult.body;
 }
 
 // ============== 公共接口 ==============

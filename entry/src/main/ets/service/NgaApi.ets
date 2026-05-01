@@ -579,15 +579,18 @@ export async function getThread(token: string, tid: string, pid: string,
       if (authorid) ngaParams['authorid'] = authorid;
 
       let jsonOk: boolean = false;
+      let jsonError: string = '';
       try {
         const raw = await ngaClient.get('/read.php', ngaParams, { uid: session.uid, cid: session.cid }) as Record<string, Object>;
-        const error = parseNgaError(raw);
-        if (!error) {
+        const err = parseNgaError(raw);
+        if (err) {
+          jsonError = err;
+        } else {
           fillThreadResult(raw as Record<string, Object>, result, blacklist);
           jsonOk = true;
         }
       } catch (e) {
-        // JSON 请求异常（含非200），降级 HTML
+        // JSON 请求异常，降级 HTML
       }
 
       if (!jsonOk) {
@@ -599,6 +602,10 @@ export async function getThread(token: string, tid: string, pid: string,
         const html: string = await ngaClient.getHtmlText('/read.php', fallbackParams, { uid: session.uid, cid: session.cid });
         const rawHtml: object = parseHtmlToRawJson(html);
         fillThreadResult(rawHtml as Record<string, Object>, result, blacklist);
+        if (result.posts.length === 0) {
+          result.ok = false;
+          result.error = jsonError || result.error || '无法加载该帖子';
+        }
       }
     }
   } catch (e) {
@@ -1106,7 +1113,7 @@ export async function getNotifications(token: string): Promise<NotificationsResu
   }
   try {
     const params: Record<string, string> = {
-      '__lib': 'noti', '__output': '8', '__act': 'get_all', 'raw': '3', 'time_limit': '1',
+      '__lib': 'noti', '__output': '8', '__act': 'get_all',
     };
     const raw = await ngaClient.get('/nuke.php', params, { uid: session.uid, cid: session.cid });
     result.data = parseNotifications(raw as object);

@@ -2,7 +2,9 @@ export interface NotificationInfo {
   type: number;
   userId: string;
   userName: string;
+  title: string;
   timeStamp: string;
+  unread: boolean;
 }
 
 export interface ReplyNotification extends NotificationInfo {
@@ -28,4 +30,12 @@ export interface VoteNotification extends NotificationInfo {
   pid: string;
 }
 
-export type NgaNotification = ReplyNotification | MessageNotification | VoteNotification;
+export interface UpvoteNotification extends NotificationInfo {
+  type: number;
+  toUid: string;
+  title: string;
+  tid: string;
+  pid: string;
+}
+
+export type NgaNotification = ReplyNotification | MessageNotification | VoteNotification | UpvoteNotification;

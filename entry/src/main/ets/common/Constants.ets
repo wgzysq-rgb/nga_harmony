@@ -289,13 +289,16 @@ export interface NotiTypeInfo {
 
 export const NOTI_TYPE_MAP: Record<number, NotiTypeInfo> = {
   1: { label: '回复了你的主题', category: 'thread' },
-  2: { label: '回复了你的帖子', category: 'thread' },
+  2: { label: '回复了你的回复', category: 'thread' },
   3: { label: '评论了你的主题', category: 'thread' },
-  4: { label: '评论了你的帖子', category: 'thread' },
-  7: { label: '在主题中@了你', category: 'thread' },
-  8: { label: '在帖子中@了你', category: 'thread' },
-  10: { label: '给你发了私信', category: 'message' },
-  11: { label: '回复了你的私信', category: 'message' },
+  4: { label: '评论了你的回复', category: 'thread' },
+  7: { label: '在主题中提到了你', category: 'thread' },
+  8: { label: '在回复中提到了你', category: 'thread' },
+  10: { label: '发起了新的对话', category: 'message' },
+  11: { label: '回复了对话', category: 'message' },
+  12: { label: '邀请了新用户加入对话', category: 'message' },
+  15: { label: '评价了你的发言', category: 'thread' },
+  17: { label: '获得了支持或反对', category: 'thread' },
 }
 
 export function getNotiIcon(type: number): Resource {
@@ -308,6 +311,8 @@ export function getNotiIcon(type: number): Resource {
     8: $r('app.media.icon_at'),
     10: $r('app.media.icon_mail'),
     11: $r('app.media.icon_mail'),
+    12: $r('app.media.icon_mail'),
+    15: $r('app.media.icon_thumb_up'),
   }
   return map[type] || $r('app.media.icon_clipboard')
 }
