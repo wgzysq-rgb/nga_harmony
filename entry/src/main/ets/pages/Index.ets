@@ -46,6 +46,6 @@ struct Index {
     .height('100%')
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
-    .backgroundColor(AppColors.white)
+    .backgroundColor(AppColors.bg)
   }
 }

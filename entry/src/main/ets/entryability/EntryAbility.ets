@@ -1,4 +1,5 @@
 import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
+import { fileIo } from '@kit.CoreFileKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { display, window } from '@kit.ArkUI';
 import { sessionStore } from '../service/SessionStore';
@@ -8,13 +9,30 @@ import { voteRecordStore } from '../store/VoteRecordStore';
 
 const DOMAIN = 0x0000;
 const TAG = 'EntryAbility';
+const THEME_CACHE_FILE = 'theme_cache.txt'
 
 export default class EntryAbility extends UIAbility {
   private curBp: string = 'sm'
 
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
+    // 在 loadContent 前尽可能早地应用用户保存的主题，减少主题切换闪烁
     try {
-      this.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
+      const appContext = this.context.getApplicationContext()
+      let initialTheme: string = 'light'
+      try {
+        const themeCachePath = appContext.cacheDir + '/' + THEME_CACHE_FILE
+        const cachedTheme = fileIo.readTextSync(themeCachePath).trim()
+        if (cachedTheme === 'dark') {
+          initialTheme = 'dark'
+        }
+      } catch (e) {
+        // 尚未缓存过主题，使用默认值
+      }
+      if (initialTheme === 'dark') {
+        appContext.setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_DARK)
+      } else {
+        appContext.setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_LIGHT)
+      }
     } catch (err) {
       hilog.error(DOMAIN, TAG, 'Failed to set colorMode. Cause: %{public}s', JSON.stringify(err));
     }

@@ -1,10 +1,6 @@
 {
   "color": [
     {
-      "name": "start_window_background",
-      "value": "#FFFFFF"
-    },
-    {
       "name": "primary",
       "value": "#C08A4A"
     },

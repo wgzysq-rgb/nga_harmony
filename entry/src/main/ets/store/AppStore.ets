@@ -1,4 +1,6 @@
+import { fileIo } from '@kit.CoreFileKit'
 import { hilog } from '@kit.PerformanceAnalysisKit'
+import { util } from '@kit.ArkTS'
 import { ConfigurationConstant, Context } from '@kit.AbilityKit'
 import { fetchForumFavorites, getForumCategories, getUserProfile } from '../service/NgaApi'
 import type { Category } from '../model/Forum'
@@ -321,6 +323,20 @@ class AppStoreClass {
       hilog.error(DOMAIN, TAG, 'setColorMode failed: %{public}s', JSON.stringify(err))
     }
     AppStorage.setOrCreate('themeName', theme)
+
+    // 缓存主题到文件，供下次冷启动时 EntryAbility 同步读取
+    try {
+      const cacheDir = this.context?.getApplicationContext().cacheDir
+      if (cacheDir) {
+        const encoder = new util.TextEncoder()
+        const bytes = encoder.encodeInto(theme)
+        const file = fileIo.openSync(cacheDir + '/theme_cache.txt', fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC | fileIo.OpenMode.WRITE_ONLY)
+        fileIo.writeSync(file.fd, bytes.buffer)
+        fileIo.closeSync(file)
+      }
+    } catch (err) {
+      hilog.error(DOMAIN, TAG, 'Failed to cache theme. Cause: %{public}s', JSON.stringify(err))
+    }
   }
 
   private persistSettings(): void {

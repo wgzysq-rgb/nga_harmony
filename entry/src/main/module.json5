@@ -25,7 +25,7 @@
         "icon": "$media:layered_image",
         "label": "$string:EntryAbility_label",
         "startWindowIcon": "$media:startIcon",
-        "startWindowBackground": "$color:start_window_background",
+        "startWindowBackground": "$color:bg",
         "orientation": "unspecified",
         "exported": true,
         "skills": [
