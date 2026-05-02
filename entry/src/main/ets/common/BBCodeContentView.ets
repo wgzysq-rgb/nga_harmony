@@ -391,7 +391,6 @@ export struct BBCodeContentView {
     }
     .width('100%')
     .padding({ bottom: 2 })
-    .border({ width: { bottom: 0.5 }, color: { bottom: AppColors.separator } })
   }
 
   private makeQuoteCtx(parent: RenderContext): RenderContext {

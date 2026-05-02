@@ -75,12 +75,21 @@ export struct ThreadPanel {
     floatingLayerStore.push(FloatingPage.PROFILE_CARD)
   }
 
+  private hasInitiallyLoaded: boolean = false
+
   aboutToAppear(): void {
-    this.loadPosts(1, LOAD_REPLACE)
+    this.hasInitiallyLoaded = true
+    if (this.threadTid) {
+      this.loadPosts(1, LOAD_REPLACE)
+    }
     this.loadPersistedVotes()
   }
 
   private onThreadChanged(): void {
+    if (!this.hasInitiallyLoaded) {
+      this.hasInitiallyLoaded = true
+      return
+    }
     this.mgr.reset()
     this.allPosts = []
     this.postsDataSource.clear()
