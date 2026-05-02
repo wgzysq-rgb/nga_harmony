@@ -9,7 +9,8 @@ import { sessionStore, type Session } from './SessionStore';
 import { parseForumCategories } from '../parser/ForumParser';
 import { parseTopicList } from '../parser/TopicParser';
 import { parseThreadData } from '../parser/ThreadParser';
-import { parseHtmlToRawJson } from '../parser/HtmlThreadParser';
+import { taskpool } from '@kit.ArkTS';
+import { parseHtmlTask } from './HtmlParseTask';
 import { parseNotifications } from '../parser/NotificationParser';
 import { parseMessageList, parseMessageDetail } from '../parser/MessageParser';
 import { parseNgaError } from '../parser/ErrorParser';
@@ -585,8 +586,9 @@ export async function getThread(token: string, tid: string, pid: string,
       };
       if (authorid) htmlParams['authorid'] = authorid;
       const html: string = await ngaClient.getHtmlText('/read.php', htmlParams, { uid: session.uid, cid: session.cid });
-      const rawHtml: object = parseHtmlToRawJson(html);
-      fillThreadResult(rawHtml as Record<string, Object>, result, blacklist);
+      const rawObj: Object = await taskpool.execute(parseHtmlTask, html)
+      const rawHtml: Record<string, Object> = rawObj as Record<string, Object>
+      fillThreadResult(rawHtml, result, blacklist);
     } else {
       // 优先尝试 JSON API (__output=8)；失败时降级 HTML 解析
       const ngaParams: Record<string, string> = {
@@ -621,8 +623,9 @@ export async function getThread(token: string, tid: string, pid: string,
         };
         if (authorid) fallbackParams['authorid'] = authorid;
         const html: string = await ngaClient.getHtmlText('/read.php', fallbackParams, { uid: session.uid, cid: session.cid });
-        const rawHtml: object = parseHtmlToRawJson(html);
-        fillThreadResult(rawHtml as Record<string, Object>, result, blacklist);
+        const rawObj: Object = await taskpool.execute(parseHtmlTask, html)
+        const rawHtml: Record<string, Object> = rawObj as Record<string, Object>
+        fillThreadResult(rawHtml, result, blacklist);
         if (result.posts.length === 0) {
           result.ok = false;
           result.error = jsonError || result.error || '无法加载该帖子';
@@ -787,8 +790,9 @@ export async function getThreadHtml(token: string, tid: string, page: string,
     };
 
     const html: string = await ngaClient.getHtmlText('/read.php', params, { uid: session.uid, cid: session.cid });
-    const raw: object = parseHtmlToRawJson(html);
-    fillThreadResult(raw as Record<string, Object>, result, blacklist);
+    const rawObj: Object = await taskpool.execute(parseHtmlTask, html)
+    const raw: Record<string, Object> = rawObj as Record<string, Object>
+    fillThreadResult(raw, result, blacklist);
   } catch (e) {
     result.error = (e as Error).message ?? '获取帖子详情失败(HTML降级)';
   }

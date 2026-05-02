@@ -4,6 +4,7 @@ import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
 import { browseHistoryStore, BrowseHistoryEntry } from '../store/BrowseHistoryStore'
 import { getThread, addFavorite, removeFavorite, votePost, ThreadResult, PostInfo, PostReplyResult, VoteResult } from '../service/NgaApi'
+import { preWarmBBCache } from '../service/BBCodeCache'
 import { AppColors } from '../common/Constants'
 import { PanelNavBar } from '../common/PanelNavBar'
 import { PostItem } from '../common/PostItem'
@@ -117,6 +118,18 @@ export struct ThreadPanel {
     }
   }
 
+  private preWarmPosts(posts: PostInfo[]): void {
+    for (let i: number = 0; i < posts.length; i++) {
+      const p: PostInfo = posts[i]
+      preWarmBBCache(p.content)
+      if (p.signature) preWarmBBCache(p.signature)
+      const comments: PostInfo[] = p.comments
+      for (let j: number = 0; j < comments.length; j++) {
+        preWarmBBCache(comments[j].content)
+      }
+    }
+  }
+
   private async loadPosts(targetPage: number, mode: string): Promise<void> {
     const gen: number = this.mgr.nextGeneration()
 
@@ -148,6 +161,8 @@ export struct ThreadPanel {
       if (gen !== this.mgr.getGeneration()) return
 
       if (result.ok) {
+        this.preWarmPosts(result.posts)
+
         if (result.pagination) {
           this.totalPages = result.pagination.totalPages
         }
