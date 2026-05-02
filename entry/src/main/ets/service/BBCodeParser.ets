@@ -58,6 +58,7 @@ function isSafeUrl(url: string): boolean {
   if (/^data:/i.test(trimmed)) return false
   if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('mailto:')) return true
   if (trimmed.startsWith('/') && !trimmed.startsWith('//')) return true
+  if (trimmed.startsWith('./')) return true
   if (/^\w+\.php\b/i.test(trimmed)) return true
   return false
 }
@@ -342,10 +343,32 @@ function tryMatchBlock(state: ParseState, result: BBNode[]): boolean {
   const ffm = pFlash.exec(state.content)
   if (ffm && ffm.index === state.pos) {
     state.pos = pFlash.lastIndex
-    const n = new BBNode()
-    n.type = BBNodeType.FLASH
-    n.href = isSafeUrl(ffm[1].trim()) ? ffm[1].trim() : ''
-    result.push(n)
+    const rawUrl: string = ffm[1].trim()
+    let resolved: string = rawUrl
+    if (rawUrl.startsWith('./mon_') || rawUrl.startsWith('/mon_')) {
+      const path: string = rawUrl.startsWith('./') ? rawUrl.substring(1) : rawUrl
+      resolved = NGA_CDN_BASE + path
+    }
+    const extMatch: RegExpExecArray | null = /\.(\w+)(\?.*)?$/.exec(resolved)
+    const ext: string = extMatch ? extMatch[1].toLowerCase() : ''
+    const videoExts: string[] = ['mp4', 'webm', 'ogg', 'mov', '3gp']
+    const audioExts: string[] = ['mp3', 'wav', 'flac', 'aac', 'm4a']
+    if (videoExts.indexOf(ext) >= 0) {
+      const n = new BBNode()
+      n.type = BBNodeType.VIDEO
+      n.src = isSafeUrl(resolved) ? resolved : ''
+      result.push(n)
+    } else if (audioExts.indexOf(ext) >= 0) {
+      const n = new BBNode()
+      n.type = BBNodeType.AUDIO
+      n.src = isSafeUrl(resolved) ? resolved : ''
+      result.push(n)
+    } else {
+      const n = new BBNode()
+      n.type = BBNodeType.FLASH
+      n.href = isSafeUrl(resolved) ? resolved : ''
+      result.push(n)
+    }
     return true
   }
 

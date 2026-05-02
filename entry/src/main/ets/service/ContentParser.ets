@@ -98,9 +98,21 @@ export function parseNgaContent(content: string): string {
     (s: string, p1: string): string => `<audio src="${p1}" controls></audio>`
   );
 
-  // [flash]url[/flash]
+  // [flash]url[/flash] — 根据扩展名推断类型
   html = html.replace(/\[flash\](.*?)\[\/flash\]/g,
-    (s: string, p1: string): string => `[Flash]`
+    (s: string, p1: string): string => {
+      const url: string = p1.trim()
+      const extMatch: RegExpExecArray | null = /\.(\w+)(\?.*)?$/.exec(url)
+      const ext: string = extMatch ? extMatch[1].toLowerCase() : ''
+      const videoExts: string[] = ['mp4', 'webm', 'ogg', 'mov', '3gp']
+      const audioExts: string[] = ['mp3', 'wav', 'flac', 'aac', 'm4a']
+      if (videoExts.indexOf(ext) >= 0) {
+        return `<video src="${url}" controls></video>`
+      } else if (audioExts.indexOf(ext) >= 0) {
+        return `<audio src="${url}" controls></audio>`
+      }
+      return `[Flash]`
+    }
   );
 
   // [lessernuke]body[/lessernuke]

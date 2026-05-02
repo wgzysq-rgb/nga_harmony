@@ -428,6 +428,9 @@ export struct ThreadPanel {
                 onLinkClick: (href: string): void => {
                   this.handleLinkClick(href)
                 },
+                onVideoClick: (url: string): void => {
+                  this.handleLinkClick(url)
+                },
                 onProfileClick: (uid: string, screenX: number, screenY: number): void => {
                   this.showProfileCard(uid, screenX, screenY)
                 },
