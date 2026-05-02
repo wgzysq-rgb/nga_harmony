@@ -183,6 +183,11 @@ class AppStoreClass {
     this.persistSettings()
   }
 
+  removeAllBlacklist(): void {
+    this.settings.blacklist = []
+    this.persistSettings()
+  }
+
   getBlacklistIds(): Set<string> {
     const ids = new Set<string>()
     for (const entry of this.settings.blacklist) {

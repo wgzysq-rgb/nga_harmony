@@ -563,7 +563,7 @@ export struct ProfilePanel {
                     routerStore.navigateActivity(Screen.topicList(this.profile!.userName + '的回帖', -1, this.profile!.uid, '', '1'))
                   })
 
-                Button('加黑')
+                Button(appStore.settings.blacklist.some(e => e.userId === this.profile!.uid) ? '取消屏蔽' : '加黑')
                   .fontSize(15)
                   .fontColor(AppColors.destructive)
                   .backgroundColor(AppColors.bgTertiary)
@@ -571,11 +571,16 @@ export struct ProfilePanel {
                   .height(44)
                   .margin({ left: 12 })
                   .onClick(() => {
-                    appStore.addBlacklist({
-                      userId: this.profile!.uid,
-                      nickName: this.profile!.userName || `User${this.profile!.uid}`
-                    })
-                    appStore.showToast('已加入黑名单')
+                    if (appStore.settings.blacklist.some(e => e.userId === this.profile!.uid)) {
+                      appStore.removeBlacklist(this.profile!.uid)
+                      appStore.showToast('已取消屏蔽')
+                    } else {
+                      appStore.addBlacklist({
+                        userId: this.profile!.uid,
+                        nickName: this.profile!.userName || `User${this.profile!.uid}`
+                      })
+                      appStore.showToast('已加入黑名单')
+                    }
                   })
               }
               .width('92%')

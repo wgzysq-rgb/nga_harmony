@@ -15,12 +15,18 @@ export struct BlacklistPanel {
   @State showAddDialog: boolean = false
   @State addUid: string = ''
   @State removeTarget: BlacklistEntry | null = null
+  @State blacklistCount: number = 0
   @StorageProp('statusBarHeight') statusBarHeight: number = 0
   @StorageProp('navBarHeight') navBarHeight: number = 0
 
   private blacklistDataSource: BlacklistDataSource = new BlacklistDataSource()
 
   aboutToAppear(): void {
+    this.refreshBlacklist()
+  }
+
+  private refreshBlacklist(): void {
+    this.blacklistCount = appStore.settings.blacklist.length
     this.blacklistDataSource.replaceAll(appStore.settings.blacklist)
   }
 
@@ -29,13 +35,23 @@ export struct BlacklistPanel {
       Column() {
         Row().width('100%').height(44 + this.statusBarHeight)
 
-        if (appStore.settings.blacklist.length === 0) {
+        if (this.blacklistCount === 0) {
           Column() {
             Image($r('app.media.icon_block')).width(40).height(40).opacity(0.4)
             Text('黑名单为空').fontSize(15).fontColor(AppColors.textTertiary).margin({ top: 8 })
           }
           .width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
         } else {
+          Row() {
+            Text('共 ' + String(this.blacklistCount) + ' 人').fontSize(13).fontColor(AppColors.textTertiary).layoutWeight(1)
+            Text('删除全部').fontSize(13).fontColor(AppColors.destructive)
+              .onClick(() => {
+                appStore.removeAllBlacklist()
+                this.refreshBlacklist()
+                appStore.showToast('已清空黑名单')
+              })
+          }.width('100%').padding({ left: 16, right: 16, top: 8, bottom: 8 })
+
           List() {
             LazyForEach(this.blacklistDataSource, (entry: BlacklistEntry) => {
               ListItem() {
@@ -91,7 +107,7 @@ export struct BlacklistPanel {
             .onSubmit(() => {
               if (this.addUid.trim()) {
                 appStore.addBlacklist({ userId: this.addUid.trim(), nickName: `User${this.addUid.trim()}` })
-                this.blacklistDataSource.replaceAll(appStore.settings.blacklist)
+                this.refreshBlacklist()
                 this.addUid = ''
                 this.showAddDialog = false
               }
@@ -104,7 +120,7 @@ export struct BlacklistPanel {
             .onClick(() => {
               if (this.addUid.trim()) {
                 appStore.addBlacklist({ userId: this.addUid.trim(), nickName: `User${this.addUid.trim()}` })
-                this.blacklistDataSource.replaceAll(appStore.settings.blacklist)
+                this.refreshBlacklist()
                 this.addUid = ''
                 this.showAddDialog = false
               }
@@ -132,7 +148,7 @@ export struct BlacklistPanel {
           onConfirm: () => {
             if (this.removeTarget) {
               appStore.removeBlacklist(this.removeTarget.userId)
-              this.blacklistDataSource.replaceAll(appStore.settings.blacklist)
+              this.refreshBlacklist()
               this.removeTarget = null
             }
           },

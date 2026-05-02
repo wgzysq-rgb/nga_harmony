@@ -15,7 +15,6 @@ export function parseThreadData(raw: object | null, blacklist: Set<string> = new
     if (!r || r['pid'] === undefined || r['pid'] === null) continue;
     if (r['comment_to_id'] !== undefined && r['comment_to_id'] !== null &&
       r['content'] === undefined) continue;
-    if (blacklist.has(String(r['authorid']))) continue;
     rowList.push(mapRow(r, blacklist));
   }
 
@@ -99,7 +98,7 @@ function mapRow(raw: Record<string, Object>, blacklist: Set<string>): ThreadRowI
     alterinfo: String(raw['alterinfo'] ?? ''),
     score: Number(raw['score'] ?? 0),
     score_2: Number(raw['score_2'] ?? 0),
-    isInBlackList: false,
+    isInBlackList: blacklist.has(String(raw['authorid'])),
     userNote: '',
     imageUrlList: (raw['imageUrlList'] as string[]) ?? [],
     formattedHtmlData: String(raw['formattedHtmlData'] ?? ''),

@@ -187,9 +187,23 @@ export struct ProfileCardPopup {
           .padding({ top: 10, bottom: 10 })
           .onClick(() => this.navigateAuthorPosts(profile.uid, profile.userName, true))
         Divider().vertical(true).height(16).alignSelf(ItemAlign.Center).color(AppColors.separator)
-        Text('资料').fontSize(12).fontColor(AppColors.primary).layoutWeight(1).textAlign(TextAlign.Center)
+        Text(appStore.settings.blacklist.some(e => e.userId === profile.uid) ? '取消屏蔽' : '屏蔽')
+          .fontSize(12)
+          .fontColor(appStore.settings.blacklist.some(e => e.userId === profile.uid) ? AppColors.textPrimary : AppColors.destructive)
+          .layoutWeight(1).textAlign(TextAlign.Center)
           .padding({ top: 10, bottom: 10 })
-          .onClick(() => this.navigateProfile(profile.uid))
+          .onClick(() => {
+            if (appStore.settings.blacklist.some(e => e.userId === profile.uid)) {
+              appStore.removeBlacklist(profile.uid)
+              appStore.showToast('已取消屏蔽')
+            } else {
+              appStore.addBlacklist({
+                userId: profile.uid,
+                nickName: profile.userName || `User${profile.uid}`
+              })
+              appStore.showToast('已加入黑名单')
+            }
+          })
       }
       .width('100%')
       .border({ width: { top: 0.5 }, color: AppColors.separator })
