@@ -90,7 +90,7 @@ export struct FloatingLayerComponent {
             }.height(44)
           }
           .width(300).padding({ left: 20, right: 20 })
-          .backgroundColor(AppColors.white).borderRadius(14)
+          .backgroundColor(AppColors.bgTertiary).borderRadius(14)
           .alignItems(HorizontalAlign.Center)
         }
         .width('100%').height('100%')

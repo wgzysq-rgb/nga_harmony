@@ -10,7 +10,7 @@
     },
     {
       "name": "primary_light",
-      "value": "#3A2A1A"
+      "value": "#26D4A85A"
     },
     {
       "name": "destructive",
@@ -26,35 +26,35 @@
     },
     {
       "name": "bg",
-      "value": "#1A1A1E"
+      "value": "#121214"
     },
     {
       "name": "bg_secondary",
-      "value": "#252529"
+      "value": "#1C1C20"
     },
     {
       "name": "bg_tertiary",
-      "value": "#2C2C30"
+      "value": "#26262A"
     },
     {
       "name": "text_primary",
-      "value": "#E8E0D8"
+      "value": "#EAE2D8"
     },
     {
       "name": "text_secondary",
-      "value": "#A09888"
+      "value": "#ADA298"
     },
     {
       "name": "text_tertiary",
-      "value": "#706858"
+      "value": "#8A8278"
     },
     {
       "name": "separator",
-      "value": "#383838"
+      "value": "#303032"
     },
     {
       "name": "divider_strong",
-      "value": "#484848"
+      "value": "#3E3E40"
     },
     {
       "name": "white",
@@ -66,19 +66,19 @@
     },
     {
       "name": "overlay",
-      "value": "#33000000"
-    },
-    {
-      "name": "overlay_strong",
       "value": "#66000000"
     },
     {
+      "name": "overlay_strong",
+      "value": "#88000000"
+    },
+    {
       "name": "shadow",
-      "value": "#40000000"
+      "value": "#60000000"
     },
     {
       "name": "shadow_light",
-      "value": "#30000000"
+      "value": "#40000000"
     },
     {
       "name": "toast_bg",
@@ -89,12 +89,16 @@
       "value": "#FF000000"
     },
     {
+      "name": "image_viewer_button_bg",
+      "value": "#33FFFFFF"
+    },
+    {
       "name": "warn_bg",
-      "value": "#3A2818"
+      "value": "#2E1A0A"
     },
     {
       "name": "warn_border",
-      "value": "#8A6A3A"
+      "value": "#8A6030"
     },
     {
       "name": "warn_text",
@@ -102,11 +106,19 @@
     },
     {
       "name": "chevron",
-      "value": "#605848"
+      "value": "#807060"
     },
     {
       "name": "sheet_indicator",
-      "value": "#3A3A3A"
+      "value": "#3A3A3E"
+    },
+    {
+      "name": "frost_glass",
+      "value": "#40000000"
+    },
+    {
+      "name": "frost_glass_strong",
+      "value": "#4D000000"
     },
     {
       "name": "quote_border_1",

@@ -232,7 +232,7 @@ export struct CommunityTabContent {
   MobileContent() {
     Row() {
       Image($r('app.media.icon_search'))
-        .width(16).height(16).margin({ right: 8 })
+        .width(16).height(16).fillColor(AppColors.textTertiary).margin({ right: 8 })
       Text('搜索板块、主题...')
         .fontSize(15).fontColor(AppColors.textTertiary)
     }
@@ -294,7 +294,7 @@ export struct CommunityTabContent {
           })
 
           Row() {
-            Image($r('app.media.icon_search')).width(14).height(14).margin({ right: 4 })
+            Image($r('app.media.icon_search')).width(14).height(14).fillColor(AppColors.textTertiary).margin({ right: 4 })
             Text('搜索').fontSize(11).fontColor(AppColors.textTertiary)
           }
           .width('100%').height(28).padding({ left: 6, right: 6 })

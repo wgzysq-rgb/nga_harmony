@@ -89,6 +89,10 @@
       "value": "#FF000000"
     },
     {
+      "name": "image_viewer_button_bg",
+      "value": "#33FFFFFF"
+    },
+    {
       "name": "warn_bg",
       "value": "#FFF2E5"
     },
@@ -107,6 +111,14 @@
     {
       "name": "sheet_indicator",
       "value": "#D4C8B0"
+    },
+    {
+      "name": "frost_glass",
+      "value": "#40FFFFFF"
+    },
+    {
+      "name": "frost_glass_strong",
+      "value": "#59FFFFFF"
     },
     {
       "name": "quote_border_1",

@@ -173,7 +173,7 @@ export struct TopicListPanel {
         } else if (this.threads.length === 0) {
           Row().width('100%').height(44 + this.statusBarHeight)
           Column() {
-            Image($r('app.media.icon_chat_bubble')).width(40).height(40).opacity(0.4).margin({ bottom: 8 })
+            Image($r('app.media.icon_chat_bubble')).width(40).height(40).fillColor(AppColors.textTertiary).opacity(0.4).margin({ bottom: 8 })
             Text('暂无主题').fontSize(15).fontColor(AppColors.textTertiary)
           }.width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
         } else {
@@ -250,13 +250,13 @@ export struct TopicListPanel {
             .fillColor(AppColors.primary)
         }
         .width(40).height(40).borderRadius(20)
-        .backgroundColor('rgba(255, 255, 255, 0.0)')
+        .backgroundColor(Color.Transparent)
         .shadow({ radius: 16, color: AppColors.shadow, offsetY: 4 })
         .backgroundEffect({
           radius: 10,
           saturation: 1.15,
           brightness: 1.08,
-          color: 'rgba(255, 255, 255, 0.25)'
+          color: AppColors.frostGlass
         })
         .onClick(() => this.loadTopics(1))
       }.width('100%').justifyContent(FlexAlign.End).padding({ right: 16, bottom: 16 + this.navBarHeight })

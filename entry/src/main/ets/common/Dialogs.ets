@@ -24,6 +24,7 @@ export struct ConfirmDialog {
 
       Text(this.title)
         .fontSize(17)
+        .fontColor(AppColors.textPrimary)
         .fontWeight(FontWeight.Bold)
         .margin({ top: this.icon !== undefined ? 0 : 20, bottom: 8 })
 
@@ -62,7 +63,7 @@ export struct ConfirmDialog {
     }
     .constraintSize({ maxWidth: 340, minWidth: 260 })
     .padding({ left: 20, right: 20 })
-    .backgroundColor(AppColors.white)
+      .backgroundColor(AppColors.bgTertiary)
     .borderRadius(14)
     .alignItems(HorizontalAlign.Center)
   }
@@ -107,6 +108,7 @@ export struct ActionSheetDialog {
             Row() {
               Text(opt.label)
                 .fontSize(this.getLabelFontSize ? this.getLabelFontSize(opt.value) : 17)
+                .fontColor(AppColors.textPrimary)
                 .fontWeight(opt.value === this.selected ? FontWeight.Medium : FontWeight.Regular)
                 .layoutWeight(1)
 
@@ -143,7 +145,7 @@ export struct ActionSheetDialog {
         })
     }
     .width('100%').constraintSize({ maxWidth: 420 })
-    .backgroundColor(AppColors.white)
+      .backgroundColor(AppColors.bgTertiary)
     .borderRadius({ topLeft: 16, topRight: 16 })
     .padding({ bottom: 20 })
   }

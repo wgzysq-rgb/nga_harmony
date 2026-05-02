@@ -199,7 +199,7 @@ export struct SearchPanel {
             }.layoutWeight(1).align(Alignment.TopStart)
           } else {
             Column() {
-              Image($r('app.media.icon_clock')).width(36).height(36).opacity(0.4)
+              Image($r('app.media.icon_clock')).width(36).height(36).fillColor(AppColors.textTertiary).opacity(0.4)
               Text('暂无搜索历史').fontSize(14).fontColor(AppColors.textTertiary).margin({ top: 8 })
             }.width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
           }
@@ -235,7 +235,7 @@ export struct SearchPanel {
         }
       } else {
         if (this.threads.length === 0) {
-          Column() { Image($r('app.media.icon_search')).width(36).height(36).opacity(0.4); Text('未找到相关结果').fontSize(14).fontColor(AppColors.textTertiary).margin({ top: 8 }) }
+          Column() { Image($r('app.media.icon_search')).width(36).height(36).fillColor(AppColors.textTertiary).opacity(0.4); Text('未找到相关结果').fontSize(14).fontColor(AppColors.textTertiary).margin({ top: 8 }) }
             .width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
         } else {
           List({ scroller: this.scroller }) {
@@ -265,7 +265,7 @@ export struct SearchPanel {
       Column() {
         Row() {
           Row() {
-            Image($r('app.media.icon_search')).width(16).height(16).margin({ right: 8 })
+            Image($r('app.media.icon_search')).width(16).height(16).fillColor(AppColors.textTertiary).margin({ right: 8 })
             TextInput({ text: this.keyword, placeholder: '搜索板块、主题、内容...' })
               .layoutWeight(1).fontSize(15).backgroundColor(Color.Transparent).type(InputType.Normal)
               .keyboardAppearance(KeyboardAppearance.IMMERSIVE)
@@ -276,7 +276,7 @@ export struct SearchPanel {
                 .onClick(() => { this.keyword = ''; this.submitted = ''; this.threads = []; this.forums = []; this.threadsDataSource.clear(); this.forumsDataSource.clear() })
             }
           }.layoutWeight(1).height(40).padding({ left: 12, right: 12 })
-          .backgroundColor('rgba(255, 255, 255, 0.5)').borderRadius(10).alignItems(VerticalAlign.Center)
+          .backgroundColor(AppColors.bgSecondary).borderRadius(10).alignItems(VerticalAlign.Center)
           Text('取消').fontSize(15).fontColor(AppColors.primary).margin({ left: 12 }).onClick(() => routerStore.back())
         }.width('100%').padding({ left: 16, right: 16, top: 8 + this.statusBarHeight, bottom: 8 }).alignItems(VerticalAlign.Center)
 
@@ -300,7 +300,7 @@ export struct SearchPanel {
         }.width('100%')
       }
       .width('100%')
-      .backgroundColor('rgba(255, 255, 255, 0.0)')
+      .backgroundColor(Color.Transparent)
       .backdropBlur(60)
       .border({ width: { bottom: 0.5 }, color: AppColors.separator })
       .position({ x: 0, y: 0 })

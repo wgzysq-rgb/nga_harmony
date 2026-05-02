@@ -584,30 +584,29 @@ export struct ThreadPanel {
           }
           .padding({ left: 8, right: 8, top: 0, bottom: 0 })
           .height(40).alignItems(VerticalAlign.Center)
-          .backgroundColor('rgba(255, 255, 255, 0.0)').borderRadius(20)
+          .backgroundColor(Color.Transparent).borderRadius(20)
           .shadow({ radius: 16, color: AppColors.shadow, offsetY: 4 })
           .backgroundEffect({
             radius: 10,
             saturation: 1.15,
             brightness: 1.08,
-            color: 'rgba(255, 255, 255, 0.25)'
+            color: AppColors.frostGlass
           })
           .margin({ right: 8 })
         }
 
         Stack() {
           Image($r('app.media.icon_reply'))
-            .width(20).height(20)
-            .fillColor(AppColors.primary)
+            .width(20).height(20).fillColor(AppColors.primary)
         }
         .width(40).height(40).borderRadius(20)
-        .backgroundColor('rgba(255, 255, 255, 0.0)')
+        .backgroundColor(Color.Transparent)
         .shadow({ radius: 16, color: AppColors.shadow, offsetY: 4 })
         .backgroundEffect({
           radius: 10,
           saturation: 1.15,
           brightness: 1.08,
-          color: 'rgba(255, 255, 255, 0.25)'
+          color: AppColors.frostGlass
         })
         .onClick(() => {
           replyManager.startThreadReply(Number(this.threadTid), this.threadFid)
@@ -657,7 +656,7 @@ export struct ThreadPanel {
             .width('100%')
           }
           .width(150)
-          .backgroundColor(AppColors.white)
+          .backgroundColor(AppColors.bgTertiary)
           .borderRadius(10)
           .shadow({ radius: 16, color: AppColors.shadowLight, offsetY: 4 })
           .position({ top: this.statusBarHeight + NAV_BAR_H + 6, right: 16 })

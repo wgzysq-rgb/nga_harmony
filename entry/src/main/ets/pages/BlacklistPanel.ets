@@ -37,7 +37,7 @@ export struct BlacklistPanel {
 
         if (this.blacklistCount === 0) {
           Column() {
-            Image($r('app.media.icon_block')).width(40).height(40).opacity(0.4)
+            Image($r('app.media.icon_block')).width(40).height(40).fillColor(AppColors.textTertiary).opacity(0.4)
             Text('黑名单为空').fontSize(15).fontColor(AppColors.textTertiary).margin({ top: 8 })
           }
           .width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)

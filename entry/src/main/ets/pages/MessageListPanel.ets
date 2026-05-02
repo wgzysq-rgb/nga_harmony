@@ -99,7 +99,7 @@ export struct MessageListPanel {
         } else if (this.threads.length === 0) {
           Row().width('100%').height(44 + this.statusBarHeight)
           Column() {
-            Image($r('app.media.icon_mail')).width(40).height(40).opacity(0.4)
+            Image($r('app.media.icon_mail')).width(40).height(40).fillColor(AppColors.textTertiary).opacity(0.4)
             Text('暂无私信').fontSize(15).fontColor(AppColors.textTertiary).margin({ top: 8 })
           }
           .width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)

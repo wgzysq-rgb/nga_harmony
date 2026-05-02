@@ -51,7 +51,7 @@ export struct BrowseHistoryPanel {
         if (this.items.length === 0) {
           Row().width('100%').height(44 + this.statusBarHeight)
           Column() {
-            Image($r('app.media.icon_clock')).width(40).height(40).opacity(0.4).margin({ bottom: 12 })
+            Image($r('app.media.icon_clock')).width(40).height(40).fillColor(AppColors.textTertiary).opacity(0.4).margin({ bottom: 12 })
             Text('暂无浏览记录').fontSize(15).fontColor(AppColors.textTertiary)
           }
           .width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)

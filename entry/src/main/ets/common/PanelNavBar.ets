@@ -47,7 +47,7 @@ export struct PanelNavBar {
       radius: 30,
       saturation: 1.15,
       brightness: 1.08,
-      color: 'rgba(255, 255, 255, 0.35)'
+      color: AppColors.frostGlassStrong
     })
     .border({ width: { bottom: 0.5 }, color: AppColors.separator }).alignItems(VerticalAlign.Center)
   }
