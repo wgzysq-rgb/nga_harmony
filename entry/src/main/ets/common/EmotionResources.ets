@@ -302,6 +302,13 @@ const DT_NAMES: string[] = ['ROLL', '上', '傲娇', '叉出去', '发光', '呵
   '注意2', '泪', '泪2', '烧', '笑', '笑2', '笑3', '脸红', '药', '衰',
   '鄙视', '闲', '黑脸']
 
+/** 暗色模式下需要垫白色背景的表情分类 */
+export const EMOTION_CATEGORIES_DARK_BG: Set<string> = new Set(['ac', 'a2', 'dt'])
+
+export function isEmotionCategoryNeedDarkBg(cat: string): boolean {
+  return EMOTION_CATEGORIES_DARK_BG.has(cat)
+}
+
 export function getCategoryNames(cat: string): string[] {
   if (cat === 'ac') {
     return AC_NAMES

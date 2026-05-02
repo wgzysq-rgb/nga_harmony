@@ -2,7 +2,7 @@ import { AppColors } from './Constants'
 import { floatingLayerStore } from '../store/FloatingLayerStore'
 import { replyManager, ReplyManagerClass, ReplyType } from './ReplyManager'
 import { appStore } from '../store/AppStore'
-import { getEmotionResource, CATEGORY_KEYS, getCategoryLabel, getCategoryNames } from './EmotionResources'
+import { getEmotionResource, CATEGORY_KEYS, getCategoryLabel, getCategoryNames, isEmotionCategoryNeedDarkBg } from './EmotionResources'
 import fileIo from '@ohos.file.fs'
 import picker from '@ohos.file.picker'
 
@@ -34,6 +34,7 @@ export struct ReplyDialog {
   @State selEnd: number = 0
   @State showEmojiPanel: boolean = false
   @State selectedCatKey: string = 'ac'
+  @StorageProp('themeName') themeName: string = 'light'
   private textAreaController: TextAreaController = new TextAreaController()
   onSend?: (text: string, isAnony: boolean) => Promise<void>
   onClose: () => void = () => {}
@@ -247,6 +248,8 @@ export struct ReplyDialog {
                 Column() {
                   Image(getEmotionResource(this.selectedCatKey, name))
                     .width(45).height(45).objectFit(ImageFit.Contain)
+                    .backgroundColor(this.themeName === 'dark' && isEmotionCategoryNeedDarkBg(this.selectedCatKey)
+                      ? Color.White : Color.Transparent)
                 }
                 .width(60).height(60)
                 .justifyContent(FlexAlign.Center)

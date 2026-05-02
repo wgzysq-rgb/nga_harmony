@@ -1,6 +1,6 @@
 import { BBNode, BBNodeType } from '../model/BBCodeNode'
 import { AppColors } from '../common/Constants'
-import { getEmotionResource } from '../common/EmotionResources'
+import { getEmotionResource, isEmotionCategoryNeedDarkBg } from '../common/EmotionResources'
 
 function isInlineNode(type: BBNodeType): boolean {
   return type === BBNodeType.TEXT || type === BBNodeType.BOLD ||
@@ -49,6 +49,7 @@ function splitQuoteChildren(children: BBNode[]): QuoteSplit {
 export struct BBCodeContentView {
   nodes: BBNode[] = []
   @State collapseKeys: Set<string> = new Set()
+  @StorageProp('themeName') themeName: string = 'light'
   onImageClick: (urls: string[], index: number) => void = (_urls: string[], _index: number) => {}
   onLinkClick: (href: string) => void = (_href: string) => {}
 
@@ -166,6 +167,9 @@ export struct BBCodeContentView {
           .width(ctx.inQuote ? 26 : 50)
           .height(ctx.inQuote ? 26 : 50)
           .objectFit(ImageFit.Contain)
+          .textBackgroundStyle(this.themeName === 'dark' &&
+            isEmotionCategoryNeedDarkBg(node.emotionCat)
+            ? { color: Color.White } : { color: Color.Transparent })
       } else {
         Span(`[表情:${node.emotionCat}:${node.emotionCode}]`)
           .fontSize(ctx.inQuote ? 12 : 14)
@@ -215,6 +219,9 @@ export struct BBCodeContentView {
           .width(ctx.inQuote ? 26 : 50)
           .height(ctx.inQuote ? 26 : 50)
           .objectFit(ImageFit.Contain)
+          .textBackgroundStyle(this.themeName === 'dark' &&
+            isEmotionCategoryNeedDarkBg(child.emotionCat)
+            ? { color: Color.White } : { color: Color.Transparent })
       } else {
         Span(`[表情:${child.emotionCat}:${child.emotionCode}]`)
           .fontSize(ctx.inQuote ? 12 : 14)
