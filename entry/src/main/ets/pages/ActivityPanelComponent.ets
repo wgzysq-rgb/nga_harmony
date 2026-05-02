@@ -31,6 +31,8 @@ export struct ActivityPanelComponent {
           MessageListPanel({ composeToInit: this.topActivity.screen.composeTo })
         } else if (this.topActivity.screen.type === 'notifications') {
           NotificationPanel()
+        } else if (this.topActivity.screen.type === 'blacklist') {
+          BlacklistPanel()
         } else if (this.topActivity.screen.type === 'topicList') {
           TopicListPanel({
             boardFid: this.topActivity.screen.topicListFid,
@@ -67,8 +69,6 @@ export struct ActivityPanelComponent {
       ProfilePanel({ uid: this.topActivity!.screen.uid })
     } else if (this.topActivity!.screen.type === 'messageDetail') {
       MessageDetailPanel({ mid: this.topActivity!.screen.mid })
-    } else if (this.topActivity!.screen.type === 'blacklist') {
-      BlacklistPanel()
     } else if (this.topActivity!.screen.type === 'settings') {
       SettingsPanel()
     } else {

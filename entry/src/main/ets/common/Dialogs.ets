@@ -13,24 +13,32 @@ export struct ConfirmDialog {
   @Prop destructive: boolean = false
   onConfirm?: () => void
   onCancel?: () => void
+  icon?: Resource
 
   build() {
     Column() {
+      if (this.icon !== undefined) {
+        Image(this.icon).width(36).height(36).fillColor(AppColors.destructive)
+          .margin({ top: 24, bottom: 12 })
+      }
+
       Text(this.title)
         .fontSize(17)
         .fontWeight(FontWeight.Bold)
-        .margin({ top: 20, bottom: 8 })
+        .margin({ top: this.icon !== undefined ? 0 : 20, bottom: 8 })
 
       Text(this.message)
         .fontSize(14)
         .fontColor(AppColors.textSecondary)
         .margin({ bottom: 20 })
+        .textAlign(TextAlign.Center)
 
       Divider().color(AppColors.separator)
 
       Row() {
         Button('取消')
           .layoutWeight(1)
+          .height(44)
           .backgroundColor(Color.Transparent)
           .fontColor(AppColors.primary)
           .onClick(() => {
@@ -38,21 +46,21 @@ export struct ConfirmDialog {
             if (this.onCancel) this.onCancel()
           })
 
-        Divider().vertical(true).height(20).color(AppColors.separator)
+        Divider().vertical(true).height(24).color(AppColors.separator)
 
         Button(this.confirmLabel)
           .layoutWeight(1)
-          .backgroundColor(Color.Transparent)
-          .fontColor(this.destructive ? AppColors.destructive : AppColors.primary)
+          .height(44)
+          .backgroundColor(this.destructive ? AppColors.destructive : Color.Transparent)
+          .fontColor(this.destructive ? AppColors.white : AppColors.primary)
           .fontWeight(FontWeight.Bold)
           .onClick(() => {
             this.controller.close()
             if (this.onConfirm) this.onConfirm()
           })
       }
-      .height(44)
     }
-    .width(300)
+    .constraintSize({ maxWidth: 340, minWidth: 260 })
     .padding({ left: 20, right: 20 })
     .backgroundColor(AppColors.white)
     .borderRadius(14)
@@ -75,6 +83,7 @@ export struct ActionSheetDialog {
   selected: number = 0
   onSelect?: (value: number) => void
   onCancel?: () => void
+  getLabelFontSize?: (value: number) => number
 
   build() {
     Column() {
@@ -87,9 +96,9 @@ export struct ActionSheetDialog {
         .margin({ top: 8, bottom: 12 })
 
       Text(this.title)
-        .fontSize(13)
+        .fontSize(15)
         .fontColor(AppColors.textSecondary)
-        .margin({ bottom: 8 })
+        .margin({ bottom: 4 })
 
       // 选项列表
       List() {
@@ -97,17 +106,19 @@ export struct ActionSheetDialog {
           ListItem() {
             Row() {
               Text(opt.label)
-                .fontSize(17)
+                .fontSize(this.getLabelFontSize ? this.getLabelFontSize(opt.value) : 17)
+                .fontWeight(opt.value === this.selected ? FontWeight.Medium : FontWeight.Regular)
                 .layoutWeight(1)
 
               if (opt.value === this.selected) {
                 Image($r('app.media.icon_checkmark'))
-                  .width(17).height(17).fillColor(AppColors.primary)
+                  .width(18).height(18).fillColor(AppColors.primary)
               }
             }
             .width('100%')
-            .height(50)
+            .height(52)
             .padding({ left: 20, right: 20 })
+            .backgroundColor(opt.value === this.selected ? AppColors.primaryLight : Color.Transparent)
             .onClick(() => {
               this.controller.close()
               if (this.onSelect) this.onSelect(opt.value)
@@ -131,8 +142,9 @@ export struct ActionSheetDialog {
           if (this.onCancel) this.onCancel()
         })
     }
+    .width('100%').constraintSize({ maxWidth: 420 })
     .backgroundColor(AppColors.white)
-    .borderRadius({ topLeft: 14, topRight: 14 })
+    .borderRadius({ topLeft: 16, topRight: 16 })
     .padding({ bottom: 20 })
   }
 }

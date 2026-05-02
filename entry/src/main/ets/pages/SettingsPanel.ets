@@ -10,13 +10,63 @@ import { ActionSheetDialog, ActionOption, ConfirmDialog } from '../common/Dialog
 
 @Component
 export struct SettingsPanel {
-  @State showFontSheet: boolean = false
-  @State showDomainSheet: boolean = false
-  @State showLogoutConfirm: boolean = false
   @StorageProp('themeName') themeName: string = 'original'
-  fontSizeDialogController?: CustomDialogController
-  domainDialogController?: CustomDialogController
-  logoutDialogController?: CustomDialogController
+
+  fontSizeDialogController?: CustomDialogController = new CustomDialogController({
+    builder: ActionSheetDialog({
+      title: '选择字号',
+      options: FONT_OPTIONS as ActionOption[],
+      selected: appStore.settings.fontSize,
+      getLabelFontSize: (value: number): number => value,
+      onSelect: (value: number) => {
+        appStore.setFontSize(value)
+      },
+      onCancel: () => {}
+    }),
+    autoCancel: true,
+    customStyle: true,
+    alignment: DialogAlignment.Bottom,
+    offset: { dx: 0, dy: 0 }
+  })
+
+  domainDialogController?: CustomDialogController = new CustomDialogController({
+    builder: ActionSheetDialog({
+      title: '选择域名',
+      options: DOMAIN_OPTIONS as ActionOption[],
+      selected: appStore.settings.domainIndex,
+      onSelect: (value: number) => {
+        appStore.setDomainIndex(value)
+      },
+      onCancel: () => {}
+    }),
+    autoCancel: true,
+    customStyle: true,
+    alignment: DialogAlignment.Bottom,
+    offset: { dx: 0, dy: 0 }
+  })
+
+  logoutDialogController?: CustomDialogController = new CustomDialogController({
+    builder: ConfirmDialog({
+      title: '退出登录',
+      message: '确定要退出登录吗？\n退出后需要重新输入账号密码登录',
+      confirmLabel: '退出',
+      destructive: true,
+      icon: $r('app.media.icon_exit'),
+      onConfirm: () => {
+        appStore.clearAuth()
+        router.replaceUrl({ url: 'pages/LoginPage' })
+      },
+      onCancel: () => {}
+    }),
+    autoCancel: true,
+    customStyle: true
+  })
+
+  aboutToDisappear() {
+    this.fontSizeDialogController = undefined
+    this.domainDialogController = undefined
+    this.logoutDialogController = undefined
+  }
 
   build() {
     Column() {
@@ -88,9 +138,6 @@ export struct SettingsPanel {
       .layoutWeight(1).scrollBar(BarState.Off).align(Alignment.Top)
     }
     .width('100%').height('100%').backgroundColor(AppColors.bg)
-    .bindContentCover(this.fontSizeDialogController !== undefined, this.FontSizeDialogBuilder())
-    .bindContentCover(this.domainDialogController !== undefined, this.DomainDialogBuilder())
-    .bindContentCover(this.logoutDialogController !== undefined, this.LogoutDialogBuilder())
   }
 
   @Builder
@@ -130,47 +177,6 @@ export struct SettingsPanel {
       if (theme.name !== this.themeName) {
         appStore.setTheme(theme.name)
       }
-    })
-  }
-
-  @Builder
-  FontSizeDialogBuilder() {
-    ActionSheetDialog({
-      title: '选择字号',
-      options: FONT_OPTIONS as ActionOption[],
-      selected: appStore.settings.fontSize,
-      onSelect: (value: number) => {
-        appStore.setFontSize(value)
-      },
-      onCancel: () => {}
-    })
-  }
-
-  @Builder
-  DomainDialogBuilder() {
-    ActionSheetDialog({
-      title: '选择域名',
-      options: DOMAIN_OPTIONS as ActionOption[],
-      selected: appStore.settings.domainIndex,
-      onSelect: (value: number) => {
-        appStore.setDomainIndex(value)
-      },
-      onCancel: () => {}
-    })
-  }
-
-  @Builder
-  LogoutDialogBuilder() {
-    ConfirmDialog({
-      title: '退出登录',
-      message: '确定要退出登录吗？',
-      confirmLabel: '退出',
-      destructive: true,
-      onConfirm: () => {
-        appStore.clearAuth()
-        router.replaceUrl({ url: 'pages/LoginPage' })
-      },
-      onCancel: () => {}
     })
   }
 
