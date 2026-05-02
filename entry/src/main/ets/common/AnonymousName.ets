@@ -7,7 +7,7 @@ export struct AnonymousName {
   @Prop author: string = ''
   @Prop isAnonymous: boolean = false
   @Prop fontSize: number = 14
-  @Prop normalColor: string = AppColors.textTertiary
+  @Prop normalColor: ResourceColor = AppColors.textTertiary
 
   build() {
     Row() {

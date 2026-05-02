@@ -1,10 +1,9 @@
 import { hilog } from '@kit.PerformanceAnalysisKit'
-import { Context } from '@kit.AbilityKit'
+import { ConfigurationConstant, Context } from '@kit.AbilityKit'
 import { fetchForumFavorites, getForumCategories, getUserProfile } from '../service/NgaApi'
 import type { Category } from '../model/Forum'
 import type { ProfileData } from '../model/User'
 import { PreferencesStore } from './PreferencesStore'
-import { applyTheme } from '../common/Constants'
 
 const TAG = 'AppStore'
 const DOMAIN = 0x0000
@@ -34,7 +33,7 @@ export class SettingsState {
   favorites: FavBoard[] = []
   fontSize: number = 15
   domainIndex: number = 0
-  theme: string = 'original'
+  theme: string = 'light'
 }
 
 export class ToastState {
@@ -56,6 +55,7 @@ class AppStoreClass {
   settings: SettingsState = new SettingsState()
   toast: ToastState = new ToastState()
   private toastTimer: number = -1
+  private context?: Context
 
   cachedCategories: Category[] = []
   private categoriesVersion: number = 0
@@ -69,6 +69,7 @@ class AppStoreClass {
 
   async init(context: Context): Promise<void> {
     try {
+      this.context = context
       await this.store.init(context, 'nga_app_store')
       await this.migrateAuthIfNeeded()
       await this.loadAuth()
@@ -263,16 +264,19 @@ class AppStoreClass {
 
   private applyCurrentTheme(): void {
     let theme: string = this.settings.theme
-    if (theme === 'light') {
-      theme = 'white'
-    } else if (theme === 'dark') {
-      theme = 'original'
+    // 兼容旧数据：original/white 统一映射到 light
+    if (theme === 'original' || theme === 'white') {
+      theme = 'light'
     }
-    if (theme !== this.settings.theme) {
-      this.settings.theme = theme
-      this.persistSettings()
+    let mode: number = ConfigurationConstant.ColorMode.COLOR_MODE_LIGHT
+    if (theme === 'dark') {
+      mode = ConfigurationConstant.ColorMode.COLOR_MODE_DARK
     }
-    applyTheme(theme)
+    try {
+      this.context?.getApplicationContext().setColorMode(mode)
+    } catch (err) {
+      hilog.error(DOMAIN, TAG, 'setColorMode failed: %{public}s', JSON.stringify(err))
+    }
     AppStorage.setOrCreate('themeName', theme)
   }
 

@@ -3,6 +3,122 @@
     {
       "name": "start_window_background",
       "value": "#FFFFFF"
+    },
+    {
+      "name": "primary",
+      "value": "#C08A4A"
+    },
+    {
+      "name": "primary_light",
+      "value": "#FDF3E7"
+    },
+    {
+      "name": "destructive",
+      "value": "#E45D4C"
+    },
+    {
+      "name": "warning",
+      "value": "#E8933A"
+    },
+    {
+      "name": "success",
+      "value": "#7BA05B"
+    },
+    {
+      "name": "bg",
+      "value": "#FEFAF6"
+    },
+    {
+      "name": "bg_secondary",
+      "value": "#F5EDE3"
+    },
+    {
+      "name": "bg_tertiary",
+      "value": "#FDF7F0"
+    },
+    {
+      "name": "text_primary",
+      "value": "#3E2A1D"
+    },
+    {
+      "name": "text_secondary",
+      "value": "#9C8B7A"
+    },
+    {
+      "name": "text_tertiary",
+      "value": "#C4B5A0"
+    },
+    {
+      "name": "separator",
+      "value": "#E8DCC8"
+    },
+    {
+      "name": "divider_strong",
+      "value": "#D0C0A8"
+    },
+    {
+      "name": "white",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "black",
+      "value": "#000000"
+    },
+    {
+      "name": "overlay",
+      "value": "#33000000"
+    },
+    {
+      "name": "overlay_strong",
+      "value": "#66000000"
+    },
+    {
+      "name": "shadow",
+      "value": "#40000000"
+    },
+    {
+      "name": "shadow_light",
+      "value": "#30000000"
+    },
+    {
+      "name": "toast_bg",
+      "value": "#CC000000"
+    },
+    {
+      "name": "image_viewer_bg",
+      "value": "#FF000000"
+    },
+    {
+      "name": "warn_bg",
+      "value": "#FFF2E5"
+    },
+    {
+      "name": "warn_border",
+      "value": "#E8B98A"
+    },
+    {
+      "name": "warn_text",
+      "value": "#A65D2E"
+    },
+    {
+      "name": "chevron",
+      "value": "#C4B5A0"
+    },
+    {
+      "name": "sheet_indicator",
+      "value": "#D4C8B0"
+    },
+    {
+      "name": "quote_border_1",
+      "value": "#4DC08A4A"
+    },
+    {
+      "name": "quote_border_2",
+      "value": "#33C08A4A"
+    },
+    {
+      "name": "quote_border_3",
+      "value": "#1FC08A4A"
     }
   ]
 }

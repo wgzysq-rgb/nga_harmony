@@ -10,7 +10,7 @@ import { ActionSheetDialog, ActionOption, ConfirmDialog } from '../common/Dialog
 
 @Component
 export struct SettingsPanel {
-  @StorageProp('themeName') themeName: string = 'original'
+  @StorageProp('themeName') themeName: string = 'light'
 
   fontSizeDialogController?: CustomDialogController = new CustomDialogController({
     builder: ActionSheetDialog({

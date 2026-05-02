@@ -8,7 +8,7 @@ export struct PanelNavBar {
   onBack?: () => void
   @Prop showBack: boolean = true
   @Prop rightLabel: string = ''
-  @Prop rightLabelColor: string = ''
+  @Prop rightLabelColor: ResourceColor = ''
   onRightClick?: () => void
   @Prop rightIcon?: Resource
   @Prop rightIconColor: string = ''

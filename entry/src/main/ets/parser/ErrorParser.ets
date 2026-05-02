@@ -4,8 +4,8 @@ export function parseNgaError(data: object | null): string | null {
   if (d['error']) {
     if (typeof d['error'] !== 'string') {
       const errorObj = d['error'] as Record<string, Object>;
-      const code = Number(errorObj['2'] ?? 1);
-      if (code === 0) {
+      const rawCode = errorObj['2'];
+      if (rawCode === 0 || rawCode === '0') {
         return null;
       }
       return String(errorObj['0'] ?? '未知错误');

@@ -20,7 +20,7 @@ function isInlineGroupBlank(nodes: BBNode[]): boolean {
   return true
 }
 
-const QUOTE_BORDER_COLORS: string[] = AppColors.quoteBorders
+const QUOTE_BORDER_COLORS: Resource[] = AppColors.quoteBorders
 
 class RenderContext {
   inQuote: boolean = false

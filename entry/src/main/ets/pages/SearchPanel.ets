@@ -36,7 +36,7 @@ export struct SearchPanel {
     this.loadHistory()
   }
 
-  private getSubjectFontColor(titleFont: string): string {
+  private getSubjectFontColor(titleFont: string): ResourceColor {
     const num = Number(titleFont) || 0
     const color = num & 0x1f
     if (FONT_COLORS[color]) return FONT_COLORS[color]
