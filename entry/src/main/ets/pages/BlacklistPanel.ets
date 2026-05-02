@@ -4,11 +4,13 @@
 
 import { appStore } from '../store/AppStore'
 import type { BlacklistEntry } from '../store/AppStore'
+import { display } from '@kit.ArkUI'
 import { AppColors } from '../common/Constants'
 import { escHtml, unescapeHtml } from '../common/Utils'
 import { BlacklistDataSource } from '../common/LazyDataSource'
 import { PanelNavBar } from '../common/PanelNavBar'
 import { ConfirmDialog, AddBlacklistDialog } from '../common/Dialogs'
+import { floatingLayerStore, FloatingPage } from '../store/FloatingLayerStore'
 
 @Component
 export struct BlacklistPanel {
@@ -49,6 +51,29 @@ export struct BlacklistPanel {
 
   aboutToAppear(): void {
     this.refreshBlacklist()
+  }
+
+  private showProfileCard(uid: string, screenX: number, screenY: number): void {
+    const cardW: number = 280
+    const cardH: number = 400
+    const pad: number = 8
+    let posX: number = screenX
+    let posY: number = screenY
+    try {
+      const context = this.getUIContext()
+      const displayInfo = display.getDefaultDisplaySync()
+      const screenW = context.px2vp(displayInfo.width)
+      const screenH = context.px2vp(displayInfo.height)
+      posX = Math.max(pad, Math.min(screenX - cardW / 2, screenW - cardW - pad))
+      posY = Math.max(pad, Math.min(screenY + pad, screenH - cardH - pad))
+    } catch (e) {
+      posX = screenX - cardW / 2
+      posY = screenY + pad
+    }
+    floatingLayerStore.profileCardUid = uid
+    floatingLayerStore.profileCardX = posX
+    floatingLayerStore.profileCardY = posY
+    floatingLayerStore.push(FloatingPage.PROFILE_CARD)
   }
 
   private refreshBlacklist(): void {
@@ -93,6 +118,9 @@ export struct BlacklistPanel {
                     Text(`UID: ${escHtml(entry.userId)}`).fontSize(13).fontColor(AppColors.textTertiary).margin({ top: 2 })
                   }
                   .layoutWeight(1).margin({ left: 12 }).alignItems(HorizontalAlign.Start)
+                  .onClick((event: ClickEvent) => {
+                    this.showProfileCard(entry.userId, event.screenX, event.screenY)
+                  })
 
                   Stack() {
                     Image($r('app.media.icon_delete')).width(18).height(18).fillColor(AppColors.destructive)

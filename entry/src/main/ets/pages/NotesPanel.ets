@@ -1,10 +1,12 @@
 import { appStore } from '../store/AppStore'
 import type { UserNoteEntry } from '../model/NoteInfo'
+import { display } from '@kit.ArkUI'
 import { AppColors } from '../common/Constants'
 import { escHtml, unescapeHtml } from '../common/Utils'
 import { NotesDataSource } from '../common/LazyDataSource'
 import { PanelNavBar } from '../common/PanelNavBar'
 import { ConfirmDialog, MakeNoteDialog, AddNoteDialog } from '../common/Dialogs'
+import { floatingLayerStore, FloatingPage } from '../store/FloatingLayerStore'
 
 @Component
 export struct NotesPanel {
@@ -76,6 +78,29 @@ export struct NotesPanel {
     this.notesDataSource.replaceAll(appStore.settings.notes)
   }
 
+  private showProfileCard(uid: string, screenX: number, screenY: number): void {
+    const cardW: number = 280
+    const cardH: number = 400
+    const pad: number = 8
+    let posX: number = screenX
+    let posY: number = screenY
+    try {
+      const context = this.getUIContext()
+      const displayInfo = display.getDefaultDisplaySync()
+      const screenW = context.px2vp(displayInfo.width)
+      const screenH = context.px2vp(displayInfo.height)
+      posX = Math.max(pad, Math.min(screenX - cardW / 2, screenW - cardW - pad))
+      posY = Math.max(pad, Math.min(screenY + pad, screenH - cardH - pad))
+    } catch (e) {
+      posX = screenX - cardW / 2
+      posY = screenY + pad
+    }
+    floatingLayerStore.profileCardUid = uid
+    floatingLayerStore.profileCardX = posX
+    floatingLayerStore.profileCardY = posY
+    floatingLayerStore.push(FloatingPage.PROFILE_CARD)
+  }
+
   build() {
     Stack() {
       Column() {
@@ -108,15 +133,20 @@ export struct NotesPanel {
                   .width(40).height(40).borderRadius(20).backgroundColor(AppColors.bgSecondary)
 
                   Column() {
-                    Text(unescapeHtml(entry.nickName)).fontSize(15).fontColor(AppColors.textPrimary)
-                      .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-                    if (entry.note.length > 0) {
-                      Text(entry.note).fontSize(13).fontColor(AppColors.warning).margin({ top: 2 })
+                    Row() {
+                      Text(unescapeHtml(entry.nickName)).fontSize(15).fontColor(AppColors.textPrimary)
                         .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+                      if (entry.note.length > 0) {
+                        Text('(' + entry.note + ')')
+                          .fontSize(13).fontColor(AppColors.warning).margin({ left: 4 })
+                      }
                     }
                     Text('UID: ' + escHtml(entry.userId)).fontSize(13).fontColor(AppColors.textTertiary).margin({ top: 2 })
                   }
                   .layoutWeight(1).margin({ left: 12 }).alignItems(HorizontalAlign.Start)
+                  .onClick((event: ClickEvent) => {
+                    this.showProfileCard(entry.userId, event.screenX, event.screenY)
+                  })
 
                   Stack() {
                     Image($r('app.media.icon_compose')).width(18).height(18).fillColor(AppColors.primary)
