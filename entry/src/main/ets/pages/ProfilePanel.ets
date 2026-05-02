@@ -397,6 +397,7 @@ export struct ProfilePanel {
             .width('92%')
             .backgroundColor(AppColors.bgTertiary)
             .borderRadius(12)
+            .margin({ top: 12 })
 
             if (this.profile!.medal) {
               Column() {
@@ -411,7 +412,7 @@ export struct ProfilePanel {
               .padding(16)
               .backgroundColor(AppColors.bgTertiary)
               .borderRadius(12)
-              .margin({ top: 16 })
+              .margin({ top: 12 })
               .alignItems(HorizontalAlign.Start)
             }
 
@@ -428,7 +429,7 @@ export struct ProfilePanel {
               .padding(16)
               .backgroundColor(AppColors.bgTertiary)
               .borderRadius(12)
-              .margin({ top: 16 })
+              .margin({ top: 12 })
               .alignItems(HorizontalAlign.Start)
             }
 
@@ -493,7 +494,7 @@ export struct ProfilePanel {
               .width('92%')
               .backgroundColor(AppColors.bgTertiary)
               .borderRadius(12)
-              .margin({ top: 16 })
+              .margin({ top: 12 })
               .alignItems(HorizontalAlign.Start)
               .clip(true)
             }
@@ -585,7 +586,7 @@ export struct ProfilePanel {
               .width('92%')
               .backgroundColor(AppColors.bgTertiary)
               .borderRadius(12)
-              .margin({ top: 16 })
+              .margin({ top: 12 })
             } else {
               Row() {
                 Button('发私信')

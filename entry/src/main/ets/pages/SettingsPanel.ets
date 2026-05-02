@@ -89,12 +89,13 @@ export struct SettingsPanel {
               }
               .width('100%').justifyContent(FlexAlign.Center).alignItems(VerticalAlign.Top)
             }
-            .width('92%')
-            .backgroundColor(AppColors.bgTertiary)
-            .borderRadius(12)
-            .padding({ top: 16, bottom: 16 })
+          .width('92%')
+          .backgroundColor(AppColors.bgTertiary)
+          .borderRadius(12)
+          .padding({ top: 16, bottom: 16 })
+          .margin({ top: 12 })
 
-            // ---- 其他设置 ----
+          // ---- 其他设置 ----
             Column() {
               this.SettingRow($r('app.media.icon_text_fields'), IconColors.textFields, '字号',
                 FONT_OPTIONS.find((f: FontOption) => f.value === appStore.settings.fontSize)?.label ?? '中', () => {
@@ -111,7 +112,7 @@ export struct SettingsPanel {
             .width('92%')
             .backgroundColor(AppColors.bgTertiary)
             .borderRadius(12)
-            .margin({ top: 16 })
+            .margin({ top: 12 })
 
             Column() {
               this.SettingRow($r('app.media.icon_block'), IconColors.block, '黑名单管理', '', () => {
@@ -148,7 +149,7 @@ export struct SettingsPanel {
             .width('92%')
             .backgroundColor(AppColors.bgTertiary)
             .borderRadius(12)
-            .margin({ top: 16 })
+            .margin({ top: 12 })
           }
           .width('100%').alignItems(HorizontalAlign.Center).padding({ bottom: 32 })
         }
