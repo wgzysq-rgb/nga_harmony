@@ -346,6 +346,27 @@ function generateLoginToken(): string {
 
 // ============== 获取当前用户 ==============
 
+export async function verifyToken(token: string): Promise<boolean> {
+  const session = sessionStore.get(token);
+  if (!session) {
+    return false;
+  }
+  try {
+    const params: Record<string, string> = {
+      '__lib': 'ucp', '__act': 'get', 'lite': 'js', 'noprefix': '', 'uid': session.uid,
+    };
+    const raw = await ngaClient.get('/nuke.php', params, { uid: session.uid, cid: session.cid }) as Record<string, Object>;
+    const error = parseNgaError(raw);
+    if (error) {
+      return false;
+    }
+    return true;
+  } catch (e) {
+    // 网络异常时无法验证，默认视为有效，避免离线时强制登出
+    return true;
+  }
+}
+
 export async function getCurrentUser(token: string): Promise<CurrentUserResult> {
   const result = new CurrentUserResult();
   const session = sessionStore.get(token);

@@ -5,6 +5,7 @@
 
 import { appStore } from '../store/AppStore'
 import { AppColors } from '../common/Constants'
+import { verifyToken } from '../service/NgaApi'
 import router from '@ohos.router'
 
 @Entry
@@ -16,15 +17,20 @@ struct Index {
     this.waitAndRoute()
   }
 
-  private waitAndRoute(): void {
+  private async waitAndRoute(): Promise<void> {
     if (appStore.auth.initialized) {
       if (appStore.auth.isAuthenticated) {
-        router.replaceUrl({ url: 'pages/MainPage' })
+        const valid = await verifyToken(appStore.auth.token)
+        if (valid) {
+          router.replaceUrl({ url: 'pages/MainPage' })
+        } else {
+          appStore.clearAuth()
+          router.replaceUrl({ url: 'pages/LoginPage' })
+        }
       } else {
         router.replaceUrl({ url: 'pages/LoginPage' })
       }
     } else {
-      // 初始化尚未完成，轮询等待（每 50ms 检查一次）
       setTimeout(() => this.waitAndRoute(), 50)
     }
   }
