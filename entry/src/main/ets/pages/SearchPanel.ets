@@ -178,31 +178,31 @@ export struct SearchPanel {
         Row().width('100%').height(86 + this.statusBarHeight)
 
         if (this.submitted.length === 0) {
-        Scroll() {
-          Column() {
-            if (this.history.length > 0) {
-              Row() {
-                Text('搜索历史').fontSize(13).fontWeight(FontWeight.Bold).fontColor(AppColors.textSecondary)
-                Text('清空').fontSize(13).fontColor(AppColors.textTertiary).onClick(() => this.clearHistoryAll())
-              }.width('100%').justifyContent(FlexAlign.SpaceBetween).margin({ bottom: 8 })
-              Flex({ wrap: FlexWrap.Wrap }) {
-                ForEach(this.history, (kw: string) => {
-                  Row() {
-                    Text(escHtml(kw)).fontSize(14).fontColor(AppColors.textPrimary).onClick(() => this.handleHistoryClick(kw))
-                    Text('✕').fontSize(12).fontColor(AppColors.textTertiary).margin({ left: 4 })
-                      .onClick(() => this.removeHistory(kw))
-                  }.padding({ left: 12, right: 10, top: 6, bottom: 6 })
-                  .backgroundColor(AppColors.bgSecondary).borderRadius(16).margin({ right: 8, bottom: 8 })
-                })
-              }
-            } else {
+          if (this.history.length > 0) {
+            Scroll() {
               Column() {
-                Image($r('app.media.icon_clock')).width(36).height(36).opacity(0.4)
-                Text('暂无搜索历史').fontSize(14).fontColor(AppColors.textTertiary).margin({ top: 8 })
-              }.margin({ top: 60 })
-            }
-          }.width('100%').padding(16).alignItems(HorizontalAlign.Center)
-        }.layoutWeight(1).align(Alignment.TopStart)
+                Row() {
+                  Text('搜索历史').fontSize(13).fontWeight(FontWeight.Bold).fontColor(AppColors.textSecondary)
+                  Text('清空').fontSize(13).fontColor(AppColors.textTertiary).onClick(() => this.clearHistoryAll())
+                }.width('100%').justifyContent(FlexAlign.SpaceBetween).margin({ bottom: 8 })
+                Flex({ wrap: FlexWrap.Wrap }) {
+                  ForEach(this.history, (kw: string) => {
+                    Row() {
+                      Text(escHtml(kw)).fontSize(14).fontColor(AppColors.textPrimary).onClick(() => this.handleHistoryClick(kw))
+                      Text('✕').fontSize(12).fontColor(AppColors.textTertiary).margin({ left: 4 })
+                        .onClick(() => this.removeHistory(kw))
+                    }.padding({ left: 12, right: 10, top: 6, bottom: 6 })
+                    .backgroundColor(AppColors.bgSecondary).borderRadius(16).margin({ right: 8, bottom: 8 })
+                  })
+                }
+              }.width('100%').padding(16).alignItems(HorizontalAlign.Center)
+            }.layoutWeight(1).align(Alignment.TopStart)
+          } else {
+            Column() {
+              Image($r('app.media.icon_clock')).width(36).height(36).opacity(0.4)
+              Text('暂无搜索历史').fontSize(14).fontColor(AppColors.textTertiary).margin({ top: 8 })
+            }.width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
+          }
       } else if (this.isLoading) {
         Column() {
           LoadingProgress().width(28).height(28).color(AppColors.textTertiary)
