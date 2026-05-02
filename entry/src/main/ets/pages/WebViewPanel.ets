@@ -46,6 +46,9 @@ export struct WebViewPanel {
         .javaScriptAccess(true)
         .domStorageAccess(true)
         .geolocationAccess(true)
+        .zoomAccess(true)
+        .overviewModeAccess(true)
+        .userAgent('Mozilla/5.0 (Linux; Android 10; HarmonyOS) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.144 Mobile Safari/537.36')
         .onTitleReceive((event: Object): void => {
           const evt = event as Record<string, Object>
           this.pageTitle = String(evt['title'] ?? '')
