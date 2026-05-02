@@ -242,6 +242,7 @@ export struct TopicListPanel {
             }
           }
           .width('100%').layoutWeight(1)
+          .scrollBar(BarState.Off)
           .divider({ strokeWidth: 0.5, color: AppColors.separator })
           .lanes(new BreakpointType(1, 1, 1).getValue(this.currentBreakpoint), 12)
           .edgeEffect(EdgeEffect.Spring)

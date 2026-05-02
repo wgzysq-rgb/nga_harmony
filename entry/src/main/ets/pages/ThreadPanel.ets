@@ -459,6 +459,7 @@ export struct ThreadPanel {
           }
         }
         .width('100%').layoutWeight(1)
+        .scrollBar(BarState.Off)
         .divider({ strokeWidth: 0.5, color: AppColors.separator })
         .edgeEffect(EdgeEffect.Spring)
         .maintainVisibleContentPosition(true)
