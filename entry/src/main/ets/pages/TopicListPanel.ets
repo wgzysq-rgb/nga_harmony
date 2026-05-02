@@ -96,11 +96,25 @@ export struct TopicListPanel {
           this.threads = list
           this.threadsDataSource.replaceAll(list)
         } else {
-          const arr: object[] = []
-          for (let i = 0; i < this.threads.length; i++) arr.push(this.threads[i])
-          for (let i = 0; i < list.length; i++) arr.push(list[i])
-          this.threads = arr
-          this.threadsDataSource.appendAll(list)
+          const existingTids: Set<number> = new Set()
+          for (let i = 0; i < this.threads.length; i++) {
+            const t: number = Number((this.threads[i] as Record<string, Object>)['tid'] ?? 0)
+            if (t) existingTids.add(t)
+          }
+          const deduped: object[] = []
+          for (let i = 0; i < list.length; i++) {
+            if (!existingTids.has(list[i].tid)) {
+              deduped.push(list[i])
+              existingTids.add(list[i].tid)
+            }
+          }
+          if (deduped.length > 0) {
+            const arr: object[] = []
+            for (let i = 0; i < this.threads.length; i++) arr.push(this.threads[i])
+            for (let i = 0; i < deduped.length; i++) arr.push(deduped[i])
+            this.threads = arr
+            this.threadsDataSource.appendAll(deduped)
+          }
         }
         this.currentPage = page
         this.totalPages = result.data.pagination.totalPages
