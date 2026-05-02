@@ -3,18 +3,18 @@ import { FilterKeyword } from '../model/FilterKeyword'
 import { AppColors } from '../common/Constants'
 import { FilterKeywordDataSource } from '../common/LazyDataSource'
 import { PanelNavBar } from '../common/PanelNavBar'
-import { ConfirmDialog } from '../common/Dialogs'
+import { ConfirmDialog, AddKeywordDialog } from '../common/Dialogs'
 
 @Component
 export struct FilterKeywordsPanel {
-  @State showAddDialog: boolean = false
-  @State addKeyword: string = ''
   @State removeTarget: string = ''
   @State keywordCount: number = 0
   @StorageProp('statusBarHeight') statusBarHeight: number = 0
   @StorageProp('navBarHeight') navBarHeight: number = 0
 
   private keywordDataSource: FilterKeywordDataSource = new FilterKeywordDataSource()
+
+  addDialogController?: CustomDialogController
 
   deleteDialogController?: CustomDialogController = new CustomDialogController({
     builder: ConfirmDialog({
@@ -39,6 +39,7 @@ export struct FilterKeywordsPanel {
 
   aboutToDisappear(): void {
     this.deleteDialogController = undefined
+    this.addDialogController = undefined
   }
 
   aboutToAppear(): void {
@@ -117,54 +118,22 @@ export struct FilterKeywordsPanel {
       }
       .width('100%').height('100%')
 
-      PanelNavBar({ title: '关键词屏蔽', rightLabel: '+ 添加', onRightClick: (): void => { this.showAddDialog = true } })
+      PanelNavBar({ title: '关键词屏蔽', rightLabel: '+ 添加', onRightClick: (): void => {
+        this.addDialogController = new CustomDialogController({
+          builder: AddKeywordDialog({
+            onConfirm: (keyword: string): void => {
+              appStore.addKeyword(keyword)
+              this.refreshKeywords()
+              appStore.showToast('已添加关键词')
+            }
+          }),
+          autoCancel: true,
+          customStyle: true,
+          alignment: DialogAlignment.Center
+        })
+        this.addDialogController.open()
+      } })
         .width('100%').position({ x: 0, y: 0 })
-
-      if (this.showAddDialog) {
-        Column() {
-        }
-        .width('100%').height('100%')
-        .position({ x: 0, y: 0 })
-        .backgroundColor(AppColors.overlay)
-        .onClick(() => { this.showAddDialog = false })
-
-        Column() {
-          Divider().width(36).height(4).borderRadius(2).color(AppColors.sheetIndicator).margin({ top: 8, bottom: 12 })
-          Text('添加关键词').fontSize(17).fontWeight(FontWeight.Bold).margin({ bottom: 4 })
-          Text('输入需要屏蔽的关键词').fontSize(13).fontColor(AppColors.textSecondary).margin({ bottom: 12 })
-
-          TextInput({ text: this.addKeyword, placeholder: '输入关键词' })
-            .width('92%').height(44).fontSize(15).borderRadius(12)
-            .backgroundColor(AppColors.bgSecondary)
-            .keyboardAppearance(KeyboardAppearance.IMMERSIVE)
-            .onChange((value: string) => { this.addKeyword = value })
-            .onSubmit(() => {
-              if (this.addKeyword.trim()) {
-                appStore.addKeyword(this.addKeyword.trim())
-                this.refreshKeywords()
-                this.addKeyword = ''
-                this.showAddDialog = false
-              }
-            })
-
-          Button('确定添加')
-            .width('92%').height(44).fontSize(16).fontColor(AppColors.white)
-            .backgroundColor(AppColors.primary).borderRadius(12).margin({ top: 12, bottom: 20 })
-            .enabled(this.addKeyword.trim().length > 0)
-            .onClick(() => {
-              if (this.addKeyword.trim()) {
-                appStore.addKeyword(this.addKeyword.trim())
-                this.refreshKeywords()
-                this.addKeyword = ''
-                this.showAddDialog = false
-              }
-            })
-        }
-        .width('100%').backgroundColor(AppColors.bg)
-        .borderRadius({ topLeft: 14, topRight: 14 }).alignItems(HorizontalAlign.Center)
-        .padding({ bottom: this.navBarHeight })
-        .position({ x: 0, y: '55%' })
-      }
     }
     .width('100%').height('100%').backgroundColor(AppColors.bg)
   }

@@ -8,18 +8,18 @@ import { AppColors } from '../common/Constants'
 import { escHtml, unescapeHtml } from '../common/Utils'
 import { BlacklistDataSource } from '../common/LazyDataSource'
 import { PanelNavBar } from '../common/PanelNavBar'
-import { ConfirmDialog } from '../common/Dialogs'
+import { ConfirmDialog, AddBlacklistDialog } from '../common/Dialogs'
 
 @Component
 export struct BlacklistPanel {
-  @State showAddDialog: boolean = false
-  @State addUid: string = ''
   @State removeTarget: BlacklistEntry | null = null
   @State blacklistCount: number = 0
   @StorageProp('statusBarHeight') statusBarHeight: number = 0
   @StorageProp('navBarHeight') navBarHeight: number = 0
 
   private blacklistDataSource: BlacklistDataSource = new BlacklistDataSource()
+
+  addDialogController?: CustomDialogController
 
   deleteDialogController?: CustomDialogController = new CustomDialogController({
     builder: ConfirmDialog({
@@ -44,6 +44,7 @@ export struct BlacklistPanel {
 
   aboutToDisappear(): void {
     this.deleteDialogController = undefined
+    this.addDialogController = undefined
   }
 
   aboutToAppear(): void {
@@ -112,54 +113,22 @@ export struct BlacklistPanel {
       }
       .width('100%').height('100%')
 
-      PanelNavBar({ title: '黑名单管理', rightLabel: '+ 添加', onRightClick: (): void => { this.showAddDialog = true } })
+      PanelNavBar({ title: '黑名单管理', rightLabel: '+ 添加', onRightClick: (): void => {
+        this.addDialogController = new CustomDialogController({
+          builder: AddBlacklistDialog({
+            onConfirm: (uid: string): void => {
+              appStore.addBlacklist({ userId: uid, nickName: `User${uid}` })
+              this.refreshBlacklist()
+              appStore.showToast('已加入黑名单')
+            }
+          }),
+          autoCancel: true,
+          customStyle: true,
+          alignment: DialogAlignment.Center
+        })
+        this.addDialogController.open()
+      } })
         .width('100%').position({ x: 0, y: 0 })
-
-      if (this.showAddDialog) {
-        Column() {
-        }
-        .width('100%').height('100%')
-        .position({ x: 0, y: 0 })
-        .backgroundColor(AppColors.overlay)
-        .onClick(() => { this.showAddDialog = false })
-
-        Column() {
-          Divider().width(36).height(4).borderRadius(2).color(AppColors.sheetIndicator).margin({ top: 8, bottom: 12 })
-          Text('添加黑名单').fontSize(17).fontWeight(FontWeight.Bold).margin({ bottom: 4 })
-          Text('输入用户 UID').fontSize(13).fontColor(AppColors.textSecondary).margin({ bottom: 12 })
-
-          TextInput({ text: this.addUid, placeholder: '输入 UID' })
-            .width('92%').height(44).fontSize(15).borderRadius(12)
-            .backgroundColor(AppColors.bgSecondary)
-            .keyboardAppearance(KeyboardAppearance.IMMERSIVE)
-            .onChange((value: string) => { this.addUid = value })
-            .onSubmit(() => {
-              if (this.addUid.trim()) {
-                appStore.addBlacklist({ userId: this.addUid.trim(), nickName: `User${this.addUid.trim()}` })
-                this.refreshBlacklist()
-                this.addUid = ''
-                this.showAddDialog = false
-              }
-            })
-
-          Button('确定添加')
-            .width('92%').height(44).fontSize(16).fontColor(AppColors.white)
-            .backgroundColor(AppColors.primary).borderRadius(12).margin({ top: 12, bottom: 20 })
-            .enabled(this.addUid.trim().length > 0)
-            .onClick(() => {
-              if (this.addUid.trim()) {
-                appStore.addBlacklist({ userId: this.addUid.trim(), nickName: `User${this.addUid.trim()}` })
-                this.refreshBlacklist()
-                this.addUid = ''
-                this.showAddDialog = false
-              }
-            })
-        }
-        .width('100%').backgroundColor(AppColors.bg)
-        .borderRadius({ topLeft: 14, topRight: 14 }).alignItems(HorizontalAlign.Center)
-        .padding({ bottom: this.navBarHeight })
-        .position({ x: 0, y: '55%' })
-      }
     }
     .width('100%').height('100%').backgroundColor(AppColors.bg)
   }

@@ -4,15 +4,12 @@ import { AppColors } from '../common/Constants'
 import { escHtml, unescapeHtml } from '../common/Utils'
 import { NotesDataSource } from '../common/LazyDataSource'
 import { PanelNavBar } from '../common/PanelNavBar'
-import { ConfirmDialog, MakeNoteDialog } from '../common/Dialogs'
+import { ConfirmDialog, MakeNoteDialog, AddNoteDialog } from '../common/Dialogs'
 
 @Component
 export struct NotesPanel {
-  @State showAddDialog: boolean = false
   @State removeTarget: UserNoteEntry | null = null
   @State editTarget: UserNoteEntry | null = null
-  @State addUserName: string = ''
-  @State addUid: string = ''
   @State notesCount: number = 0
   @StorageProp('statusBarHeight') statusBarHeight: number = 0
   @StorageProp('navBarHeight') navBarHeight: number = 0
@@ -20,6 +17,7 @@ export struct NotesPanel {
   private notesDataSource: NotesDataSource = new NotesDataSource()
 
   noteDialogController?: CustomDialogController
+  addDialogController?: CustomDialogController
 
   deleteDialogController?: CustomDialogController = new CustomDialogController({
     builder: ConfirmDialog({
@@ -66,6 +64,7 @@ export struct NotesPanel {
   aboutToDisappear(): void {
     this.deleteDialogController = undefined
     this.noteDialogController = undefined
+    this.addDialogController = undefined
   }
 
   aboutToAppear(): void {
@@ -144,55 +143,22 @@ export struct NotesPanel {
       }
       .width('100%').height('100%')
 
-      PanelNavBar({ title: '用户备注', rightLabel: '+ 添加', onRightClick: (): void => { this.showAddDialog = true } })
+      PanelNavBar({ title: '用户备注', rightLabel: '+ 添加', onRightClick: (): void => {
+        this.addDialogController = new CustomDialogController({
+          builder: AddNoteDialog({
+            onConfirm: (nickName: string, uid: string): void => {
+              appStore.addOrUpdateNote(uid, nickName, '')
+              this.refreshNotes()
+              appStore.showToast('已添加备注')
+            }
+          }),
+          autoCancel: true,
+          customStyle: true,
+          alignment: DialogAlignment.Center
+        })
+        this.addDialogController.open()
+      } })
         .width('100%').position({ x: 0, y: 0 })
-
-      if (this.showAddDialog) {
-        Column() {
-        }
-        .width('100%').height('100%')
-        .position({ x: 0, y: 0 })
-        .backgroundColor(AppColors.overlay)
-        .onClick(() => { this.showAddDialog = false })
-
-        Column() {
-          Divider().width(36).height(4).borderRadius(2).color(AppColors.sheetIndicator).margin({ top: 8, bottom: 12 })
-          Text('添加备注').fontSize(17).fontWeight(FontWeight.Bold).margin({ bottom: 4 })
-          Text('输入用户昵称和备注内容').fontSize(13).fontColor(AppColors.textSecondary).margin({ bottom: 12 })
-
-          TextInput({ text: this.addUserName, placeholder: '输入用户昵称' })
-            .width('92%').height(44).fontSize(15).borderRadius(12)
-            .backgroundColor(AppColors.bgSecondary)
-            .keyboardAppearance(KeyboardAppearance.IMMERSIVE)
-            .onChange((value: string) => { this.addUserName = value })
-
-          TextInput({ text: this.addUid, placeholder: '输入用户 UID' })
-            .width('92%').height(44).fontSize(15).borderRadius(12)
-            .backgroundColor(AppColors.bgSecondary)
-            .margin({ top: 8 })
-            .keyboardAppearance(KeyboardAppearance.IMMERSIVE)
-            .onChange((value: string) => { this.addUid = value })
-
-          Button('确定添加')
-            .width('92%').height(44).fontSize(16).fontColor(AppColors.white)
-            .backgroundColor(AppColors.primary).borderRadius(12).margin({ top: 12, bottom: 20 })
-            .enabled(this.addUid.trim().length > 0 && this.addUserName.trim().length > 0)
-            .onClick(() => {
-              if (this.addUid.trim() && this.addUserName.trim()) {
-                appStore.addOrUpdateNote(this.addUid.trim(), this.addUserName.trim(), '')
-                this.refreshNotes()
-                this.addUid = ''
-                this.addUserName = ''
-                this.showAddDialog = false
-                appStore.showToast('已添加备注')
-              }
-            })
-        }
-        .width('100%').backgroundColor(AppColors.bg)
-        .borderRadius({ topLeft: 14, topRight: 14 }).alignItems(HorizontalAlign.Center)
-        .padding({ bottom: this.navBarHeight })
-        .position({ x: 0, y: '55%' })
-      }
     }
     .width('100%').height('100%').backgroundColor(AppColors.bg)
   }

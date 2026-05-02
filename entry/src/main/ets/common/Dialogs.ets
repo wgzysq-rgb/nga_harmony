@@ -216,4 +216,170 @@ export struct MakeNoteDialog {
   }
 }
 
+// 添加黑名单对话框
+@CustomDialog
+export struct AddBlacklistDialog {
+  controller: CustomDialogController
+  @State uid: string = ''
+  onConfirm?: (uid: string) => void
+
+  build() {
+    Column() {
+      Text('添加黑名单')
+        .fontSize(17).fontWeight(FontWeight.Bold).fontColor(AppColors.textPrimary)
+        .margin({ top: 20, bottom: 4 })
+        .alignSelf(ItemAlign.Center)
+
+      Text('输入用户 UID')
+        .fontSize(13).fontColor(AppColors.textSecondary)
+        .margin({ bottom: 12 })
+        .alignSelf(ItemAlign.Center)
+
+      TextInput({ text: this.uid, placeholder: '输入 UID' })
+        .height(44).fontSize(15).borderRadius(12)
+        .backgroundColor(AppColors.bgSecondary)
+        .onChange((value: string) => { this.uid = value })
+
+      Divider().color(AppColors.separator).margin({ top: 12 })
+
+      Row() {
+        Button('取消')
+          .layoutWeight(1).height(44).backgroundColor(Color.Transparent)
+          .fontColor(AppColors.primary).fontSize(16)
+          .onClick(() => { this.controller.close() })
+
+        Divider().vertical(true).height(24).color(AppColors.separator)
+
+        Button('确定添加')
+          .layoutWeight(1).height(44).backgroundColor(Color.Transparent)
+          .fontColor(this.uid.trim().length > 0 ? AppColors.primary : AppColors.textTertiary)
+          .fontWeight(FontWeight.Bold).fontSize(16)
+          .onClick(() => {
+            if (this.uid.trim()) {
+              if (this.onConfirm) this.onConfirm(this.uid.trim())
+              this.controller.close()
+            }
+          })
+      }
+    }
+    .constraintSize({ maxWidth: 340 })
+    .padding({ left: 20, right: 20, bottom: 12 })
+    .backgroundColor(AppColors.bgTertiary)
+    .borderRadius(14)
+  }
+}
+
+// 添加关键词对话框
+@CustomDialog
+export struct AddKeywordDialog {
+  controller: CustomDialogController
+  @State keyword: string = ''
+  onConfirm?: (keyword: string) => void
+
+  build() {
+    Column() {
+      Text('添加关键词')
+        .fontSize(17).fontWeight(FontWeight.Bold).fontColor(AppColors.textPrimary)
+        .margin({ top: 20, bottom: 4 })
+        .alignSelf(ItemAlign.Center)
+
+      Text('输入需要屏蔽的关键词')
+        .fontSize(13).fontColor(AppColors.textSecondary)
+        .margin({ bottom: 12 })
+        .alignSelf(ItemAlign.Center)
+
+      TextInput({ text: this.keyword, placeholder: '输入关键词' })
+        .height(44).fontSize(15).borderRadius(12)
+        .backgroundColor(AppColors.bgSecondary)
+        .onChange((value: string) => { this.keyword = value })
+
+      Divider().color(AppColors.separator).margin({ top: 12 })
+
+      Row() {
+        Button('取消')
+          .layoutWeight(1).height(44).backgroundColor(Color.Transparent)
+          .fontColor(AppColors.primary).fontSize(16)
+          .onClick(() => { this.controller.close() })
+
+        Divider().vertical(true).height(24).color(AppColors.separator)
+
+        Button('确定添加')
+          .layoutWeight(1).height(44).backgroundColor(Color.Transparent)
+          .fontColor(this.keyword.trim().length > 0 ? AppColors.primary : AppColors.textTertiary)
+          .fontWeight(FontWeight.Bold).fontSize(16)
+          .onClick(() => {
+            if (this.keyword.trim()) {
+              if (this.onConfirm) this.onConfirm(this.keyword.trim())
+              this.controller.close()
+            }
+          })
+      }
+    }
+    .constraintSize({ maxWidth: 340 })
+    .padding({ left: 20, right: 20, bottom: 12 })
+    .backgroundColor(AppColors.bgTertiary)
+    .borderRadius(14)
+  }
+}
+
+// 添加备注对话框
+@CustomDialog
+export struct AddNoteDialog {
+  controller: CustomDialogController
+  @State nickName: string = ''
+  @State uid: string = ''
+  onConfirm?: (nickName: string, uid: string) => void
+
+  build() {
+    Column() {
+      Text('添加备注')
+        .fontSize(17).fontWeight(FontWeight.Bold).fontColor(AppColors.textPrimary)
+        .margin({ top: 20, bottom: 4 })
+        .alignSelf(ItemAlign.Center)
+
+      Text('输入用户昵称和 UID')
+        .fontSize(13).fontColor(AppColors.textSecondary)
+        .margin({ bottom: 12 })
+        .alignSelf(ItemAlign.Center)
+
+      TextInput({ text: this.nickName, placeholder: '输入用户昵称' })
+        .height(44).fontSize(15).borderRadius(12)
+        .backgroundColor(AppColors.bgSecondary)
+        .onChange((value: string) => { this.nickName = value })
+
+      TextInput({ text: this.uid, placeholder: '输入用户 UID' })
+        .height(44).fontSize(15).borderRadius(12)
+        .backgroundColor(AppColors.bgSecondary)
+        .margin({ top: 8 })
+        .onChange((value: string) => { this.uid = value })
+
+      Divider().color(AppColors.separator).margin({ top: 12 })
+
+      Row() {
+        Button('取消')
+          .layoutWeight(1).height(44).backgroundColor(Color.Transparent)
+          .fontColor(AppColors.primary).fontSize(16)
+          .onClick(() => { this.controller.close() })
+
+        Divider().vertical(true).height(24).color(AppColors.separator)
+
+        Button('确定添加')
+          .layoutWeight(1).height(44).backgroundColor(Color.Transparent)
+          .fontColor(this.uid.trim().length > 0 && this.nickName.trim().length > 0 ? AppColors.primary : AppColors.textTertiary)
+          .fontWeight(FontWeight.Bold).fontSize(16)
+          .onClick(() => {
+            if (this.uid.trim() && this.nickName.trim()) {
+              if (this.onConfirm) this.onConfirm(this.nickName.trim(), this.uid.trim())
+              this.controller.close()
+            }
+          })
+      }
+    }
+    .constraintSize({ maxWidth: 340 })
+    .padding({ left: 20, right: 20, bottom: 12 })
+    .backgroundColor(AppColors.bgTertiary)
+    .borderRadius(14)
+  }
+}
+
 
