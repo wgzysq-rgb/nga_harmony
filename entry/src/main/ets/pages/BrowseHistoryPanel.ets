@@ -79,6 +79,10 @@ export struct BrowseHistoryPanel {
                             (itemObj as BrowseHistoryEntry).author.length === 39,
                           fontSize: 12
                         })
+                        if (appStore.getNote((itemObj as BrowseHistoryEntry).authorid).length > 0) {
+                          Text('(' + appStore.getNote((itemObj as BrowseHistoryEntry).authorid) + ')')
+                            .fontSize(11).fontColor(AppColors.warning).margin({ left: 3 })
+                        }
                         Text(` · ${formatTime((itemObj as BrowseHistoryEntry).ts / 1000)}`)
                           .fontSize(12).fontColor(AppColors.textTertiary)
                       }

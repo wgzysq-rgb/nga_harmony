@@ -6,6 +6,7 @@ import { AppColors, IconColors, BreakpointType } from '../common/Constants'
 import { formatTime, fmtNum, escHtml, unescapeHtml } from '../common/Utils'
 import { Avatar } from '../common/Avatar'
 import { AnonymousName } from '../common/AnonymousName'
+import { MakeNoteDialog } from '../common/Dialogs'
 
 @Component
 export struct ProfilePanel {
@@ -17,6 +18,25 @@ export struct ProfilePanel {
   @State unreadMessages: number = 0
   @State checkinLoading: boolean = false
   @State checkinResult: string = ''
+  noteDialogController?: CustomDialogController
+
+  private showNoteDialog(): void {
+    this.noteDialogController = new CustomDialogController({
+      builder: MakeNoteDialog({
+        userName: this.profile?.userName ?? '',
+        uid: this.uid,
+        currentNote: appStore.getNote(this.uid),
+        onConfirm: (note: string, uid: string, userName: string): void => {
+          appStore.addOrUpdateNote(uid, userName, note)
+          appStore.showToast('备注已保存')
+        }
+      }),
+      autoCancel: true,
+      customStyle: true,
+      alignment: DialogAlignment.Center
+    })
+    this.noteDialogController.open()
+  }
   @StorageProp('profileVersion') @Watch('onProfileVersionChange') profileVersion: number = 0
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'sm'
 
@@ -251,6 +271,13 @@ export struct ProfilePanel {
                   .fontColor(AppColors.warning)
                   .fontWeight(FontWeight.Medium)
                   .margin({ top: 4 })
+              }
+
+              if (appStore.getNote(this.uid).length > 0) {
+                Text('备注: ' + appStore.getNote(this.uid))
+                  .fontSize(13)
+                  .fontColor(AppColors.warning)
+                  .margin({ top: 6 })
               }
             }
             .width('92%')
@@ -539,6 +566,19 @@ export struct ProfilePanel {
                     routerStore.navigateActivity(Screen.messages(this.profile!.userName))
                   })
 
+                Button('备注')
+                  .fontSize(15)
+                  .fontColor(AppColors.warning)
+                  .backgroundColor(AppColors.bgTertiary)
+                  .borderRadius(12)
+                  .height(44)
+                  .margin({ left: 12 })
+                  .onClick(() => { this.showNoteDialog() })
+              }
+              .width('92%')
+              .margin({ top: 12 })
+
+              Row() {
                 Button('主题')
                   .fontSize(15)
                   .fontColor(AppColors.textPrimary)
@@ -546,7 +586,6 @@ export struct ProfilePanel {
                   .borderRadius(12)
                   .layoutWeight(1)
                   .height(44)
-                  .margin({ left: 12 })
                   .onClick(() => {
                     routerStore.navigateActivity(Screen.topicList(this.profile!.userName + '的主题', -1, this.profile!.uid))
                   })
@@ -584,7 +623,7 @@ export struct ProfilePanel {
                   })
               }
               .width('92%')
-              .margin({ top: 24, bottom: 30 })
+              .margin({ top: 12, bottom: 30 })
             }
           }
           .alignItems(HorizontalAlign.Center)

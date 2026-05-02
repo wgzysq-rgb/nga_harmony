@@ -10,7 +10,7 @@ function hasKeywordMatch(content: string, keywords: string[]): boolean {
 }
 
 export function parseThreadData(raw: object | null, blacklist: Set<string> = new Set(),
-  keywords: string[] = []): ThreadData {
+  keywords: string[] = [], noteMap: Record<string, string> = {}): ThreadData {
   const rowList: ThreadRowInfo[] = [];
   const rawObj = raw as Record<string, Object>;
   const dataObj = rawObj?.['data'] as Record<string, Object> | undefined;
@@ -26,7 +26,7 @@ export function parseThreadData(raw: object | null, blacklist: Set<string> = new
     if (r['comment_to_id'] !== undefined && r['comment_to_id'] !== null &&
       r['content'] === undefined) continue;
     if (hasKeywordMatch(String(r['content'] ?? ''), keywords)) continue;
-    rowList.push(mapRow(r, blacklist, keywords));
+    rowList.push(mapRow(r, blacklist, keywords, noteMap));
   }
 
   const actualTotalRows: number = totalRows > 0 ? totalRows : rowList.length;
@@ -47,7 +47,7 @@ export function parseThreadData(raw: object | null, blacklist: Set<string> = new
 }
 
 function mapRow(raw: Record<string, Object>, blacklist: Set<string>,
-  keywords: string[] = []): ThreadRowInfo {
+  keywords: string[] = [], noteMap: Record<string, string> = {}): ThreadRowInfo {
   const attachs: Attachment[] = [];
   const rawAttachs = raw['attachs'];
   if (rawAttachs && typeof rawAttachs === 'object') {
@@ -81,7 +81,7 @@ function mapRow(raw: Record<string, Object>, blacklist: Set<string>,
       if (!c || typeof c !== 'object') continue;
       if (blacklist.has(String(c['authorid']))) continue;
       if (hasKeywordMatch(String(c['content'] ?? ''), keywords)) continue;
-      comments.push(mapRow(c, blacklist, keywords));
+      comments.push(mapRow(c, blacklist, keywords, noteMap));
     }
   }
 
@@ -112,7 +112,7 @@ function mapRow(raw: Record<string, Object>, blacklist: Set<string>,
     score: Number(raw['score'] ?? 0),
     score_2: Number(raw['score_2'] ?? 0),
     isInBlackList: blacklist.has(String(raw['authorid'])),
-    userNote: '',
+    userNote: noteMap[String(raw['authorid'])] ?? '',
     imageUrlList: (raw['imageUrlList'] as string[]) ?? [],
     formattedHtmlData: String(raw['formattedHtmlData'] ?? ''),
     isMuted: !!raw['mute_time'],

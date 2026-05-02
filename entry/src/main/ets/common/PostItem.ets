@@ -31,7 +31,13 @@ export struct PostItem {
             Avatar({ avatar: this.post.avatar, uid: String(this.post.authorid), name: this.post.author, avatarSize: 32 })
 
             Column() {
-              AnonymousName({ author: this.post.author, isAnonymous: this.post.isanonymous, fontSize: 14, normalColor: AppColors.primary })
+              Row() {
+                AnonymousName({ author: this.post.author, isAnonymous: this.post.isanonymous, fontSize: 14, normalColor: AppColors.primary })
+                if (this.post.userNote && this.post.userNote.length > 0) {
+                  Text('(' + this.post.userNote + ')')
+                    .fontSize(11).fontColor(AppColors.warning).margin({ left: 4 })
+                }
+              }
               Row() {
                 if (this.post.memberGroup && this.post.memberGroup.length > 0) {
                   Text(this.post.memberGroup).fontSize(11).fontColor(AppColors.textTertiary)
@@ -214,7 +220,13 @@ export struct PostItem {
             })
 
           Column() {
-            AnonymousName({ author: c.author, isAnonymous: c.isanonymous, fontSize: 12, normalColor: AppColors.primary })
+            Row() {
+              AnonymousName({ author: c.author, isAnonymous: c.isanonymous, fontSize: 12, normalColor: AppColors.primary })
+              if (appStore.getNote(String(c.authorid)).length > 0) {
+                Text('(' + appStore.getNote(String(c.authorid)) + ')')
+                  .fontSize(10).fontColor(AppColors.warning).margin({ left: 3 })
+              }
+            }
 
             BBCodeContentView({
               nodes: filterBBTags(getCachedBBNodes(c.content), [BBNodeType.QUOTE, BBNodeType.POST_BY]),

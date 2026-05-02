@@ -176,8 +176,12 @@ export struct NotificationPanel {
                       Row() {
                         if (n.userName.length > 0) {
                           Text(unescapeHtml(n.userName)).fontSize(15).fontColor(AppColors.primary)
-                            .margin({ right: 4 })
                             .fontWeight(n.unread ? FontWeight.Bold : FontWeight.Normal)
+                          if (appStore.getNote(n.userId).length > 0) {
+                            Text('(' + appStore.getNote(n.userId) + ')')
+                              .fontSize(11).fontColor(AppColors.warning).margin({ left: 3 })
+                          }
+                          Text('').margin({ right: 4 })
                         }
                         Text(escHtml(NOTI_TYPE_MAP[n.type] ? NOTI_TYPE_MAP[n.type].label : '通知'))
                           .fontSize(15).fontColor(AppColors.textSecondary)

@@ -1,5 +1,5 @@
 /**
- * 确认对话框 + ActionSheet 组件
+ * 确认对话框 + ActionSheet 组件 + 备注编辑对话框
  */
 import { AppColors } from '../common/Constants'
 
@@ -150,3 +150,70 @@ export struct ActionSheetDialog {
     .padding({ bottom: 20 })
   }
 }
+
+// 备注编辑对话框
+@CustomDialog
+export struct MakeNoteDialog {
+  controller: CustomDialogController
+  @Prop userName: string = ''
+  @Prop uid: string = ''
+  @Prop currentNote: string = ''
+  @State noteText: string = ''
+  onConfirm?: (note: string, uid: string, userName: string) => void
+
+  aboutToAppear(): void {
+    this.noteText = this.currentNote
+  }
+
+  build() {
+    Column() {
+      Text('编辑备注')
+        .fontSize(17).fontWeight(FontWeight.Bold).fontColor(AppColors.textPrimary)
+        .margin({ top: 20, bottom: 4 })
+        .alignSelf(ItemAlign.Center)
+
+      Text(this.userName)
+        .fontSize(13).fontColor(AppColors.textSecondary)
+        .margin({ bottom: 12 })
+        .alignSelf(ItemAlign.Center)
+
+      TextInput({ text: this.noteText, placeholder: '输入备注内容(1-20字)' })
+        .height(44).fontSize(15).borderRadius(12)
+        .backgroundColor(AppColors.bgSecondary)
+        .onChange((value: string) => { this.noteText = value })
+
+      Text(String(this.noteText.length) + '/20')
+        .fontSize(11).fontColor(AppColors.textTertiary)
+        .margin({ top: 4 })
+        .alignSelf(ItemAlign.End)
+
+      Divider().color(AppColors.separator).margin({ top: 12 })
+
+      Row() {
+        Button('取消')
+          .layoutWeight(1).height(44).backgroundColor(Color.Transparent)
+          .fontColor(AppColors.primary).fontSize(16)
+          .onClick(() => { this.controller.close() })
+
+        Divider().vertical(true).height(24).color(AppColors.separator)
+
+        Button('确认')
+          .layoutWeight(1).height(44).backgroundColor(Color.Transparent)
+          .fontColor(this.noteText.length >= 1 && this.noteText.length <= 20 ? AppColors.primary : AppColors.textTertiary)
+          .fontWeight(FontWeight.Bold).fontSize(16)
+          .onClick(() => {
+            if (this.noteText.length >= 1 && this.noteText.length <= 20) {
+              if (this.onConfirm) this.onConfirm(this.noteText, this.uid, this.userName)
+              this.controller.close()
+            }
+          })
+      }
+    }
+    .constraintSize({ maxWidth: 340 })
+    .padding({ left: 20, right: 20, bottom: 12 })
+    .backgroundColor(AppColors.bgTertiary)
+    .borderRadius(14)
+  }
+}
+
+

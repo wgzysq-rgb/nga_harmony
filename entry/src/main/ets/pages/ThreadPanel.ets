@@ -162,10 +162,12 @@ export struct ThreadPanel {
     }
 
     try {
+      const noteMap: Record<string, string> = appStore.getNoteMap()
       const result: ThreadResult = await getThread(
         appStore.auth.token, this.threadTid, '',
         this.authorOnly ? this.threadAuthorId : '', String(targetPage),
-        appStore.getBlacklistIds(), appStore.getEnabledKeywords()
+        appStore.getBlacklistIds(), appStore.getEnabledKeywords(),
+        noteMap
       )
 
       if (gen !== this.mgr.getGeneration()) return

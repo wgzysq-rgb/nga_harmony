@@ -292,6 +292,10 @@ export struct TopicListPanel {
       Row() {
         Row() {
           AnonymousName({ author: String(thread['author'] ?? ''), isAnonymous: thread['isAnonymity'] as boolean, fontSize: 12 })
+          if (appStore.getNote(String(thread['authorId'] ?? '')).length > 0) {
+            Text('(' + appStore.getNote(String(thread['authorId'] ?? '')) + ')')
+              .fontSize(11).fontColor(AppColors.warning).margin({ left: 3 })
+          }
           Text(` · ${formatTime(Number(thread['postDate'] ?? 0))}`)
             .fontSize(12).fontColor(AppColors.textTertiary)
         }

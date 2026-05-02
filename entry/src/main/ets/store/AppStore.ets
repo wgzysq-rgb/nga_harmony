@@ -5,6 +5,7 @@ import type { Category } from '../model/Forum'
 import type { ProfileData } from '../model/User'
 import { PreferencesStore } from './PreferencesStore'
 import { FilterKeyword } from '../model/FilterKeyword'
+import type { UserNoteEntry } from '../model/NoteInfo'
 import { FilterListManager } from './FilterListManager'
 
 const TAG = 'AppStore'
@@ -32,6 +33,7 @@ export class FavBoard {
 
 export class SettingsState {
   blacklist: BlacklistEntry[] = []
+  notes: UserNoteEntry[] = []
   filterKeywords: FilterKeyword[] = []
   favorites: FavBoard[] = []
   fontSize: number = 15
@@ -65,6 +67,8 @@ class AppStoreClass {
   private categoriesRefreshing: boolean = false
 
   private blacklistManager: FilterListManager<BlacklistEntry> = new FilterListManager<BlacklistEntry>()
+
+  private notesManager: FilterListManager<UserNoteEntry> = new FilterListManager<UserNoteEntry>()
 
   private filterKeywordsManager: FilterListManager<FilterKeyword> = new FilterListManager<FilterKeyword>()
 
@@ -103,6 +107,7 @@ class AppStoreClass {
   private resetUserState(): void {
     this.settings = new SettingsState()
     this.blacklistManager = new FilterListManager<BlacklistEntry>()
+    this.notesManager = new FilterListManager<UserNoteEntry>()
     this.filterKeywordsManager = new FilterListManager<FilterKeyword>()
     this.profileCache = {}
     this.favoritesLoaded = false
@@ -303,6 +308,10 @@ class AppStoreClass {
         this.settings.blacklist = saved.blacklist
         this.blacklistManager.init(saved.blacklist)
       }
+      if (saved.notes) {
+        this.settings.notes = saved.notes
+        this.notesManager.init(saved.notes)
+      }
       if (saved.filterKeywords) {
         this.settings.filterKeywords = saved.filterKeywords
         this.filterKeywordsManager.init(saved.filterKeywords)
@@ -428,6 +437,42 @@ class AppStoreClass {
 
   getBlacklistHeaderString(): string {
     return this.settings.blacklist.map(u => u.userId).join(',')
+  }
+
+  // ============== User Notes ==============
+
+  addOrUpdateNote(userId: string, nickName: string, note: string): void {
+    const existing: UserNoteEntry | undefined = this.settings.notes.find((n: UserNoteEntry) => n.userId === userId)
+    if (existing) {
+      existing.note = note
+      existing.nickName = nickName
+    } else {
+      this.settings.notes = this.notesManager.add({ userId, nickName, note })
+    }
+    this.persistSettings()
+  }
+
+  removeNote(userId: string): void {
+    this.settings.notes = this.notesManager.remove((n: UserNoteEntry) => n.userId === userId)
+    this.persistSettings()
+  }
+
+  removeAllNotes(): void {
+    this.settings.notes = this.notesManager.clear()
+    this.persistSettings()
+  }
+
+  getNote(userId: string): string {
+    const entry: UserNoteEntry | undefined = this.settings.notes.find((n: UserNoteEntry) => n.userId === userId)
+    return entry?.note ?? ''
+  }
+
+  getNoteMap(): Record<string, string> {
+    const map: Record<string, string> = {}
+    for (let i = 0; i < this.settings.notes.length; i++) {
+      map[this.settings.notes[i].userId] = this.settings.notes[i].note
+    }
+    return map
   }
 
   // ============== Filter Keywords ==============

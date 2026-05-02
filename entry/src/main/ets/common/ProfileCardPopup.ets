@@ -4,6 +4,7 @@ import { ProfileData, AdminForumsData } from '../model/User'
 import { AppColors } from '../common/Constants'
 import { formatTime, fmtNum, escHtml, unescapeHtml } from '../common/Utils'
 import { Avatar } from '../common/Avatar'
+import { MakeNoteDialog } from '../common/Dialogs'
 
 @Component
 export struct ProfileCardPopup {
@@ -14,6 +15,25 @@ export struct ProfileCardPopup {
   @State hasError: boolean = false
   @StorageProp('profileVersion') @Watch('onProfileVersionChange') profileVersion: number = 0
   onClose: () => void = () => {}
+  noteDialogController?: CustomDialogController
+
+  private showNoteDialog(): void {
+    this.noteDialogController = new CustomDialogController({
+      builder: MakeNoteDialog({
+        userName: this.profile?.userName ?? '',
+        uid: this.targetUid,
+        currentNote: appStore.getNote(this.targetUid),
+        onConfirm: (note: string, uid: string, userName: string): void => {
+          appStore.addOrUpdateNote(uid, userName, note)
+          appStore.showToast('备注已保存')
+        }
+      }),
+      autoCancel: true,
+      customStyle: true,
+      alignment: DialogAlignment.Center
+    })
+    this.noteDialogController.open()
+  }
 
   aboutToAppear(): void {
     const cached = appStore.getCachedProfile(this.targetUid)
@@ -132,6 +152,11 @@ export struct ProfileCardPopup {
 
           Text(`UID: ${escHtml(profile.uid)}`)
             .fontSize(11).fontColor(AppColors.textTertiary).margin({ top: 3 })
+
+          if (appStore.getNote(profile.uid).length > 0) {
+            Text('备注: ' + appStore.getNote(profile.uid))
+              .fontSize(11).fontColor(AppColors.warning).margin({ top: 2 })
+          }
         }
         .alignItems(HorizontalAlign.Start)
         .margin({ left: 12 })
@@ -186,6 +211,13 @@ export struct ProfileCardPopup {
         Text('回帖').fontSize(12).fontColor(AppColors.primary).layoutWeight(1).textAlign(TextAlign.Center)
           .padding({ top: 10, bottom: 10 })
           .onClick(() => this.navigateAuthorPosts(profile.uid, profile.userName, true))
+        Divider().vertical(true).height(16).alignSelf(ItemAlign.Center).color(AppColors.separator)
+        Text(appStore.getNote(profile.uid).length > 0 ? '编辑备注' : '备注')
+          .fontSize(12)
+          .fontColor(AppColors.warning)
+          .layoutWeight(1).textAlign(TextAlign.Center)
+          .padding({ top: 10, bottom: 10 })
+          .onClick(() => { this.showNoteDialog() })
         Divider().vertical(true).height(16).alignSelf(ItemAlign.Center).color(AppColors.separator)
         Text(appStore.settings.blacklist.some(e => e.userId === profile.uid) ? '取消屏蔽' : '屏蔽')
           .fontSize(12)
