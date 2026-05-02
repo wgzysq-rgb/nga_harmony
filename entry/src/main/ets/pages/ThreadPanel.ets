@@ -274,7 +274,7 @@ export struct ThreadPanel {
         const isComment: boolean = replyManager.type === ReplyType.COMMENT
         appStore.showToast(isComment ? '贴条成功' : '回复成功')
         if (this.currentPage >= this.totalPages) {
-          this.loadPosts(1, LOAD_REPLACE)
+          await this.loadPosts(1, LOAD_REPLACE)
         }
       } else {
         appStore.showToast(result.error || '操作失败')
