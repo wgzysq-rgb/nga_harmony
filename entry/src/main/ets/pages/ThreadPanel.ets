@@ -546,39 +546,41 @@ export struct ThreadPanel {
                   .fontWeight(FontWeight.Regular)
               }.width(24).height(28).onClick(() => this.loadPosts(this.displayPage + 1, LOAD_REPLACE))
             }
-            Divider().vertical(true).height(16).color(AppColors.dividerStrong)
-            Text('到').fontSize(13).fontColor(AppColors.primary).padding({ left: 4, right: 2 })
-              .onClick(() => {
-                floatingLayerStore.pagePickerTotalPages = this.totalPages
-                floatingLayerStore.pagePickerCurrentPage = this.displayPage
-                try {
-                  const ctx = this.getUIContext()
-                  const info = componentUtils.getRectangleById('threadPanelRoot')
-                  const panelLeftVp = ctx.px2vp(info.windowOffset.x)
-                  const panelTopVp = ctx.px2vp(info.windowOffset.y)
-                  const panelHeightVp = ctx.px2vp(info.size.height)
-                  const dInfo = display.getDefaultDisplaySync()
-                  const screenW = ctx.px2vp(dInfo.width)
-                  const screenH = ctx.px2vp(dInfo.height)
-                  const pickerW = 220
-                  const pickerH = 180
-                  let px = panelLeftVp + 16
-                  let py = panelTopVp + panelHeightVp - 244 - this.navBarHeight
-                  px = Math.max(8, Math.min(px, screenW - pickerW - 8))
-                  py = Math.max(8, Math.min(py, screenH - pickerH - 8))
-                  floatingLayerStore.pagePickerX = px
-                  floatingLayerStore.pagePickerY = py
-                } catch (e) {
-                  floatingLayerStore.pagePickerX = 16
-                  floatingLayerStore.pagePickerY = 400
-                }
-                floatingLayerStore.pagePickerOnSelect = (page: number): void => {
-                  if (page !== this.displayPage) {
-                    this.loadPosts(page, LOAD_REPLACE)
+            if (this.totalPages > 2) {
+              Divider().vertical(true).height(16).color(AppColors.dividerStrong)
+              Text('到').fontSize(13).fontColor(AppColors.primary).padding({ left: 4, right: 2 })
+                .onClick(() => {
+                  floatingLayerStore.pagePickerTotalPages = this.totalPages
+                  floatingLayerStore.pagePickerCurrentPage = this.displayPage
+                  try {
+                    const ctx = this.getUIContext()
+                    const info = componentUtils.getRectangleById('threadPanelRoot')
+                    const panelLeftVp = ctx.px2vp(info.windowOffset.x)
+                    const panelTopVp = ctx.px2vp(info.windowOffset.y)
+                    const panelHeightVp = ctx.px2vp(info.size.height)
+                    const dInfo = display.getDefaultDisplaySync()
+                    const screenW = ctx.px2vp(dInfo.width)
+                    const screenH = ctx.px2vp(dInfo.height)
+                    const pickerW = 220
+                    const pickerH = 180
+                    let px = panelLeftVp + 16
+                    let py = panelTopVp + panelHeightVp - 244 - this.navBarHeight
+                    px = Math.max(8, Math.min(px, screenW - pickerW - 8))
+                    py = Math.max(8, Math.min(py, screenH - pickerH - 8))
+                    floatingLayerStore.pagePickerX = px
+                    floatingLayerStore.pagePickerY = py
+                  } catch (e) {
+                    floatingLayerStore.pagePickerX = 16
+                    floatingLayerStore.pagePickerY = 400
                   }
-                }
-                floatingLayerStore.push(FloatingPage.PAGE_PICKER)
-              })
+                  floatingLayerStore.pagePickerOnSelect = (page: number): void => {
+                    if (page !== this.displayPage) {
+                      this.loadPosts(page, LOAD_REPLACE)
+                    }
+                  }
+                  floatingLayerStore.push(FloatingPage.PAGE_PICKER)
+                })
+            }
           }
           .padding({ left: 8, right: 8, top: 0, bottom: 0 })
           .height(40).alignItems(VerticalAlign.Center)
@@ -590,9 +592,8 @@ export struct ThreadPanel {
             brightness: 1.08,
             color: 'rgba(255, 255, 255, 0.25)'
           })
+          .margin({ right: 8 })
         }
-
-        Blank().layoutWeight(1)
 
         Stack() {
           Image($r('app.media.icon_reply'))
@@ -617,7 +618,7 @@ export struct ThreadPanel {
           floatingLayerStore.push(FloatingPage.REPLY_DIALOG)
         })
       }
-      .width('100%').padding({ left: 16, right: 16, bottom: 16 + this.navBarHeight }).alignItems(VerticalAlign.Center)
+      .width('100%').padding({ left: 16, right: 16, bottom: 16 + this.navBarHeight }).alignItems(VerticalAlign.Center).justifyContent(FlexAlign.End)
 
       if (this.showMoreMenu) {
         Stack() {
