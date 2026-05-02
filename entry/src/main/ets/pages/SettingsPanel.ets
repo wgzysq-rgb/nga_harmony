@@ -174,7 +174,7 @@ export struct SettingsPanel {
       }
       .width('100%').justifyContent(FlexAlign.Center).padding({ top: 16, bottom: 8 })
 
-      Text(theme.label).fontSize(15).fontColor(AppColors.textPrimary).fontWeight(FontWeight.Medium)
+      Text(theme.label).fontSize(15).fontColor(theme.textColor).fontWeight(FontWeight.Medium)
 
       // 选中指示
       if (this.themeName === theme.name) {
@@ -189,7 +189,7 @@ export struct SettingsPanel {
       }
     }
     .width('44%')
-    .backgroundColor(this.themeName === theme.name ? AppColors.bgSecondary : AppColors.white)
+    .backgroundColor(theme.bgColor)
     .borderRadius(12)
     .borderWidth(this.themeName === theme.name ? 2 : 1)
     .borderColor(this.themeName === theme.name ? AppColors.primary : AppColors.separator)

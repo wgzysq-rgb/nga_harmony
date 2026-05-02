@@ -51,11 +51,12 @@ export interface ThemeOption {
   label: string
   primaryColor: string
   bgColor: string
+  textColor: string
 }
 
 export const THEME_OPTIONS: ThemeOption[] = [
-  { name: 'light', label: '原味主题', primaryColor: '#C08A4A', bgColor: '#FEFAF6' },
-  { name: 'dark', label: '暗色主题', primaryColor: '#D4A85A', bgColor: '#1A1A1E' },
+  { name: 'light', label: '原味主题', primaryColor: '#C08A4A', bgColor: '#FEFAF6', textColor: '#3E2A1D' },
+  { name: 'dark', label: '暗色主题', primaryColor: '#D4A85A', bgColor: '#1A1A1E', textColor: '#EAE2D8' },
 ]
 
 // 品牌图标背景色（不随主题变化）
