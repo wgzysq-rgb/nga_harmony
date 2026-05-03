@@ -369,7 +369,7 @@ export struct ProfileCardPopup {
         Row() {
           this.SummaryBadge(String(this.analysisData.topicCount), '主题')
           this.SummaryBadge(String(this.analysisData.replyCount), '回复')
-          this.SummaryBadge(String(this.analysisData.totalDays) + '天', '跨度')
+          this.SummaryBadge(String(this.analysisData.topicCount + this.analysisData.replyCount), '总计')
         }
         .width('100%')
         .padding({ left: 12, right: 12 })
@@ -487,7 +487,7 @@ export struct ProfileCardPopup {
     if (!this.analysisData) return ''
     const d = this.analysisData
     let text = `${this.profile?.userName ?? ''}(UID:${this.targetUid}) 的账号分析：\n`
-    text += `共 ${d.topicCount} 个主题，${d.replyCount} 条回复，时间跨度 ${d.totalDays} 天\n\n`
+    text += `共 ${d.topicCount} 个主题，${d.replyCount} 条回复\n\n`
     text += '活跃版面：\n'
     for (let i = 0; i < d.forumList.length; i++) {
       const f = d.forumList[i]

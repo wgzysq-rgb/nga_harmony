@@ -1268,9 +1268,6 @@ export class UserActivityAnalysis {
   hourDistribution: number[] = [];
   topicCount: number = 0;
   replyCount: number = 0;
-  firstActivityDate: string = '';
-  lastActivityDate: string = '';
-  totalDays: number = 0;
   topicSubjects: string[] = [];
   replySnippets: string[] = [];
 }
@@ -1302,6 +1299,16 @@ export async function getUserActivityAnalysis(token: string, uid: string): Promi
     if (h >= 0 && h < 24) result.hourDistribution[h]++;
   };
 
+  const fmtDT = (ts: number): string => {
+    if (ts <= 0) return '';
+    const d = new Date(ts > 1e12 ? ts : ts * 1000);
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hour = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${month}-${day} ${hour}:${min}`;
+  };
+
   const extractForumName = (raw: Record<string, Object>): string => {
     const parent = raw['parent'] as Record<string, Object> | undefined;
     if (parent && parent['2']) return String(parent['2']);
@@ -1326,15 +1333,9 @@ export async function getUserActivityAnalysis(token: string, uid: string): Promi
         if (!entry['tid'] || entryAuthorId === 0) continue;
         if (subject.includes('帖子发布或回复时间超过限制') || subject.includes('帐号权限不足')) continue;
         result.topicCount++;
-        result.topicSubjects.push(subject);
+        result.topicSubjects.push(subject + ' (' + fmtDT(Number(entry['postdate'] ?? 0)) + ')');
         addToForum(extractForumName(entry), true);
         extractHour(Number(entry['postdate'] ?? 0));
-        const ts = Number(entry['postdate'] ?? 0);
-        if (ts > 0) {
-          const ds = new Date(ts > 1e12 ? ts : ts * 1000).toISOString().slice(0, 10);
-          if (!result.firstActivityDate || ds < result.firstActivityDate) result.firstActivityDate = ds;
-          if (!result.lastActivityDate || ds > result.lastActivityDate) result.lastActivityDate = ds;
-        }
       }
     }
 
@@ -1363,22 +1364,15 @@ export async function getUserActivityAnalysis(token: string, uid: string): Promi
           rc = rc.replace(/https?:\/\/\S+/g, '');
           rc = rc.replace(/\s+/g, ' ').trim();
           if (rc.length > 0) {
-            result.replySnippets.push(rc.slice(0, 200));
+            const replyTs = Number(pData?.['postdate'] ?? 0);
+            result.replySnippets.push('回复于《' + subject + '》(' + fmtDT(replyTs) + '): ' + rc.slice(0, 200));
           }
         }
         const replyTs = Number(pData?.['postdate'] ?? 0);
         if (replyTs > 0) {
           extractHour(replyTs);
-          const ds = new Date(replyTs > 1e12 ? replyTs : replyTs * 1000).toISOString().slice(0, 10);
-          if (!result.firstActivityDate || ds < result.firstActivityDate) result.firstActivityDate = ds;
-          if (!result.lastActivityDate || ds > result.lastActivityDate) result.lastActivityDate = ds;
         }
       }
-    }
-
-    if (result.firstActivityDate && result.lastActivityDate) {
-      const diff = new Date(result.lastActivityDate).getTime() - new Date(result.firstActivityDate).getTime();
-      result.totalDays = Math.max(1, Math.floor(diff / 86400000) + 1);
     }
 
     const fList: ForumStat[] = [];
