@@ -16,70 +16,70 @@ import { WebViewPanel } from './WebViewPanel'
 
 @Component
 export struct ActivityPanelComponent {
-  @Prop topActivity: NavEntry | null
+  @Prop activityStack: NavEntry[] = []
   @StorageProp('statusBarHeight') statusBarHeight: number = 0
 
   build() {
-    Column() {
-      if (this.topActivity) {
-        if (this.topActivity.screen.type === 'thread') {
+    Stack() {
+      ForEach(this.activityStack, (entry: NavEntry) => {
+        if (entry.screen.type === 'thread') {
           ThreadPanel({
-            threadTid: this.topActivity.screen.tid,
-            threadPid: this.topActivity.screen.pid,
-            navEntryId: this.topActivity.id
+            threadTid: entry.screen.tid,
+            threadPid: entry.screen.pid,
+            navEntryId: entry.id
           })
-        } else if (this.topActivity.screen.type === 'browseHistory') {
+        } else if (entry.screen.type === 'browseHistory') {
           BrowseHistoryPanel()
-        } else if (this.topActivity.screen.type === 'messages') {
-          MessageListPanel({ composeToInit: this.topActivity.screen.composeTo })
-        } else if (this.topActivity.screen.type === 'notifications') {
+        } else if (entry.screen.type === 'messages') {
+          MessageListPanel({ composeToInit: entry.screen.composeTo })
+        } else if (entry.screen.type === 'notifications') {
           NotificationPanel()
-        } else if (this.topActivity.screen.type === 'blacklist') {
+        } else if (entry.screen.type === 'blacklist') {
           BlacklistPanel()
-        } else if (this.topActivity.screen.type === 'notes') {
+        } else if (entry.screen.type === 'notes') {
           NotesPanel()
-        } else if (this.topActivity.screen.type === 'filterKeywords') {
+        } else if (entry.screen.type === 'filterKeywords') {
           FilterKeywordsPanel()
-        } else if (this.topActivity.screen.type === 'topicList') {
+        } else if (entry.screen.type === 'topicList') {
           TopicListPanel({
-            boardFid: this.topActivity.screen.topicListFid,
-            boardName: this.topActivity.screen.topicListName,
-            isFavorites: this.topActivity.screen.topicListFavor === '1',
-            authorid: this.topActivity.screen.topicListAuthorid,
-            favor: this.topActivity.screen.topicListFavor,
-            searchpost: this.topActivity.screen.topicListSearchpost
+            boardFid: entry.screen.topicListFid,
+            boardName: entry.screen.topicListName,
+            isFavorites: entry.screen.topicListFavor === '1',
+            authorid: entry.screen.topicListAuthorid,
+            favor: entry.screen.topicListFavor,
+            searchpost: entry.screen.topicListSearchpost
           })
-        } else if (this.topActivity.screen.type === 'profile') {
-          ProfilePanel({ uid: this.topActivity.screen.uid })
-        } else if (this.topActivity.screen.type === 'settings') {
+        } else if (entry.screen.type === 'profile') {
+          ProfilePanel({ uid: entry.screen.uid })
+        } else if (entry.screen.type === 'settings') {
           SettingsPanel()
-        } else if (this.topActivity.screen.type === 'webview') {
-          WebViewPanel({ url: this.topActivity.screen.webviewUrl })
+        } else if (entry.screen.type === 'webview') {
+          WebViewPanel({ url: entry.screen.webviewUrl })
         } else {
           Stack() {
             Column() {
               Row().width('100%').height(44 + this.statusBarHeight)
               Column() {
-                this.ContentBody()
+                this.ContentBody(entry)
               }
               .layoutWeight(1).width('100%')
             }
             .width('100%').height('100%')
 
-            PanelNavBar({ title: this.topActivity.screen.getTitle() })
+            PanelNavBar({ title: entry.screen.getTitle() })
               .width('100%').position({ x: 0, y: 0 })
           }
           .width('100%').height('100%')
         }
-      }
+      }, (entry: NavEntry) => String(entry.id))
     }
     .width('100%').height('100%')
   }
 
   @Builder
-  ContentBody() {
-    if (this.topActivity!.screen.type === 'messageDetail') {
-      MessageDetailPanel({ mid: this.topActivity!.screen.mid })
+  ContentBody(entry: NavEntry) {
+    if (entry.screen.type === 'messageDetail') {
+      MessageDetailPanel({ mid: entry.screen.mid })
     } else {
       Column() {
         Text('未知页面类型').fontSize(14).fontColor(AppColors.textTertiary)

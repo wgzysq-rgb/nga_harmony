@@ -102,9 +102,7 @@ struct MainPage {
           .visibility(this.getBoardColVisibility())
 
           Column() {
-            if (this.router.topActivity) {
-              ActivityPanelComponent({ topActivity: this.router.topActivity })
-            }
+            ActivityPanelComponent({ activityStack: this.router.activityStack })
           }
           .layoutWeight(1)
           .height('100%')
