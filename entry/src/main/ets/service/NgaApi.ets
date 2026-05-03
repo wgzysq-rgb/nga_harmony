@@ -1255,6 +1255,146 @@ export async function sendMessage(token: string, to: string, mid: string,
   return result;
 }
 
+// ============== 用户成分分析 ==============
+
+export class ForumStat {
+  name: string = '';
+  topicCount: number = 0;
+  replyCount: number = 0;
+}
+
+export class UserActivityAnalysis {
+  forumList: ForumStat[] = [];
+  hourDistribution: number[] = [];
+  topicCount: number = 0;
+  replyCount: number = 0;
+  firstActivityDate: string = '';
+  lastActivityDate: string = '';
+  totalDays: number = 0;
+  topicSubjects: string[] = [];
+  replySnippets: string[] = [];
+}
+
+export async function getUserActivityAnalysis(token: string, uid: string): Promise<UserActivityAnalysis | null> {
+  const result = new UserActivityAnalysis();
+  const hourDist: number[] = [];
+  for (let i = 0; i < 24; i++) hourDist.push(0);
+  result.hourDistribution = hourDist;
+
+  const forumMap: Record<string, ForumStat> = {};
+
+  const addToForum = (name: string, isTopic: boolean): void => {
+    let n = name;
+    if (!n || n.length === 0) n = '未知';
+    if (!forumMap[n]) {
+      const fs = new ForumStat();
+      fs.name = n;
+      forumMap[n] = fs;
+    }
+    if (isTopic) forumMap[n].topicCount++;
+    else forumMap[n].replyCount++;
+  };
+
+  const extractHour = (ts: number): void => {
+    if (ts <= 0) return;
+    const d = new Date(ts > 1e12 ? ts : ts * 1000);
+    const h = d.getHours();
+    if (h >= 0 && h < 24) result.hourDistribution[h]++;
+  };
+
+  const extractForumName = (raw: Record<string, Object>): string => {
+    const parent = raw['parent'] as Record<string, Object> | undefined;
+    if (parent && parent['2']) return String(parent['2']);
+    return '';
+  };
+
+  const session = sessionStore.get(token);
+  if (!session) return null;
+
+  try {
+    const topicParams: Record<string, string> = {
+      'page': '1', 'lite': 'js', 'noprefix': '', 'authorid': uid,
+    };
+    const topicRaw = await ngaClient.get('/thread.php', topicParams, { uid: session.uid, cid: session.cid }) as Record<string, Object>;
+    const tData = (topicRaw['data'] as Record<string, Object> | undefined)?.['__T'] as Record<string, Object> | undefined;
+    if (tData) {
+      const tKeys = Object.keys(tData);
+      for (let i = 0; i < tKeys.length; i++) {
+        const entry = tData[tKeys[i]] as Record<string, Object>;
+        const subject = String(entry['subject'] ?? '');
+        const entryAuthorId = Number(entry['authorid'] ?? 0);
+        if (!entry['tid'] || entryAuthorId === 0) continue;
+        if (subject.includes('帖子发布或回复时间超过限制') || subject.includes('帐号权限不足')) continue;
+        result.topicCount++;
+        result.topicSubjects.push(subject);
+        addToForum(extractForumName(entry), true);
+        extractHour(Number(entry['postdate'] ?? 0));
+        const ts = Number(entry['postdate'] ?? 0);
+        if (ts > 0) {
+          const ds = new Date(ts > 1e12 ? ts : ts * 1000).toISOString().slice(0, 10);
+          if (!result.firstActivityDate || ds < result.firstActivityDate) result.firstActivityDate = ds;
+          if (!result.lastActivityDate || ds > result.lastActivityDate) result.lastActivityDate = ds;
+        }
+      }
+    }
+
+    const replyParams: Record<string, string> = {
+      'page': '1', 'lite': 'js', 'noprefix': '', 'authorid': uid, 'searchpost': '1',
+    };
+    const replyRaw = await ngaClient.get('/thread.php', replyParams, { uid: session.uid, cid: session.cid }) as Record<string, Object>;
+    const rData = (replyRaw['data'] as Record<string, Object> | undefined)?.['__T'] as Record<string, Object> | undefined;
+    if (rData) {
+      const rKeys = Object.keys(rData);
+      for (let i = 0; i < rKeys.length; i++) {
+        const entry = rData[rKeys[i]] as Record<string, Object>;
+        const subject = String(entry['subject'] ?? '');
+        const entryAuthorId = Number(entry['authorid'] ?? 0);
+        if (!entry['tid'] || entryAuthorId === 0) continue;
+        if (subject.includes('帖子发布或回复时间超过限制') || subject.includes('帐号权限不足')) continue;
+        result.replyCount++;
+        addToForum(extractForumName(entry), false);
+        const pData = entry['__P'] as Record<string, Object> | undefined;
+        if (pData && pData['content']) {
+          let rc: string = String(pData['content']);
+          rc = rc.replace(/\[quote\][\s\S]*?\[\/quote\]/gi, '');
+          rc = rc.replace(/\[\/?(?:pid|uid|tid|b|i|u|del|h|url|color|size|font|collapse|code)\d*[^\]]*\]/gi, '');
+          rc = rc.replace(/\[s:\w+:\w+\]/g, '');
+          rc = rc.replace(/<[^>]+>/g, '');
+          rc = rc.replace(/https?:\/\/\S+/g, '');
+          rc = rc.replace(/\s+/g, ' ').trim();
+          if (rc.length > 0) {
+            result.replySnippets.push(rc.slice(0, 200));
+          }
+        }
+        const replyTs = Number(pData?.['postdate'] ?? 0);
+        if (replyTs > 0) {
+          extractHour(replyTs);
+          const ds = new Date(replyTs > 1e12 ? replyTs : replyTs * 1000).toISOString().slice(0, 10);
+          if (!result.firstActivityDate || ds < result.firstActivityDate) result.firstActivityDate = ds;
+          if (!result.lastActivityDate || ds > result.lastActivityDate) result.lastActivityDate = ds;
+        }
+      }
+    }
+
+    if (result.firstActivityDate && result.lastActivityDate) {
+      const diff = new Date(result.lastActivityDate).getTime() - new Date(result.firstActivityDate).getTime();
+      result.totalDays = Math.max(1, Math.floor(diff / 86400000) + 1);
+    }
+
+    const fList: ForumStat[] = [];
+    const fKeys = Object.keys(forumMap);
+    for (let i = 0; i < fKeys.length; i++) {
+      fList.push(forumMap[fKeys[i]]);
+    }
+    fList.sort((a, b) => (b.topicCount + b.replyCount) - (a.topicCount + a.replyCount));
+    result.forumList = fList;
+
+    return result;
+  } catch (e) {
+    return null;
+  }
+}
+
 // ============== 用户资料 ==============
 
 export async function getUserProfile(token: string, uid: string): Promise<UserProfileResult> {

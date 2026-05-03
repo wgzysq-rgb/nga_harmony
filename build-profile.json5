@@ -7,11 +7,11 @@
         "material": {
           "certpath": "C:\\Users\\ll\\.ohos\\config\\default_nga_oh_RDmSj7Gf3xRQK1MQa1TOUJmu5KbhtuWVEIKwleN6mcU=.cer",
           "keyAlias": "debugKey",
-          "keyPassword": "0000001BC5FEC6C3B94C84CA675BADFC24209CC627BD5D2FF1D00493983E099E321B51683A48FA726F7518",
+          "keyPassword": "0000001B88A29CD81A0B2C98695094B8B20BA095BC8DA3B97334E2E06F21864F6AACB6F078A482B3AEAC4E",
           "profile": "C:\\Users\\ll\\.ohos\\config\\default_nga_oh_RDmSj7Gf3xRQK1MQa1TOUJmu5KbhtuWVEIKwleN6mcU=.p7b",
           "signAlg": "SHA256withECDSA",
           "storeFile": "C:\\Users\\ll\\.ohos\\config\\default_nga_oh_RDmSj7Gf3xRQK1MQa1TOUJmu5KbhtuWVEIKwleN6mcU=.p12",
-          "storePassword": "0000001BB5CF250672EF1AEB1DE53D96910F71887CA75B447809F549B3E73A2863A24E0091528305B0050C"
+          "storePassword": "0000001B9CC40EE4D72825F8A7B82F1C1A20ECD8B4B44DF3EF5483EE5806394D4C9382BCB30332D992A8F3"
         }
       }
     ],

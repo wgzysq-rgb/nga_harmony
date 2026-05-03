@@ -39,11 +39,30 @@ export function parseTopicList(raw: object | null, blacklist: Set<string> = new 
   };
 }
 
+function stripBasic(text: string): string {
+  let s = text;
+  s = s.replace(/\[quote\][\s\S]*?\[\/quote\]/gi, '');
+  s = s.replace(/\[\/?(?:pid|uid|tid|b|i|u|del|h|url|color|size|font|collapse|code|img)\d*[^\]]*\]/gi, '');
+  s = s.replace(/\[s:\w+:\w+\]/g, '');
+  s = s.replace(/<[^>]+>/g, '');
+  s = s.replace(/https?:\/\/\S+/g, '');
+  s = s.replace(/\s+/g, ' ').trim();
+  return s;
+}
+
 function mapTopicRaw(raw: Record<string, Object>): ThreadPageInfo {
   const __P = raw['__P'] as Record<string, Object> | undefined;
   const rawAuthor: string = String(raw['author'] ?? '');
   const isAnonymity: boolean = rawAuthor.startsWith('#anony_');
   const author: string = isAnonymity ? decodeAnonymousName(rawAuthor) : rawAuthor;
+
+  let replyContent: string = '';
+  let snippet: string = '';
+  if (__P) {
+    replyContent = String(__P['content'] ?? '');
+    snippet = stripBasic(replyContent).slice(0, 150);
+  }
+
   return {
     tid: Number(raw['tid']),
     fid: Number(raw['fid']),
@@ -62,7 +81,7 @@ function mapTopicRaw(raw: Record<string, Object>): ThreadPageInfo {
     postDate: Number(raw['postdate'] ?? 0),
     replyInfo: __P ? {
       pidStr: String(__P['pid'] ?? ''),
-      content: String(__P['content'] ?? ''),
+      content: replyContent,
       subject: String(__P['subject'] ?? ''),
       postDate: String(__P['postdate'] ?? ''),
       authorId: String(__P['authorid'] ?? ''),
@@ -77,7 +96,7 @@ function mapTopicRaw(raw: Record<string, Object>): ThreadPageInfo {
     },
     board: '',
     mirrorBoard: false,
-    previewSnippet: '',
+    previewSnippet: snippet,
     previewImages: [],
   };
 }
