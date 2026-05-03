@@ -123,7 +123,7 @@ export struct FloatingLayerComponent {
               }.width('100%')
             }.width('100%').height(120).align(Alignment.TopStart)
           }
-          .width(220).height(180).padding({ left: 10, right: 10 }).backgroundColor(AppColors.white).borderRadius(12)
+          .width(220).height(180).padding({ left: 10, right: 10 }).backgroundColor(AppColors.bgTertiary).borderRadius(12)
             .shadow({ radius: 16, color: AppColors.shadow, offsetY: 4 })
             .position({ x: this.floating.pagePickerX, y: this.floating.pagePickerY })
         }
