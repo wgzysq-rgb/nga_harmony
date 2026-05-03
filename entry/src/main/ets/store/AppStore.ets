@@ -44,6 +44,7 @@ export class SettingsState {
   autoCheckin: boolean = false
   lastCheckinDate: string = ''
   notes: UserNoteEntry[] = []
+  holdingHand: number = 2
 }
 
 export class ToastState {
@@ -359,7 +360,7 @@ class AppStoreClass {
     }
   }
 
-  private persistSettings(): void {
+  persistSettings(): void {
     if (!this.auth.uid) return
     this.store.putJSON(this.settingsKey(), this.settings)
   }
@@ -386,6 +387,7 @@ class AppStoreClass {
       if (saved.theme) this.settings.theme = saved.theme
       if (saved.autoCheckin !== undefined) this.settings.autoCheckin = saved.autoCheckin
       if (saved.lastCheckinDate) this.settings.lastCheckinDate = saved.lastCheckinDate
+      if (saved.holdingHand !== undefined) this.settings.holdingHand = saved.holdingHand
     }
   }
 

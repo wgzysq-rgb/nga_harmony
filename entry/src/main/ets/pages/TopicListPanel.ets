@@ -4,6 +4,8 @@
  * 点击主题通过 routerStore 导航
  */
 
+import { motion } from '@kit.MultimodalAwarenessKit'
+import { BusinessError } from '@kit.BasicServicesKit'
 import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
 import { getTopicList, createTopicListParams, TopicListParams, TopicListResult, removeFavorite } from '../service/NgaApi'
@@ -12,6 +14,14 @@ import { formatTime, unescapeHtml } from '../common/Utils'
 import { PanelNavBar } from '../common/PanelNavBar'
 import { ThreadDataSource } from '../common/LazyDataSource'
 import { AnonymousName } from '../common/AnonymousName'
+
+enum HoldingHandStatus {
+  NOT_HELD = 0,
+  LEFT_HAND_HELD = 1,
+  RIGHT_HAND_HELD = 2,
+  BOTH_HANDS_HELD = 3,
+  UNKNOWN_STATUS = 16
+}
 
 @Component
 export struct TopicListPanel {
@@ -25,6 +35,8 @@ export struct TopicListPanel {
   @Prop author: string = ''
   @Prop searchpost: string = ''
   @Prop showBack: boolean = true
+  @State holdingStatus: HoldingHandStatus = appStore.settings.holdingHand as HoldingHandStatus
+  @State holdingDetected: boolean = false
   @State isLoading: boolean = true
   @State isLoadingMore: boolean = false
   @State hasError: boolean = false
@@ -42,10 +54,46 @@ export struct TopicListPanel {
 
   private scroller: Scroller = new Scroller()
 
+  private holdingCallback: Callback<HoldingHandStatus> = (data: HoldingHandStatus): void => {
+    if (this.holdingDetected) {
+      animateTo({ duration: 300, curve: Curve.EaseInOut }, (): void => {
+        this.holdingStatus = data
+      })
+    } else {
+      this.holdingStatus = data
+      this.holdingDetected = true
+    }
+    if (appStore.settings.holdingHand !== data) {
+      appStore.settings.holdingHand = data
+      appStore.persistSettings()
+    }
+  }
+
+  private startHoldingHandMonitoring(): void {
+    try {
+      motion.on('holdingHandChanged', this.holdingCallback)
+    } catch (err) {
+      console.error('startHolding fail:', (err as BusinessError).code)
+    }
+  }
+
+  private stopHoldingHandMonitoring(): void {
+    try {
+      motion.off('holdingHandChanged', this.holdingCallback)
+    } catch (err) {
+      console.error('stopHolding fail:', (err as BusinessError).code)
+    }
+  }
+
   aboutToAppear(): void {
     this.showSort = !this.authorid && !this.favor
     this.loadTopics(1)
     appStore.refreshUnreadCount()
+    this.startHoldingHandMonitoring()
+  }
+
+  aboutToDisappear(): void {
+    this.stopHoldingHandMonitoring()
   }
 
   private onBoardChanged(): void {
@@ -285,7 +333,8 @@ export struct TopicListPanel {
           color: AppColors.frostGlass
         })
         .onClick(() => this.loadTopics(1))
-      }.width('100%').justifyContent(FlexAlign.End).padding({ right: 16, bottom: 16 + this.navBarHeight })
+      }.width('100%').justifyContent(this.holdingStatus === HoldingHandStatus.LEFT_HAND_HELD ? FlexAlign.Start : FlexAlign.End)
+      .padding({ left: this.holdingStatus === HoldingHandStatus.LEFT_HAND_HELD ? 16 : 0, right: this.holdingStatus === HoldingHandStatus.LEFT_HAND_HELD ? 0 : 16, bottom: 16 + this.navBarHeight })
     }
     .width('100%').height('100%').backgroundColor(AppColors.bg).alignContent(Alignment.BottomEnd)
   }

@@ -1,5 +1,7 @@
 import { display, componentUtils } from '@kit.ArkUI'
 import { common } from '@kit.AbilityKit'
+import { motion } from '@kit.MultimodalAwarenessKit'
+import { BusinessError } from '@kit.BasicServicesKit'
 import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
 import { ngaClient } from '../service/NgaClient'
@@ -17,6 +19,14 @@ import { unescapeHtml } from '../common/Utils'
 import { ThreadPaginationManager } from '../common/ThreadPaginationManager'
 import type { ThreadInfo } from '../model/Thread'
 
+enum HoldingHandStatus {
+  NOT_HELD = 0,
+  LEFT_HAND_HELD = 1,
+  RIGHT_HAND_HELD = 2,
+  BOTH_HANDS_HELD = 3,
+  UNKNOWN_STATUS = 16
+}
+
 const LOAD_REPLACE: string = 'replace'
 const LOAD_APPEND: string = 'append'
 const LOAD_PREPEND: string = 'prepend'
@@ -25,6 +35,9 @@ const PAGE_SCROLL_DELAY: number = 80
 
 @Component
 export struct ThreadPanel {
+  @State holdingStatus: HoldingHandStatus = appStore.settings.holdingHand as HoldingHandStatus
+  @State holdingDetected: boolean = false
+
   @Prop @Watch('onThreadChanged') threadTid: string = ''
   @Prop threadPid: string = ''
   @Prop @Watch('onScrollToPid') navEntryId: number = 0
@@ -52,6 +65,37 @@ export struct ThreadPanel {
   private scroller: Scroller = new Scroller()
   private pageSwitchPending: boolean = false
   private mgr: ThreadPaginationManager = new ThreadPaginationManager()
+
+  private holdingCallback: Callback<HoldingHandStatus> = (data: HoldingHandStatus): void => {
+    if (this.holdingDetected) {
+      animateTo({ duration: 300, curve: Curve.EaseInOut }, (): void => {
+        this.holdingStatus = data
+      })
+    } else {
+      this.holdingStatus = data
+      this.holdingDetected = true
+    }
+    if (appStore.settings.holdingHand !== data) {
+      appStore.settings.holdingHand = data
+      appStore.persistSettings()
+    }
+  }
+
+  private startHoldingHandMonitoring(): void {
+    try {
+      motion.on('holdingHandChanged', this.holdingCallback)
+    } catch (err) {
+      console.error('startHolding fail:', (err as BusinessError).code)
+    }
+  }
+
+  private stopHoldingHandMonitoring(): void {
+    try {
+      motion.off('holdingHandChanged', this.holdingCallback)
+    } catch (err) {
+      console.error('stopHolding fail:', (err as BusinessError).code)
+    }
+  }
 
   private showProfileCard(uid: string, screenX: number, screenY: number): void {
     const cardW: number = 280
@@ -84,6 +128,11 @@ export struct ThreadPanel {
       this.loadPosts(1, LOAD_REPLACE)
     }
     this.loadPersistedVotes()
+    this.startHoldingHandMonitoring()
+  }
+
+  aboutToDisappear(): void {
+    this.stopHoldingHandMonitoring()
   }
 
   private onThreadChanged(): void {
@@ -624,7 +673,8 @@ export struct ThreadPanel {
           floatingLayerStore.push(FloatingPage.REPLY_DIALOG)
         })
       }
-      .width('100%').padding({ left: 16, right: 16, bottom: 16 + this.navBarHeight }).alignItems(VerticalAlign.Center).justifyContent(FlexAlign.End)
+      .width('100%').padding({ left: 16, right: 16, bottom: 16 + this.navBarHeight }).alignItems(VerticalAlign.Center)
+      .justifyContent(this.holdingStatus === HoldingHandStatus.LEFT_HAND_HELD ? FlexAlign.Start : FlexAlign.End)
 
       if (this.showMoreMenu) {
         Stack() {
