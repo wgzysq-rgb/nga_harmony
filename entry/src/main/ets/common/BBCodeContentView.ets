@@ -127,7 +127,7 @@ export struct BBCodeContentView {
           .fontSize(ctx.inQuote ? 14 : 15)
           .fontColor(ctx.inQuote ? AppColors.textSecondary : AppColors.textPrimary)
           .fontStyle(ctx.inQuote ? FontStyle.Italic : FontStyle.Normal)
-          .lineHeight(ctx.inQuote ? 20 : 22)
+          .lineHeight(ctx.inQuote ? 24 : 26)
           .width('100%')
         }
       } else {
@@ -497,7 +497,7 @@ export struct BBCodeContentView {
                 .fontSize(ctx.inQuote ? 14 : 15)
                 .fontColor(ctx.inQuote ? AppColors.textSecondary : AppColors.textPrimary)
                 .layoutWeight(1)
-                .lineHeight(ctx.inQuote ? 20 : 22)
+                .lineHeight(ctx.inQuote ? 24 : 26)
             }
           }
           .width('100%')
@@ -521,7 +521,7 @@ export struct BBCodeContentView {
         Text(node.text)
           .fontSize(15)
           .fontColor(AppColors.warnText)
-          .lineHeight(22)
+          .lineHeight(26)
       }
     }
     .width('100%')
