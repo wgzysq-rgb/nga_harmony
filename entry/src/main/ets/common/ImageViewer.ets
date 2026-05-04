@@ -51,7 +51,7 @@ export struct ImageViewer {
   private panStartOffsetX: number = 0
   private panStartOffsetY: number = 0
 
-  private readonly ZOOM_MAX: number = 5
+  private readonly ZOOM_MAX: number = 8
   private readonly ZOOM_MIN: number = 1
   private readonly SWIPE_THRESHOLD: number = 80
   private readonly SWIPE_DISTANCE: number = 15
