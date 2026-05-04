@@ -71,6 +71,8 @@ export struct ThreadPanel {
   private mgr: ThreadPaginationManager = new ThreadPaginationManager()
   private prefetchNextInProgress: boolean = false
   private prefetchPrevInProgress: boolean = false
+  @State loadingContentOpacity: number = 0
+  private loadingDelayTimer: number = -1
 
   private holdingCallback: Callback<HoldingHandStatus> = (data: HoldingHandStatus): void => {
     if (this.holdingDetected) {
@@ -211,6 +213,15 @@ export struct ThreadPanel {
       this.allPosts = []
       this.postsDataSource.clear()
       this.isLoading = true
+      this.loadingContentOpacity = 0
+      clearTimeout(this.loadingDelayTimer)
+      this.loadingDelayTimer = setTimeout((): void => {
+        if (this.isLoading) {
+          animateTo({ duration: 150, curve: Curve.EaseInOut }, (): void => {
+            this.loadingContentOpacity = 1
+          })
+        }
+      }, 400)
       this.isLoadingMore = false
       this.isLoadingPrevious = false
       this.hasError = false
@@ -293,6 +304,9 @@ export struct ThreadPanel {
       }
     }
 
+    clearTimeout(this.loadingDelayTimer)
+    this.loadingDelayTimer = -1
+    this.loadingContentOpacity = 0
     this.isLoading = false
     this.isLoadingMore = false
     this.isLoadingPrevious = false
@@ -523,10 +537,13 @@ export struct ThreadPanel {
 
       if (this.isLoading) {
         Column() {
-          LoadingProgress().width(28).height(28).color(AppColors.textTertiary)
-          Text('加载中...').fontSize(14).fontColor(AppColors.textTertiary).margin({ top: 8 })
+          Column() {
+            LoadingProgress().width(28).height(28).color(AppColors.textTertiary)
+            Text('加载中...').fontSize(14).fontColor(AppColors.textTertiary).margin({ top: 8 })
+          }.opacity(this.loadingContentOpacity)
         }.width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
           .padding({ top: NAV_BAR_H + this.statusBarHeight })
+        .transition(TransitionEffect.OPACITY.animation({ duration: 200 }))
       } else if (this.hasError) {
         Column() {
           Text(this.errorMsg).fontSize(14).fontColor(AppColors.textTertiary).margin({ bottom: 12 })
@@ -534,6 +551,7 @@ export struct ThreadPanel {
             .onClick(() => this.loadPosts(1, LOAD_REPLACE))
         }.width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
           .padding({ top: NAV_BAR_H + this.statusBarHeight })
+        .transition(TransitionEffect.OPACITY.animation({ duration: 200 }))
       } else {
         List({ scroller: this.scroller }) {
           ListItem() {
@@ -623,6 +641,7 @@ export struct ThreadPanel {
             this.loadPosts(this.loadedPageStart - 1, LOAD_PREPEND)
           }
         })
+        .transition(TransitionEffect.OPACITY.animation({ duration: 200 }))
       }
     }
     .width('100%').height('100%')
