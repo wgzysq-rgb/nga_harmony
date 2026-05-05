@@ -225,7 +225,7 @@ export struct PostItem {
     Row() {
       Image($r('app.media.icon_reply'))
         .width(16).height(16)
-        .fillColor(this.votedUpPids.has(String(this.post.pid)) ? AppColors.primary : AppColors.textTertiary)
+        .fillColor(AppColors.textTertiary)
     }
     .padding({ left: 6, right: 6, top: 4, bottom: 4 })
     .borderRadius(6)
