@@ -174,7 +174,7 @@ function httpReq(url: string, method: http.RequestMethod,
       readTimeout: 30000,
       connectTimeout: 15000,
     };
-    if (body !== undefined) {
+    if (body) {
       options.extraData = body;
     }
     httpRequest.request(url, options, (err, response) => {
