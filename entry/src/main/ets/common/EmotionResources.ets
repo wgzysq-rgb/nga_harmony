@@ -238,9 +238,74 @@ EM.set('pg:哭', $rawfile('emotions/pg/pg13.png'))
 EM.set('pg:响指', $rawfile('emotions/pg/pg14.png'))
 EM.set('pg:转身', $rawfile('emotions/pg/pg15.png'))
 
+const SMILEY_CODE_TO_NAME: Map<string, string> = new Map()
+SMILEY_CODE_TO_NAME.set('ac:0', 'blink'); SMILEY_CODE_TO_NAME.set('ac:1', 'goodjob'); SMILEY_CODE_TO_NAME.set('ac:2', '上')
+SMILEY_CODE_TO_NAME.set('ac:3', '中枪'); SMILEY_CODE_TO_NAME.set('ac:4', '偷笑'); SMILEY_CODE_TO_NAME.set('ac:5', '冷')
+SMILEY_CODE_TO_NAME.set('ac:6', '凌乱'); SMILEY_CODE_TO_NAME.set('ac:7', '反对'); SMILEY_CODE_TO_NAME.set('ac:8', '吓')
+SMILEY_CODE_TO_NAME.set('ac:9', '吻'); SMILEY_CODE_TO_NAME.set('ac:10', '呆'); SMILEY_CODE_TO_NAME.set('ac:11', '咦')
+SMILEY_CODE_TO_NAME.set('ac:12', '哦'); SMILEY_CODE_TO_NAME.set('ac:13', '哭'); SMILEY_CODE_TO_NAME.set('ac:14', '哭1')
+SMILEY_CODE_TO_NAME.set('ac:15', '哭笑'); SMILEY_CODE_TO_NAME.set('ac:16', '哼'); SMILEY_CODE_TO_NAME.set('ac:17', '喘')
+SMILEY_CODE_TO_NAME.set('ac:18', '喷'); SMILEY_CODE_TO_NAME.set('ac:19', '嘲笑'); SMILEY_CODE_TO_NAME.set('ac:20', '嘲笑1')
+SMILEY_CODE_TO_NAME.set('ac:21', '囧'); SMILEY_CODE_TO_NAME.set('ac:22', '委屈'); SMILEY_CODE_TO_NAME.set('ac:23', '心')
+SMILEY_CODE_TO_NAME.set('ac:24', '忧伤'); SMILEY_CODE_TO_NAME.set('ac:25', '怒'); SMILEY_CODE_TO_NAME.set('ac:26', '怕')
+SMILEY_CODE_TO_NAME.set('ac:27', '惊'); SMILEY_CODE_TO_NAME.set('ac:28', '愁'); SMILEY_CODE_TO_NAME.set('ac:29', '抓狂')
+SMILEY_CODE_TO_NAME.set('ac:30', '抠鼻'); SMILEY_CODE_TO_NAME.set('ac:31', '擦汗'); SMILEY_CODE_TO_NAME.set('ac:32', '无语')
+SMILEY_CODE_TO_NAME.set('ac:33', '晕'); SMILEY_CODE_TO_NAME.set('ac:34', '汗'); SMILEY_CODE_TO_NAME.set('ac:35', '瞎')
+SMILEY_CODE_TO_NAME.set('ac:36', '羞'); SMILEY_CODE_TO_NAME.set('ac:37', '羡慕'); SMILEY_CODE_TO_NAME.set('ac:38', '花痴')
+SMILEY_CODE_TO_NAME.set('ac:39', '茶'); SMILEY_CODE_TO_NAME.set('ac:40', '衰'); SMILEY_CODE_TO_NAME.set('ac:41', '计划通')
+SMILEY_CODE_TO_NAME.set('ac:42', '赞同'); SMILEY_CODE_TO_NAME.set('ac:43', '闪光'); SMILEY_CODE_TO_NAME.set('ac:44', '黑枪')
+SMILEY_CODE_TO_NAME.set('a2:2', 'goodjob'); SMILEY_CODE_TO_NAME.set('a2:3', '偷笑'); SMILEY_CODE_TO_NAME.set('a2:4', '怒')
+SMILEY_CODE_TO_NAME.set('a2:5', '诶嘿'); SMILEY_CODE_TO_NAME.set('a2:7', '笑'); SMILEY_CODE_TO_NAME.set('a2:8', '那个…')
+SMILEY_CODE_TO_NAME.set('a2:9', '哦嗬嗬嗬'); SMILEY_CODE_TO_NAME.set('a2:10', '舔'); SMILEY_CODE_TO_NAME.set('a2:11', '有何贵干')
+SMILEY_CODE_TO_NAME.set('a2:12', '病娇'); SMILEY_CODE_TO_NAME.set('a2:13', 'lucky'); SMILEY_CODE_TO_NAME.set('a2:14', '鬼脸')
+SMILEY_CODE_TO_NAME.set('a2:15', '大哭'); SMILEY_CODE_TO_NAME.set('a2:16', '冷'); SMILEY_CODE_TO_NAME.set('a2:17', '哭')
+SMILEY_CODE_TO_NAME.set('a2:18', '妮可妮可妮'); SMILEY_CODE_TO_NAME.set('a2:19', '惊'); SMILEY_CODE_TO_NAME.set('a2:20', 'poi')
+SMILEY_CODE_TO_NAME.set('a2:21', '恨'); SMILEY_CODE_TO_NAME.set('a2:22', '囧2'); SMILEY_CODE_TO_NAME.set('a2:23', '中枪')
+SMILEY_CODE_TO_NAME.set('a2:24', '囧'); SMILEY_CODE_TO_NAME.set('a2:25', '你看看你'); SMILEY_CODE_TO_NAME.set('a2:26', 'yes')
+SMILEY_CODE_TO_NAME.set('a2:27', 'doge'); SMILEY_CODE_TO_NAME.set('a2:28', '自戳双目'); SMILEY_CODE_TO_NAME.set('a2:30', '偷吃')
+SMILEY_CODE_TO_NAME.set('a2:31', '冷笑'); SMILEY_CODE_TO_NAME.set('a2:32', '壁咚'); SMILEY_CODE_TO_NAME.set('a2:33', '不活了')
+SMILEY_CODE_TO_NAME.set('a2:36', '不明觉厉'); SMILEY_CODE_TO_NAME.set('a2:37', 'jojo立'); SMILEY_CODE_TO_NAME.set('a2:38', 'jojo立2')
+SMILEY_CODE_TO_NAME.set('a2:39', 'jojo立3'); SMILEY_CODE_TO_NAME.set('a2:40', 'jojo立5'); SMILEY_CODE_TO_NAME.set('a2:41', 'jojo立4')
+SMILEY_CODE_TO_NAME.set('a2:42', '威吓'); SMILEY_CODE_TO_NAME.set('a2:45', '你已经死了'); SMILEY_CODE_TO_NAME.set('a2:47', '异议')
+SMILEY_CODE_TO_NAME.set('a2:48', '认真'); SMILEY_CODE_TO_NAME.set('a2:49', '你这种人…'); SMILEY_CODE_TO_NAME.set('a2:51', '是在下输了')
+SMILEY_CODE_TO_NAME.set('a2:52', '抢镜头'); SMILEY_CODE_TO_NAME.set('a2:53', '你为猴这么'); SMILEY_CODE_TO_NAME.set('a2:54', '干杯')
+SMILEY_CODE_TO_NAME.set('a2:55', '干杯2')
+SMILEY_CODE_TO_NAME.set('ng:1', '呲牙笑'); SMILEY_CODE_TO_NAME.set('ng:2', '奸笑'); SMILEY_CODE_TO_NAME.set('ng:3', '问号')
+SMILEY_CODE_TO_NAME.set('ng:4', '茶'); SMILEY_CODE_TO_NAME.set('ng:5', '笑指'); SMILEY_CODE_TO_NAME.set('ng:6', '燃尽')
+SMILEY_CODE_TO_NAME.set('ng:7', '晕'); SMILEY_CODE_TO_NAME.set('ng:8', '扇笑'); SMILEY_CODE_TO_NAME.set('ng:9', '寄')
+SMILEY_CODE_TO_NAME.set('ng:10', '别急'); SMILEY_CODE_TO_NAME.set('ng:11', 'doge'); SMILEY_CODE_TO_NAME.set('ng:12', '丧')
+SMILEY_CODE_TO_NAME.set('ng:13', '汗'); SMILEY_CODE_TO_NAME.set('ng:15', '叹气'); SMILEY_CODE_TO_NAME.set('ng:16', '吃饼')
+SMILEY_CODE_TO_NAME.set('ng:17', '吃瓜'); SMILEY_CODE_TO_NAME.set('ng:18', '吐舌'); SMILEY_CODE_TO_NAME.set('ng:19', '哭')
+SMILEY_CODE_TO_NAME.set('ng:20', '喘'); SMILEY_CODE_TO_NAME.set('ng:21', '心'); SMILEY_CODE_TO_NAME.set('ng:22', '喷')
+SMILEY_CODE_TO_NAME.set('ng:24', '困'); SMILEY_CODE_TO_NAME.set('ng:25', '大哭'); SMILEY_CODE_TO_NAME.set('ng:26', '大惊')
+SMILEY_CODE_TO_NAME.set('ng:27', '害怕'); SMILEY_CODE_TO_NAME.set('ng:28', '惊'); SMILEY_CODE_TO_NAME.set('ng:30', '暴怒')
+SMILEY_CODE_TO_NAME.set('ng:31', '气愤'); SMILEY_CODE_TO_NAME.set('ng:32', '热'); SMILEY_CODE_TO_NAME.set('ng:33', '瓜不熟')
+SMILEY_CODE_TO_NAME.set('ng:34', '瞎'); SMILEY_CODE_TO_NAME.set('ng:35', '色'); SMILEY_CODE_TO_NAME.set('ng:37', '斜眼')
+SMILEY_CODE_TO_NAME.set('ng:38', '问号大')
+
+function resolveSmileyCode(cat: string, code: string): string | null {
+  const explicit: string | undefined = SMILEY_CODE_TO_NAME.get(`${cat}:${code}`)
+  if (explicit !== undefined) return explicit
+  const idx: number = parseInt(code, 10)
+  if (isNaN(idx)) return null
+  const names: string[] = getCategoryNames(cat)
+  if (names.length === 0) return null
+  const zeroBased: boolean = cat === 'ac' || cat === 'pst'
+  const nameIdx: number = zeroBased ? idx : idx - 1
+  if (nameIdx >= 0 && nameIdx < names.length) {
+    const candidate: string = names[nameIdx]
+    if (EM.get(`${cat}:${candidate}`) !== undefined) return candidate
+  }
+  return null
+}
+
 export function getEmotionResource(cat: string, code: string): Resource | null {
-  const r = EM.get(`${cat}:${code}`)
+  const r: Resource | undefined = EM.get(`${cat}:${code}`)
   if (r !== undefined) return r
+  const mappedCat: string = cat === 'pt' ? 'pst' : cat
+  const cleanCode: string = code.replace(/^0+/, '') || '0'
+  const name: string | null = resolveSmileyCode(mappedCat, cleanCode)
+  if (name !== null) return EM.get(`${mappedCat}:${name}`) || null
   return null
 }
 

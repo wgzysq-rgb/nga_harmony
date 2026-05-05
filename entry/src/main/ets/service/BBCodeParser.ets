@@ -97,6 +97,14 @@ function preprocessContent(s: string): string {
     .replace(/<\/blockquote>/gi, '[/quote]')
     .replace(/<a\s+href="(https?:\/\/[^"]+)"[^>]*>(.*?)<\/a>/gi, '[url=$1]$2[/url]')
     .replace(/<img[^>]+class="nga-emotion"[^>]+alt="([a-z]+):([^"]+)"\s*\/?>/gi, '[s:$1:$2]')
+    .replace(/\[img\]https?:\/\/img4\.(?:nga\.cn|nga\.178\.com)\/ngabbs\/post\/smile\/(\w+)\.\w+\[\/img\]/gi,
+      (_m: string, fname: string): string => {
+        const us: number = fname.indexOf('_')
+        if (us >= 0) return `[s:${fname.substring(0, us)}:${fname.substring(us + 1)}]`
+        const nm: RegExpExecArray | null = /^([a-z]+?)(\d+)$/i.exec(fname)
+        if (nm) return `[s:${nm[1]}:${nm[2]}]`
+        return _m
+      })
 }
 
 function parseBBCode(content: string): BBNode[] {
