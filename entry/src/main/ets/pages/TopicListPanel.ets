@@ -51,6 +51,8 @@ export struct TopicListPanel {
   @StorageProp('statusBarHeight') statusBarHeight: number = 0
   @StorageProp('unreadNotiCount') unreadNotiCount: number = 0
   @StorageProp('navBarHeight') navBarHeight: number = 0
+  @State loadingContentOpacity: number = 0
+  private loadingDelayTimer: number = -1
 
   private scroller: Scroller = new Scroller()
   private prefetchedThreads: object[] = []
@@ -161,6 +163,15 @@ export struct TopicListPanel {
   private async loadTopics(page: number): Promise<void> {
     if (page === 1) {
       this.isLoading = true
+      this.loadingContentOpacity = 0
+      clearTimeout(this.loadingDelayTimer)
+      this.loadingDelayTimer = setTimeout((): void => {
+        if (this.isLoading) {
+          animateTo({ duration: 150, curve: Curve.EaseInOut }, (): void => {
+            this.loadingContentOpacity = 1
+          })
+        }
+      }, 400)
       this.hasError = false
       this.clearPrefetch()
     } else {
@@ -192,6 +203,9 @@ export struct TopicListPanel {
         this.errorMsg = (e as Error).message || '加载失败'
       }
     }
+    clearTimeout(this.loadingDelayTimer)
+    this.loadingDelayTimer = -1
+    this.loadingContentOpacity = 0
     this.isLoading = false
     this.isLoadingMore = false
   }
@@ -267,7 +281,8 @@ export struct TopicListPanel {
           Column() {
             LoadingProgress().width(28).height(28).color(AppColors.textTertiary)
             Text('加载中...').fontSize(14).fontColor(AppColors.textTertiary).margin({ top: 8 })
-          }.width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
+          }.opacity(this.loadingContentOpacity).width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
+          .transition(TransitionEffect.OPACITY.animation({ duration: 200 }))
         } else if (this.hasError) {
           Row().width('100%').height(44 + this.statusBarHeight)
           Column() {
@@ -275,12 +290,14 @@ export struct TopicListPanel {
             Button('重试').fontSize(14).fontColor(AppColors.primary).backgroundColor(AppColors.bgSecondary).borderRadius(10)
               .onClick(() => this.loadTopics(1))
           }.width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
+          .transition(TransitionEffect.OPACITY.animation({ duration: 200 }))
         } else if (this.threads.length === 0) {
           Row().width('100%').height(44 + this.statusBarHeight)
           Column() {
             Image($r('app.media.icon_chat_bubble')).width(40).height(40).fillColor(AppColors.textTertiary).opacity(0.4).margin({ bottom: 8 })
             Text('暂无主题').fontSize(15).fontColor(AppColors.textTertiary)
           }.width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
+          .transition(TransitionEffect.OPACITY.animation({ duration: 200 }))
         } else {
           List({ scroller: this.scroller }) {
             ListItem() {
@@ -348,6 +365,7 @@ export struct TopicListPanel {
               this.loadTopics(this.currentPage + 1)
             }
           })
+          .transition(TransitionEffect.OPACITY.animation({ duration: 200 }))
         }
       }
       .width('100%').height('100%')
