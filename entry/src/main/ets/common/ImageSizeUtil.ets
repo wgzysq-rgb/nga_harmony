@@ -185,12 +185,16 @@ async function doFetchRequest(url: string): Promise<ImageSize | null> {
     });
     const code: number = resp.responseCode;
     if (code !== 206 && code !== 200) return null;
+    const buf: ArrayBuffer = resp.result as ArrayBuffer;
+    const hdrs: Record<string, string> = resp.header as Record<string, string>
+    const contentRange: string = hdrs['content-range'] ?? hdrs['Content-Range'] ?? hdrs['CONTENT-RANGE'] ?? ''
+    const contentLen: string = hdrs['content-length'] ?? hdrs['Content-Length'] ?? hdrs['CONTENT-LENGTH'] ?? ''
+    console.info('[ImageSize] url=' + url + ' code=' + code + ' actualBytes=' + buf.byteLength + ' Content-Range=' + contentRange + ' Content-Length=' + contentLen)
     if (code === 200) {
       noRangeHosts.add(host);
-      console.warn('[ImageSize] Server does not support Range, full image downloaded:', host);
+      console.warn('[ImageSize] Server does not support Range, full image downloaded: host=' + host + ' size=' + buf.byteLength);
       return null;
     }
-    const buf: ArrayBuffer = resp.result as ArrayBuffer;
     if (buf.byteLength < 4) return null;
     const size: ImageSize | null = parseBuf(buf, extractExt(url));
     if (size) {
