@@ -66,21 +66,49 @@ export function getAvatarUrl(avatar: string, uid?: number | string): string {
   return `https://img4.nga.178.com/ngabbs/nga_classic/avatar/${avatar}`
 }
 
-export function stripThumbnailSuffix(url: string): string {
-  let result: string = url
+/**
+ * NGA CDN 图片 URL 后缀处理
+ *
+ * NGA 对同一张图片提供多种分辨率，通过文件名后缀区分：
+ *   xxx.jpg         → 原始全尺寸
+ *   xxx.thumb_s.jpg → 小缩略图 (≤56px)
+ *   xxx.thumb_m.jpg → 中缩略图 (≤120px)
+ *   xxx.medium.jpg  → 中等尺寸 (>120px)
+ *   xxx.thumb.jpg   → 旧式缩略图
+ *
+ * stripImageSuffix(url)  → 去掉所有后缀，返回原始尺寸 URL
+ * applyImageSuffix(url, suffix) → 在原始尺寸 URL 上添加指定后缀
+ */
+
+function doStripSuffix(url: string): string {
+  let r: string = url
     .replace(/\.thumb_s(\.\w+)$/i, '$1')
     .replace(/\.thumb_m(\.\w+)$/i, '$1')
     .replace(/\.medium(\.\w+)$/i, '$1')
     .replace(/\.thumb(\.\w+)$/i, '$1')
-  const dot: number = result.lastIndexOf('.')
+  r = r.replace(/\.jpeg\.jpg$/i, '.jpeg')
+  const dot: number = r.lastIndexOf('.')
   if (dot > 0) {
-    const ext: string = result.substring(dot)
-    const prev: string = result.substring(0, dot)
+    const ext: string = r.substring(dot)
+    const prev: string = r.substring(0, dot)
     if (prev.endsWith(ext)) {
-      result = prev
+      r = prev
     }
   }
-  return result
+  return r
+}
+
+export function stripImageSuffix(url: string): string {
+  if (!url) return url
+  return doStripSuffix(url)
+}
+
+export function applyImageSuffix(url: string, suffix: string): string {
+  if (!url) return url
+  const base: string = doStripSuffix(url)
+  const dot: number = base.lastIndexOf('.')
+  if (dot < 0) return base
+  return base.substring(0, dot) + '.' + suffix + base.substring(dot)
 }
 
 /**

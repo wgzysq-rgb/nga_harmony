@@ -434,6 +434,104 @@ function extractTotalReplies(html: string): number {
 }
 
 /**
+ * 从 HTML 中解析 ubbcode.attach.load() 调用的附件数据（优先方案）
+ * 失败时返回 null
+ */
+function tryParseAttachLoad(html: string, lou: number): Record<string, Object>[] | null {
+  const marker: string = `ubbcode.attach.load('postattach${lou}'`;
+  const startIdx: number = html.indexOf(marker);
+  if (startIdx < 0) return null;
+
+  const afterMarker: string = html.substring(startIdx + marker.length);
+  const contentMarker: string = `'postcontent${lou}'`;
+  const contentIdx: number = afterMarker.indexOf(contentMarker);
+  if (contentIdx < 0) return null;
+
+  let pos: number = contentIdx + contentMarker.length;
+  while (pos < afterMarker.length && (afterMarker[pos] === ',' || afterMarker[pos] === ' ' ||
+    afterMarker[pos] === '\n' || afterMarker[pos] === '\r')) {
+    pos++;
+  }
+  if (pos >= afterMarker.length || afterMarker[pos] !== '[') return null;
+
+  let depth: number = 1;
+  let inStr: boolean = false;
+  let strChar: string = '';
+  const jsonStart: number = pos;
+  pos++;
+
+  while (pos < afterMarker.length && depth > 0) {
+    const ch: string = afterMarker[pos];
+    if (inStr) {
+      if (ch === '\\') { pos += 2; continue; }
+      if (ch === strChar) { inStr = false; }
+    } else {
+      if (ch === "'" || ch === '"') { inStr = true; strChar = ch; }
+      else if (ch === '[') depth++;
+      else if (ch === ']') depth--;
+    }
+    pos++;
+  }
+  if (depth !== 0) return null;
+
+  const raw: string = afterMarker.substring(jsonStart, pos);
+  const attachs: Record<string, Object>[] = [];
+  let itemStart: number = raw.indexOf('{');
+  let itemIdx: number = 0;
+
+  while (itemStart >= 0) {
+    let itemEnd: number = -1;
+    let brDepth: number = 0;
+    let inStr: boolean = false;
+    let strChar: string = '';
+    for (let si: number = itemStart; si < raw.length; si++) {
+      const sc: string = raw[si];
+      if (inStr) {
+        if (sc === '\\') { si++; continue; }
+        if (sc === strChar) inStr = false;
+      } else {
+        if (sc === "'" || sc === '"') { inStr = true; strChar = sc; }
+        else if (sc === '{') brDepth++;
+        else if (sc === '}') { brDepth--; if (brDepth === 0) { itemEnd = si + 1; break; } }
+      }
+    }
+    if (itemEnd < 0) break;
+
+    const itemBody: string = raw.substring(itemStart, itemEnd);
+    itemStart = raw.indexOf('{', itemEnd);
+
+    const urlMatch: RegExpExecArray | null = /url\s*:\s*'([^']*)'/i.exec(itemBody);
+    const nameMatch: RegExpExecArray | null = /name\s*:\s*'([^']*)'/i.exec(itemBody);
+    const typeMatch: RegExpExecArray | null = /type\s*:\s*'([^']*)'/i.exec(itemBody);
+    const thumbMatch: RegExpExecArray | null = /thumb\s*:\s*'([^']*)'/i.exec(itemBody);
+    const sizeMatch: RegExpExecArray | null = /size\s*:\s*'([^']*)'/i.exec(itemBody);
+    const dscpMatch: RegExpExecArray | null = /dscp\s*:\s*'([^']*)'/i.exec(itemBody);
+    const orgNameMatch: RegExpExecArray | null = /url_utf8_org_name\s*:\s*'([^']*)'/i.exec(itemBody);
+    const aidMatch: RegExpExecArray | null = /aid\s*:\s*'([^']*)'/i.exec(itemBody);
+
+    const url: string = urlMatch ? urlMatch[1] : '';
+    const fileExtMatch: RegExpExecArray | null = /\.(\w+)$/.exec(url);
+    const fileExt: string = fileExtMatch ? fileExtMatch[1].toLowerCase() : '';
+
+    attachs.push({
+      'aid': aidMatch ? aidMatch[1] : '',
+      'attachurl': url,
+      'url_utf8_org_name': orgNameMatch ? orgNameMatch[1] : '',
+      'name': nameMatch ? nameMatch[1] : '',
+      'ext': fileExt,
+      'type': typeMatch ? typeMatch[1] : 'img',
+      'size': Number(sizeMatch ? sizeMatch[1] : '0') || 0,
+      'thumb': Number(thumbMatch ? thumbMatch[1] : '0') || 0,
+      'dscp': dscpMatch ? dscpMatch[1] : '',
+      'subid': itemIdx,
+    });
+    itemIdx++;
+  }
+
+  return attachs.length > 0 ? attachs : null;
+}
+
+/**
  * 将 NGA HTML 帖子页面解析为与 __output=8 JSON API 相同形状的对象
  * 返回: { data: { __R, __U, __T, __F, __ROWS, __R__ROWS_PAGE, __PAGE } }
  * 可直接传入 parseThreadData()
@@ -470,6 +568,8 @@ export function parseHtmlToRawJson(html: string): object {
       maxLou = lou;
     }
 
+    let attachs: Record<string, Object>[] = tryParseAttachLoad(html, lou) ?? [];
+
     const row: Record<string, Object> = {
       'pid': arg.pid as Object,
       'fid': fid as Object,
@@ -490,6 +590,7 @@ export function parseHtmlToRawJson(html: string): object {
       'vote': '' as Object,
       'alterinfo': '' as Object,
       'isanonymous': false as Object,
+      'attachs': attachs as Object,
     };
 
     __R[String(lou)] = row;

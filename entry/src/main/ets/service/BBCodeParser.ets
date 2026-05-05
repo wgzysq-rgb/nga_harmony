@@ -1,4 +1,5 @@
 import { BBNode, BBNodeType } from '../model/BBCodeNode'
+import { stripImageSuffix } from '../common/Utils'
 
 const NGA_CDN_BASE: string = 'https://img.nga.178.com/attachments'
 
@@ -10,31 +11,14 @@ interface FormatRecord {
   type: BBNodeType
 }
 
-function stripThumb(url: string): string {
-  let result: string = url
-    .replace(/\.thumb_s(\.\w+)$/i, '$1')
-    .replace(/\.thumb_m(\.\w+)$/i, '$1')
-    .replace(/\.medium(\.\w+)$/i, '$1')
-    .replace(/\.thumb(\.\w+)$/i, '$1')
-  const dot: number = result.lastIndexOf('.')
-  if (dot > 0) {
-    const ext: string = result.substring(dot)
-    const prev: string = result.substring(0, dot)
-    if (prev.endsWith(ext)) {
-      result = prev
-    }
-  }
-  return result
-}
-
 export function resolveImgUrl(raw: string): string {
-  if (raw.startsWith('http')) return stripThumb(raw)
+  if (raw.startsWith('http')) return stripImageSuffix(raw)
   if (raw.startsWith('/mon_') || raw.startsWith('./mon_')) {
     const path = raw.startsWith('./') ? raw.substring(1) : raw
-    return NGA_CDN_BASE + stripThumb(path)
+    return NGA_CDN_BASE + stripImageSuffix(path)
   }
-  if (raw.startsWith('/')) return NGA_CDN_BASE + stripThumb(raw)
-  return stripThumb(raw)
+  if (raw.startsWith('/')) return NGA_CDN_BASE + stripImageSuffix(raw)
+  return stripImageSuffix(raw)
 }
 
 function resolveAttachUrl(raw: string): string {

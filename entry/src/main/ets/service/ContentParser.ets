@@ -3,24 +3,9 @@
  * 使用 string.replace 的回调在 ArkTS 中需要显式参数类型
  */
 
-const NGA_CDN_HOSTS: string[] = ['img.nga.178.com', 'img2.nga.178.com', 'img4.nga.178.com', 'img8.nga.cn'];
+import { stripImageSuffix } from '../common/Utils'
 
-function stripThumbnailSuffix(url: string): string {
-  let result: string = url
-    .replace(/\.thumb_s(\.\w+)$/i, '$1')
-    .replace(/\.thumb_m(\.\w+)$/i, '$1')
-    .replace(/\.medium(\.\w+)$/i, '$1')
-    .replace(/\.thumb(\.\w+)$/i, '$1');
-  const dot: number = result.lastIndexOf('.')
-  if (dot > 0) {
-    const ext: string = result.substring(dot)
-    const prev: string = result.substring(0, dot)
-    if (prev.endsWith(ext)) {
-      result = prev
-    }
-  }
-  return result
-}
+const NGA_CDN_HOSTS: string[] = ['img.nga.178.com', 'img2.nga.178.com', 'img4.nga.178.com', 'img8.nga.cn'];
 
 export function resolveAttachUrl(attachurl: string): string {
   if (!attachurl) return '';
@@ -75,7 +60,7 @@ export function parseNgaContent(content: string): string {
   // [img]./mon_xxx[/img] NGA 内部图片
   html = html.replace(/\[img\]\.(\/mon_\S+?)\[\/img\]/g,
     (s: string, p1: string): string => {
-      const cleanPath = stripThumbnailSuffix(p1);
+      const cleanPath = stripImageSuffix(p1);
       return `<img src="https://img.nga.178.com/attachments${cleanPath}" style="max-width:100%;height:auto;border-radius:8px;">`;
     }
   );
@@ -170,7 +155,7 @@ export function parseNgaContent(content: string): string {
   // [img]url[/img] 通用图片
   html = html.replace(/\[img\](.*?)\[\/img\]/g,
     (s: string, p1: string): string => {
-      const cleanUrl = stripThumbnailSuffix(p1);
+      const cleanUrl = stripImageSuffix(p1);
       return `<img src="${cleanUrl}" style="max-width:100%;height:auto;border-radius:8px;">`;
     }
   );
@@ -211,10 +196,10 @@ export function extractContentImages(content: string): string[] {
   while (match !== null) {
     const rawUrl = match[1];
     if (rawUrl.startsWith('.')) {
-      const cleanPath = stripThumbnailSuffix(rawUrl.substring(1));
+      const cleanPath = stripImageSuffix(rawUrl.substring(1));
       urls.push(`https://img.nga.178.com/attachments${cleanPath}`);
     } else {
-      urls.push(stripThumbnailSuffix(rawUrl));
+      urls.push(stripImageSuffix(rawUrl));
     }
     match = pattern.exec(content);
   }

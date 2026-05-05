@@ -24,17 +24,6 @@ import type { NgaNotification } from '../model/Notification';
 import type { MessageListInfo, MessageDetailInfo } from '../model/Message';
 import { ProfileData, ReputationData, AdminForumsData } from '../model/User';
 
-function buildThumbUrl(attachUrl: string, thumbHeight: number): string {
-  if (!attachUrl || thumbHeight <= 0) return attachUrl;
-  const dotPos: number = attachUrl.lastIndexOf('.');
-  if (dotPos < 0) return attachUrl;
-  const base: string = attachUrl.substring(0, dotPos);
-  const ext: string = attachUrl.substring(dotPos);
-  if (thumbHeight <= 56) return base + '.thumb_s' + ext;
-  if (thumbHeight <= 120) return base + '.thumb_m' + ext;
-  return base + '.medium' + ext;
-}
-
 // ============== 返回类型定义 ==============
 
 export class ApiResult {
@@ -721,7 +710,7 @@ function fillThreadResult(raw: Record<string, Object>, result: ThreadResult,
       info.type = a.type;
       info.size = a.size;
       info.thumb = a.thumb;
-      info.thumbUrl = buildThumbUrl(info.attachurl, a.thumb);
+      info.thumbUrl = info.attachurl;
       info.dscp = a.dscp;
       info.subid = a.subid;
       return info;

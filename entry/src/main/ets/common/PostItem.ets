@@ -143,7 +143,7 @@ export struct PostItem {
   @Builder
   renderImageAttach(att: PostAttachInfo) {
     if (VIDEO_EXTS.indexOf(att.ext.toLowerCase()) < 0 && AUDIO_EXTS.indexOf(att.ext.toLowerCase()) < 0) {
-      Image(att.thumbUrl || att.attachurl).width(100).height(100).borderRadius(8)
+      Image(att.attachurl).width(100).height(100).borderRadius(8)
         .objectFit(ImageFit.Cover).backgroundColor(AppColors.bgSecondary)
         .margin({ right: 6, top: 6 }).onError(() => {})
         .onClick(() => {

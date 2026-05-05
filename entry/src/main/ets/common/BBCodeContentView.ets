@@ -110,12 +110,24 @@ export struct BBCodeContentView {
     }
   }
 
-  private onImageLoaded(src: string): void {
+  private onImageLoaded(src: string, imgWidth?: number, imgHeight?: number): void {
     if (!this.loadedImages.has(src)) {
       const s: Set<string> = new Set()
       this.loadedImages.forEach((v: string) => { s.add(v) })
       s.add(src)
       this.loadedImages = s
+    }
+    if (imgWidth !== undefined && imgHeight !== undefined && imgWidth > 0 && imgHeight > 0) {
+      if (!this.imageSizes.has(src)) {
+        const m: Map<string, ImageSize> = new Map()
+        this.imageSizes.forEach((v: ImageSize, k: string) => { m.set(k, v) })
+        const size: ImageSize = new ImageSize()
+        size.width = imgWidth
+        size.height = imgHeight
+        m.set(src, size)
+        this.imageSizes = m
+        this.releaseImage(src)
+      }
     }
   }
 
@@ -264,6 +276,7 @@ export struct BBCodeContentView {
       Span(node.text)
         .fontWeight(weight)
         .fontStyle(style)
+        .decoration({ type: deco })
         .fontColor(color.length > 0 ? color : (ctx.inQuote ? AppColors.textSecondary : AppColors.textPrimary))
         .fontSize(size > 0 ? size : (ctx.inQuote ? 14 : 15))
     }
@@ -305,12 +318,14 @@ export struct BBCodeContentView {
       Span(child.text)
         .fontWeight(FontWeight.Bold)
         .fontStyle(style)
+        .decoration({ type: deco })
         .fontColor(color.length > 0 ? color : (ctx.inQuote ? AppColors.textSecondary : AppColors.textPrimary))
         .fontSize(size > 0 ? size : (ctx.inQuote ? 14 : 15))
     } else {
       Span(child.text)
         .fontWeight(weight)
         .fontStyle(style)
+        .decoration({ type: deco })
         .fontColor(color.length > 0 ? color : (ctx.inQuote ? AppColors.textSecondary : AppColors.textPrimary))
         .fontSize(size > 0 ? size : (ctx.inQuote ? 14 : 15))
     }
@@ -403,8 +418,12 @@ export struct BBCodeContentView {
           .onError(() => {
             this.onImageLoaded(src)
           })
-          .onComplete(() => {
-            this.onImageLoaded(src)
+          .onComplete((event) => {
+            if (event) {
+              this.onImageLoaded(src, event.width, event.height)
+            } else {
+              this.onImageLoaded(src)
+            }
           })
           .onClick(() => {
             const allUrls = this.getImageUrls()
@@ -430,7 +449,7 @@ export struct BBCodeContentView {
       maxHeight: inQuote ? 200 : 10000,
       minHeight: 60,
     })
-    .backgroundColor(AppColors.bgSecondary)
+    .backgroundColor(this.loadedImages.has(src) ? Color.Transparent : AppColors.bgSecondary)
     .borderRadius(inQuote ? 6 : 8)
     .margin({ top: 6, bottom: 4 })
   }
