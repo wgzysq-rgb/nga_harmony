@@ -86,13 +86,16 @@ function doStripSuffix(url: string): string {
     .replace(/\.thumb_m(\.\w+)$/i, '$1')
     .replace(/\.medium(\.\w+)$/i, '$1')
     .replace(/\.thumb(\.\w+)$/i, '$1')
-  r = r.replace(/\.jpeg\.jpg$/i, '.jpeg')
-  const dot: number = r.lastIndexOf('.')
-  if (dot > 0) {
-    const ext: string = r.substring(dot)
-    const prev: string = r.substring(0, dot)
-    if (prev.endsWith(ext)) {
-      r = prev
+  const knownExts: string[] = ['webp', 'png', 'gif', 'bmp', 'jpg', 'jpeg']
+  const lastDot: number = r.lastIndexOf('.')
+  if (lastDot > 0) {
+    const prev: string = r.substring(0, lastDot)
+    const secondDot: number = prev.lastIndexOf('.')
+    if (secondDot > 0) {
+      const firstExt: string = prev.substring(secondDot + 1).toLowerCase()
+      if (knownExts.indexOf(firstExt) >= 0) {
+        r = prev
+      }
     }
   }
   return r
