@@ -5,8 +5,9 @@ import { AppColors } from '../common/Constants'
 import { formatTime, fmtNum, escHtml, unescapeHtml } from '../common/Utils'
 import { Avatar } from '../common/Avatar'
 import { MakeNoteDialog } from '../common/Dialogs'
-import { pasteboard } from '@kit.BasicServicesKit';
+import { pasteboard, BusinessError } from '@kit.BasicServicesKit';
 import { display } from '@kit.ArkUI';
+import { FunctionComponent, FunctionController } from '@kit.AgentFrameworkKit';
 import { getUserActivityAnalysis, UserActivityAnalysis, ForumStat } from '../service/NgaApi';
 import { floatingLayerStore } from '../store/FloatingLayerStore';
 
@@ -22,6 +23,8 @@ export struct ProfileCardPopup {
   noteDialogController?: CustomDialogController
   @State analysisMode: string = 'idle'
   @State analysisData: UserActivityAnalysis | null = null
+  private agentController: FunctionController = new FunctionController()
+  private readonly agentId: string = 'agent1f869c42e32d4b6688b5f6d582fb2053'
 
   private async startAnalysis(): Promise<void> {
     if (this.analysisMode !== 'idle') return
@@ -398,16 +401,32 @@ export struct ProfileCardPopup {
         .width('100%')
         .padding({ left: 16, right: 16 })
 
-        // 复制按钮
-        Text('复制数据')
-          .fontSize(11).fontColor(AppColors.white)
-          .backgroundColor(AppColors.primary)
-          .borderRadius(12)
-          .padding({ left: 14, right: 14, top: 5, bottom: 5 })
-          .margin({ top: 10, bottom: 8, left: 16 })
-          .onClick(() => {
-            this.copyToClipboard(this.buildSummaryText())
+        Row() {
+          // 复制按钮
+          Text('复制数据')
+            .fontSize(13).fontColor(AppColors.white)
+            .backgroundColor(AppColors.primary)
+            .borderRadius(12)
+            .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+            .margin({ right: 8 })
+            .onClick(() => {
+              this.copyToClipboard(this.buildSummaryText())
+            })
+
+          // 智能体分析按钮 - 通过Function组件拉起智能体
+          FunctionComponent({
+            agentId: this.agentId,
+            onError: (err: BusinessError) => {
+              console.error(`Agent launch failed: code=${err.code}, message=${err.message}`)
+            },
+            options: {
+              title: 'AI分析',
+              queryText: this.buildSummaryText()
+            },
+            controller: this.agentController
           })
+        }
+        .margin({ top: 10, bottom: 8, left: 16 })
       }
     }
     .width('100%')
@@ -510,6 +529,11 @@ export struct ProfileCardPopup {
         text += `  ${i + 1}. ${d.replySnippets[i]}\n`
       }
     }
+    text += '\n\n【分析指令】请根据以上用户的论坛活跃版面、发表主题和回复内容，分析总结以下内容：\n'
+    text += '1. 用户画像：推断该用户的身份、兴趣领域、在论坛中的角色\n'
+    text += '2. 语言风格：分析其说话习惯、用词特点、语气倾向\n'
+    text += '3. 政治光谱：根据其讨论话题和立场倾向，判断其政治倾向\n'
+    text += '4. 整体点评：以辛辣尖锐的网络用语对其论坛形象进行一句话锐评\n'
     return text
   }
 }
