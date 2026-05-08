@@ -347,16 +347,15 @@ export class ReplyManagerClass {
     )
   }
 
-  private async sendEdit(userText: string, _isAnonymous: boolean): Promise<PostReplyResult> {
+  private async sendEdit(userText: string, isAnonymous: boolean): Promise<PostReplyResult> {
     if (!this.ctx.targetPost) {
       const err: PostReplyResult = new PostReplyResult()
       err.error = '未指定目标楼层'
       return err
     }
-    const anony: number = this.ctx.targetPost.isanonymous ? 1 : 0
     return postReply(
       appStore.auth.token, this.ctx.tid, this.ctx.fid,
-      userText, anony,
+      userText, isAnonymous ? 1 : 0,
       this.pendingAttachments, this.pendingAttachmentsCheck,
       0, 'modify', this.ctx.targetPost.pid, ''
     )

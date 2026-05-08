@@ -44,6 +44,9 @@ export struct ReplyDialog {
   aboutToAppear(): void {
     if (this.editMode) {
       this.replyText = this.initialContent
+      this.isAnonymous = replyManager.isEditMode && replyManager.targetPost !== null
+        ? replyManager.targetPost.isanonymous
+        : false
     } else {
       this.isCommentMode = replyManager.type === ReplyType.COMMENT
       const draft: string = replyManager.loadDraft()
@@ -143,8 +146,7 @@ export struct ReplyDialog {
       }
     }
     this.sending = true
-    const anony: boolean = this.editMode ? false : this.isAnonymous
-    this.onSend(this.replyText.trim(), anony).then(() => {
+    this.onSend(this.replyText.trim(), this.isAnonymous).then(() => {
       replyManager.clearDraft()
       this.onClose()
     }).finally(() => {
@@ -293,15 +295,13 @@ export struct ReplyDialog {
 
       // 底栏：匿名 + 发送/保存
       Row() {
-        if (!this.editMode) {
-          Row() {
-            Toggle({ type: ToggleType.Checkbox, isOn: this.isAnonymous })
-              .width(16).height(16)
-              .onChange((value: boolean) => { this.isAnonymous = value })
-            Text('匿名').fontSize(11).fontColor(AppColors.textTertiary).margin({ left: 3 })
-          }
-          .alignItems(VerticalAlign.Center)
+        Row() {
+          Toggle({ type: ToggleType.Checkbox, isOn: this.isAnonymous })
+            .width(16).height(16)
+            .onChange((value: boolean) => { this.isAnonymous = value })
+          Text('匿名').fontSize(11).fontColor(AppColors.textTertiary).margin({ left: 3 })
         }
+        .alignItems(VerticalAlign.Center)
 
         Blank().layoutWeight(1)
 

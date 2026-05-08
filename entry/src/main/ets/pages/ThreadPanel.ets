@@ -424,9 +424,9 @@ export struct ThreadPanel {
     }
   }
 
-  private async handleEditSend(text: string): Promise<void> {
+  private async handleEditSend(text: string, isAnony: boolean): Promise<void> {
     try {
-      const result: PostReplyResult = await replyManager.send(text, false)
+      const result: PostReplyResult = await replyManager.send(text, isAnony)
       if (result.ok) {
         appStore.showToast('编辑成功')
         await this.loadPosts(1, LOAD_REPLACE)
@@ -608,7 +608,7 @@ export struct ThreadPanel {
                   floatingLayerStore.editMode = true
                   floatingLayerStore.editInitialContent = unescapeHtml(p.content)
                   floatingLayerStore.replyOnSend = (_text: string, _isAnony: boolean): Promise<void> => {
-                    return this.handleEditSend(_text)
+                    return this.handleEditSend(_text, _isAnony)
                   }
                   floatingLayerStore.push(FloatingPage.REPLY_DIALOG)
                 },
