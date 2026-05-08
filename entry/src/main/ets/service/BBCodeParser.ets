@@ -180,6 +180,23 @@ function parseBlockNodes(state: ParseState, closePattern: RegExp | null): BBNode
   return result
 }
 
+/**
+ * 根据文件扩展名推测 [img] 标签的真实媒体类型。
+ * NGA 有时会把 GIF 转换后保存为 .gif.mp4 但仍用 [img] 包裹。
+ * 返回 VIDEO / AUDIO 或 IMAGE（非媒体扩展名时由调用方默认当图片处理）。
+ */
+const MEDIA_VIDEO_EXTS: string[] = ['mp4', 'webm', 'ogg', 'mov', '3gp']
+const MEDIA_AUDIO_EXTS: string[] = ['mp3', 'wav', 'flac', 'aac', 'm4a']
+
+function guessMediaTypeFromExt(rawUrl: string): BBNodeType {
+  const extMatch: RegExpExecArray | null = /\.(\w+)(\?.*)?$/.exec(rawUrl)
+  if (!extMatch) return BBNodeType.IMAGE
+  const ext: string = extMatch[1].toLowerCase()
+  if (MEDIA_VIDEO_EXTS.indexOf(ext) >= 0) return BBNodeType.VIDEO
+  if (MEDIA_AUDIO_EXTS.indexOf(ext) >= 0) return BBNodeType.AUDIO
+  return BBNodeType.IMAGE
+}
+
 function tryMatchBlock(state: ParseState, result: BBNode[]): boolean {
   const savedPos = state.pos
 
@@ -396,8 +413,14 @@ function tryMatchBlock(state: ParseState, result: BBNode[]): boolean {
     const rawUrl = ncm[1]
     state.pos = pNgaImg.lastIndex
     const n = new BBNode()
-    n.type = BBNodeType.IMAGE
-    n.src = resolveImgUrl(rawUrl)
+    const guessedType: BBNodeType = guessMediaTypeFromExt(rawUrl)
+    if (guessedType === BBNodeType.VIDEO || guessedType === BBNodeType.AUDIO) {
+      n.type = guessedType
+      n.src = isSafeUrl(rawUrl) ? resolveAttachUrl(rawUrl) : ''
+    } else {
+      n.type = BBNodeType.IMAGE
+      n.src = resolveImgUrl(rawUrl)
+    }
     result.push(n)
     return true
   }
@@ -409,8 +432,14 @@ function tryMatchBlock(state: ParseState, result: BBNode[]): boolean {
     const rawUrl = im[1]
     state.pos = pImg.lastIndex
     const n = new BBNode()
-    n.type = BBNodeType.IMAGE
-    n.src = resolveImgUrl(rawUrl)
+    const guessedType: BBNodeType = guessMediaTypeFromExt(rawUrl)
+    if (guessedType === BBNodeType.VIDEO || guessedType === BBNodeType.AUDIO) {
+      n.type = guessedType
+      n.src = isSafeUrl(rawUrl) ? resolveAttachUrl(rawUrl) : ''
+    } else {
+      n.type = BBNodeType.IMAGE
+      n.src = resolveImgUrl(rawUrl)
+    }
     result.push(n)
     return true
   }
