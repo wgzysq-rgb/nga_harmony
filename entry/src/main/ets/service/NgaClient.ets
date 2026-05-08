@@ -107,12 +107,62 @@ function emptyStringRecord(): Record<string, string> {
   return result;
 }
 
-function buildEncodedBody(fields: Record<string, string>): string {
+function emojiToHtmlEntity(str: string): string {
+  let result = '';
+  for (let i = 0; i < str.length; i++) {
+    const code = str.charCodeAt(i);
+    if (code >= 0xD800 && code <= 0xDBFF && i + 1 < str.length) {
+      const nextCode = str.charCodeAt(i + 1);
+      if (nextCode >= 0xDC00 && nextCode <= 0xDFFF) {
+        const fullCodepoint = (code - 0xD800) * 0x400 + (nextCode - 0xDC00) + 0x10000;
+        result += '&#' + String(fullCodepoint) + ';';
+        i++;
+      } else {
+        result += str[i];
+      }
+    } else {
+      result += str[i];
+    }
+  }
+  return result;
+}
+
+function gbkPercentEncode(str: string): string {
+  const cleaned = emojiToHtmlEntity(str);
+  const encoder = util.TextEncoder.create('gbk');
+  const bytes = encoder.encodeInto(cleaned);
+  let result = '';
+  for (let i = 0; i < bytes.length; i++) {
+    const byteVal = bytes[i];
+    if ((byteVal >= 0x41 && byteVal <= 0x5A) ||
+        (byteVal >= 0x61 && byteVal <= 0x7A) ||
+        (byteVal >= 0x30 && byteVal <= 0x39) ||
+        byteVal === 0x2D || byteVal === 0x5F || byteVal === 0x2E || byteVal === 0x7E) {
+      result += String.fromCharCode(byteVal);
+    } else {
+      const hex = byteVal.toString(16).toUpperCase();
+      result += '%' + (hex.length === 1 ? '0' + hex : hex);
+    }
+  }
+  return result;
+}
+
+function buildEncodedBody(fields: Record<string, string>, gbkFieldKeys?: string[]): string {
   const parts: string[] = [];
   const keys = Object.keys(fields);
+  const gbkSet: Record<string, boolean> = {};
+  if (gbkFieldKeys) {
+    for (let i = 0; i < gbkFieldKeys.length; i++) {
+      gbkSet[gbkFieldKeys[i]] = true;
+    }
+  }
   for (let i = 0; i < keys.length; i++) {
     const key = keys[i];
-    parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(fields[key])}`);
+    if (gbkSet[key]) {
+      parts.push(`${encodeURIComponent(key)}=${gbkPercentEncode(fields[key])}`);
+    } else {
+      parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(fields[key])}`);
+    }
   }
   return parts.join('&');
 }
@@ -203,9 +253,10 @@ async function ngaGet(path: string, params: Record<string, string>,
 }
 
 async function ngaPost(path: string, body: Record<string, string>,
-  cookies?: Cookies): Promise<object> {
+  cookies?: Cookies, gbkFieldKeys?: string[]): Promise<object> {
+  const hasGbk: boolean = gbkFieldKeys !== undefined && gbkFieldKeys.length > 0;
   return ngaRequest(path, http.RequestMethod.POST, emptyStringRecord(),
-    buildEncodedBody(body), cookies, '', emptyStringRecord());
+    buildEncodedBody(body, gbkFieldKeys), cookies, '', emptyStringRecord(), hasGbk);
 }
 
 async function ngaPostWithQuery(path: string, params: Record<string, string>,
@@ -447,7 +498,8 @@ async function rawRequest(path: string, method: http.RequestMethod,
 interface INgaClient {
   get: (path: string, params: Record<string, string>,
     cookies?: Cookies, extraHeaders?: Record<string, string>) => Promise<object>;
-  post: (path: string, body: Record<string, string>, cookies?: Cookies) => Promise<object>;
+  post: (path: string, body: Record<string, string>, cookies?: Cookies,
+    gbkFieldKeys?: string[]) => Promise<object>;
   postWithQuery: (path: string, params: Record<string, string>, cookies?: Cookies) => Promise<object>;
   postMultipart: (path: string, fields: Record<string, string>,
     cookies?: Cookies, baseUrl?: string) => Promise<object>;
@@ -472,8 +524,8 @@ const client: INgaClient = {
   },
 
   async post(path: string, body: Record<string, string>,
-    cookies?: Cookies): Promise<object> {
-    return ngaPost(path, body, cookies);
+    cookies?: Cookies, gbkFieldKeys?: string[]): Promise<object> {
+    return ngaPost(path, body, cookies, gbkFieldKeys);
   },
 
   async postWithQuery(path: string, params: Record<string, string>,

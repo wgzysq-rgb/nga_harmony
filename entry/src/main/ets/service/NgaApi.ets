@@ -874,7 +874,8 @@ export async function postReply(token: string, tid: number, fid: number,
     if (postSubject) fields['post_subject'] = postSubject;
     if (stid) fields['stid'] = String(stid);
 
-    const raw = await ngaClient.post('/post.php', fields, { uid: session.uid, cid: session.cid }) as Record<string, Object>;
+    const raw = await ngaClient.post('/post.php', fields,
+      { uid: session.uid, cid: session.cid }, ['post_content', 'post_subject']) as Record<string, Object>;
     const error = parseNgaError(raw);
     if (error) {
       result.error = error;
@@ -914,7 +915,8 @@ export async function postComment(token: string, tid: number, pid: number,
       '__output': '8',
     };
 
-    const raw = await ngaClient.post('/post.php', fields, { uid: session.uid, cid: session.cid }) as Record<string, Object>;
+    const raw = await ngaClient.post('/post.php', fields,
+      { uid: session.uid, cid: session.cid }, ['post_content']) as Record<string, Object>;
     const error = parseNgaError(raw);
     if (error) {
       result.error = error;

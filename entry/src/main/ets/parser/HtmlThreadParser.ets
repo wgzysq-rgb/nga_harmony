@@ -21,7 +21,13 @@ function decodeHtmlEntities(s: string): string {
   r = r.replace(/&#x27;/g, "'");
   r = r.replace(/&#x2F;/g, '/');
   r = r.replace(/&#(\d+);/g, (_s: string, code: string): string => {
-    return String.fromCharCode(Number(code));
+    const cp: number = Number(code);
+    if (cp <= 0xFFFF) {
+      return String.fromCharCode(cp);
+    }
+    const high: number = Math.floor((cp - 0x10000) / 0x400) + 0xD800;
+    const low: number = (cp - 0x10000) % 0x400 + 0xDC00;
+    return String.fromCharCode(high) + String.fromCharCode(low);
   });
   return r;
 }
