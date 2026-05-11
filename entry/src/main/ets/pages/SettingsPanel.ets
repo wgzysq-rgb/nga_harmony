@@ -8,6 +8,9 @@ import { routerStore, Screen } from '../store/RouterStore'
 import { AppColors, IconColors, THEME_OPTIONS, ThemeOption } from '../common/Constants'
 import { ConfirmDialog } from '../common/Dialogs'
 import { PanelNavBar } from '../common/PanelNavBar'
+import { sessionStore } from '../service/SessionStore'
+import { picker, fileIo } from '@kit.CoreFileKit'
+import { common } from '@kit.AbilityKit'
 
 @Component
 export struct SettingsPanel {
@@ -33,6 +36,37 @@ export struct SettingsPanel {
 
   aboutToDisappear() {
     this.logoutDialogController = undefined
+  }
+
+  private async handleExport(): Promise<void> {
+    try {
+      const token = appStore.auth.token
+      const session = sessionStore.get(token)
+      if (!session) {
+        appStore.showToast('未找到登录会话')
+        return
+      }
+
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext
+      const documentSaveOptions = new picker.DocumentSaveOptions()
+      documentSaveOptions.newFileNames = ['nga_credentials.txt']
+      documentSaveOptions.fileSuffixChoices = ['文档|.txt']
+
+      const documentViewPicker = new picker.DocumentViewPicker(context)
+      const uris: string[] = await documentViewPicker.save(documentSaveOptions)
+
+      if (uris.length === 0) {
+        return
+      }
+
+      const content = `NGA_UID=${session.uid}\nNGA_CID=${session.cid}`
+      const file = fileIo.openSync(uris[0], fileIo.OpenMode.READ_WRITE)
+      fileIo.writeSync(file.fd, content)
+      fileIo.closeSync(file)
+      appStore.showToast('凭据已导出')
+    } catch (e) {
+      appStore.showToast('导出失败')
+    }
   }
 
   build() {
@@ -112,6 +146,12 @@ export struct SettingsPanel {
                   })
               }
               .width('100%').height(44).padding({ left: 16, right: 16 }).alignItems(VerticalAlign.Center)
+
+              Divider().margin({ left: 60 }).color(AppColors.separator)
+
+              this.SettingRow($r('app.media.icon_check'), IconColors.checkin, '导出凭据', '', () => {
+                this.handleExport()
+              })
 
               Divider().margin({ left: 60 }).color(AppColors.separator)
 

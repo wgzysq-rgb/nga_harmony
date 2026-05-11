@@ -174,6 +174,11 @@ export class SearchForumResult extends ApiResult {
   data: object | null = null;
 }
 
+export class InjectResult extends ApiResult {
+  token: string = '';
+  user: UserInfo | null = null;
+}
+
 // ============== 临时登录会话 ==============
 
 interface LoginSession {
@@ -400,6 +405,37 @@ export async function getCurrentUser(token: string): Promise<CurrentUserResult> 
 
 export async function logout(token: string): Promise<void> {
   await sessionStore.destroy(token);
+}
+
+export async function injectCredentials(uid: string, cid: string): Promise<InjectResult> {
+  const result = new InjectResult();
+
+  if (!uid || !cid) {
+    result.error = '凭据不完整';
+    return result;
+  }
+
+  try {
+    let nickName = uid;
+    const avatarUrl = `https://img4.nga.178.com/ngabbs/nga_classic/avatar/${uid}.png`;
+
+    const fetched = await fetchNickNameFromNga(uid, cid, uid);
+    if (fetched) {
+      nickName = fetched.nickName || nickName;
+    }
+
+    const token = await sessionStore.create(uid, cid, nickName, avatarUrl);
+    result.ok = true;
+    result.token = token;
+    const user = new UserInfo();
+    user.uid = uid;
+    user.nickName = nickName;
+    user.avatarUrl = avatarUrl;
+    result.user = user;
+  } catch (e) {
+    result.error = '凭据无效或已过期';
+  }
+  return result;
 }
 
 export function getSession(token: string): Session | null {

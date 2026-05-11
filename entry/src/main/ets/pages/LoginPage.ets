@@ -1,11 +1,14 @@
 /**
  * 登录页面 - 从 React LoginPage.tsx 迁移
- * 支持两步登录：密码 → 验证码
+ * 支持两步登录：密码 → 验证码，以及凭据文件导入
  */
 
-import { loginStep1, loginStep2, getCurrentUser } from '../service/NgaApi'
+import { loginStep1, loginStep2, injectCredentials } from '../service/NgaApi'
 import { appStore } from '../store/AppStore'
 import { AppColors } from '../common/Constants'
+import { picker, fileIo } from '@kit.CoreFileKit'
+import { common } from '@kit.AbilityKit'
+import { util } from '@kit.ArkTS'
 import router from '@ohos.router'
 
 @Entry
@@ -15,6 +18,7 @@ struct LoginPage {
   @State password: string = ''
   @State captcha: string = ''
   @State loading: boolean = false
+  @State importing: boolean = false
   @State error: string = ''
   @State loginToken: string = ''
   @State captchaId: string = ''
@@ -110,7 +114,7 @@ struct LoginPage {
         .backgroundColor(AppColors.primary)
         .borderRadius(12)
         .margin({ top: 20 })
-        .enabled(!this.loading)
+        .enabled(!this.loading && !this.importing)
         .onClick(() => {
           this.handleLogin()
         })
@@ -123,9 +127,20 @@ struct LoginPage {
       .width('85%')
       .margin({ top: 24, bottom: 24 })
 
-      Text('鸿蒙端暂不支持凭据文件注入')
-        .fontSize(13)
-        .fontColor(AppColors.textTertiary)
+      Button(this.importing ? '...' : '导入凭据文件')
+        .width('85%')
+        .height(50)
+        .fontSize(17)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(AppColors.primary)
+        .backgroundColor(Color.Transparent)
+        .borderRadius(12)
+        .borderWidth(1.5)
+        .borderColor(AppColors.primary)
+        .enabled(!this.loading && !this.importing)
+        .onClick(() => {
+          this.handleImport()
+        })
     }
     .width('100%')
     .height('100%')
@@ -146,7 +161,6 @@ struct LoginPage {
 
     try {
       if (this.loginToken) {
-        // Step 2: 验证码登录
         if (!this.captcha) {
           this.error = '请输入验证码'
           this.loading = false
@@ -156,12 +170,10 @@ struct LoginPage {
         const result = await loginStep2(this.loginToken, this.captchaId, this.captcha)
 
         if (result.ok && result.token) {
-          // 登录成功
           const user = result.user!
           await appStore.setAuth(result.token, user.uid, user.nickName, user.avatarUrl)
           router.replaceUrl({ url: 'pages/MainPage' })
         } else if (result.needCaptcha) {
-          // 需要重新输入验证码
           this.loginToken = result.loginToken
           this.captchaId = result.captchaId
           this.captchaImage = result.captchaImage
@@ -171,7 +183,6 @@ struct LoginPage {
           this.error = result.error || '登录失败'
         }
       } else {
-        // Step 1: 密码登录
         const result = await loginStep1(this.username, this.password)
 
         if (result.ok && result.needCaptcha) {
@@ -179,7 +190,6 @@ struct LoginPage {
           this.captchaId = result.captchaId
           this.captchaImage = result.captchaImage
         } else if (result.ok) {
-          // 无需验证码直接登录（一般不会发生）
           this.error = result.error || '登录失败'
         } else {
           this.error = result.error || '登录失败'
@@ -192,8 +202,61 @@ struct LoginPage {
     }
   }
 
+  private async handleImport(): Promise<void> {
+    this.error = ''
+
+    try {
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext
+      const documentSelectOptions = new picker.DocumentSelectOptions()
+      documentSelectOptions.maxSelectNumber = 1
+      documentSelectOptions.fileSuffixFilters = ['.txt', '.ini', '.cfg']
+
+      const documentViewPicker = new picker.DocumentViewPicker(context)
+      const uris: string[] = await documentViewPicker.select(documentSelectOptions)
+
+      if (uris.length === 0) {
+        return
+      }
+
+      this.importing = true
+
+      const file = fileIo.openSync(uris[0], fileIo.OpenMode.READ_ONLY)
+      const stat = fileIo.statSync(uris[0])
+      const buffer = new ArrayBuffer(stat.size)
+      const readLen = fileIo.readSync(file.fd, buffer)
+      fileIo.closeSync(file)
+
+      const textDecoder = util.TextDecoder.create('utf-8')
+      const content = textDecoder.decodeToString(new Uint8Array(buffer, 0, readLen))
+
+      const uidMatch = content.match(/NGA_UID\s*=\s*(\S+)/)
+      const cidMatch = content.match(/NGA_CID\s*=\s*(\S+)/)
+
+      if (!uidMatch || !cidMatch) {
+        this.error = '文件格式无效，需要包含 NGA_UID 和 NGA_CID'
+        return
+      }
+
+      const uid = uidMatch[1]
+      const cid = cidMatch[1]
+
+      const result = await injectCredentials(uid, cid)
+
+      if (result.ok && result.token && result.user) {
+        const user = result.user
+        await appStore.setAuth(result.token, user.uid, user.nickName, user.avatarUrl)
+        router.replaceUrl({ url: 'pages/MainPage' })
+      } else {
+        this.error = result.error || '凭据验证失败'
+      }
+    } catch (e) {
+      this.error = (e as Error).message || '导入失败'
+    } finally {
+      this.importing = false
+    }
+  }
+
   private async refreshCaptcha(): Promise<void> {
-    // 重新获取验证码 - 复用 loginStep1 的逻辑
     try {
       const result = await loginStep1(this.username, this.password)
       if (result.ok) {
