@@ -341,9 +341,17 @@ class AppStoreClass {
     if (theme === 'original' || theme === 'white') {
       theme = 'light'
     }
-    let mode: number = ConfigurationConstant.ColorMode.COLOR_MODE_LIGHT
-    if (theme === 'dark') {
+    let mode: number
+    let effectiveTheme: string
+    if (theme === 'system') {
+      mode = ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET
+      effectiveTheme = AppStorage.get<string>('effectiveColorMode') ?? 'light'
+    } else if (theme === 'dark') {
       mode = ConfigurationConstant.ColorMode.COLOR_MODE_DARK
+      effectiveTheme = 'dark'
+    } else {
+      mode = ConfigurationConstant.ColorMode.COLOR_MODE_LIGHT
+      effectiveTheme = 'light'
     }
     try {
       this.context?.getApplicationContext().setColorMode(mode)
@@ -351,9 +359,10 @@ class AppStoreClass {
       hilog.error(DOMAIN, TAG, 'setColorMode failed: %{public}s', JSON.stringify(err))
     }
     AppStorage.setOrCreate('themeName', theme)
+    AppStorage.setOrCreate('effectiveColorMode', effectiveTheme)
 
     try {
-      updateStatusBarStyle(theme === 'dark')
+      updateStatusBarStyle(effectiveTheme === 'dark')
     } catch (err) {
       hilog.error(DOMAIN, TAG, 'updateStatusBarStyle failed: %{public}s', JSON.stringify(err))
     }

@@ -47,20 +47,21 @@ export struct SettingsPanel {
               Text('主题选择').fontSize(15).fontColor(AppColors.textSecondary)
                 .width('100%').padding({ left: 16, bottom: 12 })
 
-              Row() {
-                ForEach(THEME_OPTIONS, (theme: ThemeOption) => {
-                  this.ThemeCard(theme)
-                }, (theme: ThemeOption) => theme.name)
+              Scroll() {
+                Row() {
+                  ForEach(THEME_OPTIONS, (theme: ThemeOption) => {
+                    this.ThemeCard(theme)
+                  }, (theme: ThemeOption) => theme.name)
+                }
+                .padding({ left: 10, right: 10 })
               }
-              .width('100%').justifyContent(FlexAlign.Center).alignItems(VerticalAlign.Top)
+              .scrollBar(BarState.Off)
+              .clip(false)
             }
-          .width('92%')
-          .backgroundColor(AppColors.bgTertiary)
-          .borderRadius(12)
-          .padding({ top: 16, bottom: 16 })
-          .margin({ top: 12 })
+            .width('100%')
+            .padding({ top: 16, bottom: 16 })
 
-          Column() {
+            Column() {
               this.SettingRow($r('app.media.icon_block'), IconColors.block, '黑名单管理', '', () => {
                 routerStore.navigateActivity(Screen.blacklist())
               })
@@ -112,35 +113,69 @@ export struct SettingsPanel {
   @Builder
   ThemeCard(theme: ThemeOption) {
     Column() {
-      // 色块预览
-      Row() {
-        Stack().width(28).height(28).borderRadius(8).backgroundColor(theme.primaryColor)
-        Stack().width(28).height(28).borderRadius(8).backgroundColor(theme.bgColor)
-          .border({ width: 1, color: AppColors.separator }).margin({ left: 6 })
-      }
-      .width('100%').justifyContent(FlexAlign.Center).padding({ top: 16, bottom: 8 })
+      // 预览区
+      Stack() {
+        if (theme.name === 'system') {
+          // 跟随系统：上下分半预览（上半浅色/下半深色）
+          Column() {
+            Stack() {
+              Column() {
+                Row().width(48).height(4).backgroundColor('#C08A4A').borderRadius(2)
+                Row().width(36).height(4).backgroundColor('#3E2A1D').borderRadius(2).opacity(0.5).margin({ top: 8 })
+                Row().width(28).height(4).backgroundColor('#3E2A1D').borderRadius(2).opacity(0.25).margin({ top: 5 })
+              }
+              .padding(12).alignItems(HorizontalAlign.Start).width('100%')
+            }
+            .width('100%').height('50%').backgroundColor('#FEFAF6')
 
-      Text(theme.label).fontSize(15).fontColor(theme.textColor).fontWeight(FontWeight.Medium)
-
-      // 选中指示
-      if (this.themeName === theme.name) {
-        Row() {
-          Image($r('app.media.icon_check')).width(14).height(14).fillColor(AppColors.white)
+            Stack() {
+              Column() {
+                Row().width(48).height(4).backgroundColor('#D4A85A').borderRadius(2)
+                Row().width(36).height(4).backgroundColor('#EAE2D8').borderRadius(2).opacity(0.5).margin({ top: 8 })
+                Row().width(28).height(4).backgroundColor('#EAE2D8').borderRadius(2).opacity(0.25).margin({ top: 5 })
+              }
+              .padding(12).alignItems(HorizontalAlign.Start).width('100%')
+            }
+            .width('100%').height('50%').backgroundColor('#1A1A1E')
+          }
+          .width('100%').height('100%')
+        } else {
+          Column() {
+            Row().width('100%').height(3).backgroundColor(theme.primaryColor)
+            Column() {
+              Row().width('55%').height(5).backgroundColor(theme.textColor).borderRadius(3).opacity(0.55)
+              Row().width('35%').height(5).backgroundColor(theme.textColor).borderRadius(3).opacity(0.25).margin({ top: 7 })
+              Row().width('70%').height(5).backgroundColor(theme.textColor).borderRadius(3).opacity(0.35).margin({ top: 7 })
+              Row().width('45%').height(5).backgroundColor(theme.textColor).borderRadius(3).opacity(0.15).margin({ top: 7 })
+            }
+            .padding(14).alignItems(HorizontalAlign.Start).width('100%')
+          }
+          .width('100%').height('100%').backgroundColor(theme.bgColor)
         }
-        .width(22).height(22).borderRadius(11).backgroundColor(AppColors.primary)
-        .margin({ top: 8 })
-      } else {
-        Stack().width(22).height(22).borderRadius(11).border({ width: 2, color: AppColors.separator })
-          .margin({ top: 8 })
       }
+      .width('100%').height(108).borderRadius(10)
+      .clip(true)
+      .border({
+        width: this.themeName === theme.name ? 2 : 1,
+        color: this.themeName === theme.name ? AppColors.primary : AppColors.separator
+      })
+
+      // 底部：标签 + 选中状态
+      Row() {
+        Text(theme.label).fontSize(14).fontColor(AppColors.textPrimary).fontWeight(FontWeight.Medium)
+        Blank()
+        if (this.themeName === theme.name) {
+          Image($r('app.media.icon_check')).width(16).height(16).fillColor(AppColors.primary)
+        } else {
+          Stack().width(16).height(16).borderRadius(8).border({ width: 1.5, color: AppColors.separator })
+        }
+      }
+      .width('100%').margin({ top: 10 })
     }
-    .width('44%')
-    .backgroundColor(theme.bgColor)
-    .borderRadius(12)
-    .borderWidth(this.themeName === theme.name ? 2 : 1)
-    .borderColor(this.themeName === theme.name ? AppColors.primary : AppColors.separator)
-    .alignItems(HorizontalAlign.Center)
-    .padding({ bottom: 16 })
+    .width(144)
+    .padding(12)
+    .backgroundColor(AppColors.bgSecondary)
+    .borderRadius(14)
     .margin({ left: 6, right: 6 })
     .onClick(() => {
       if (theme.name !== this.themeName) {

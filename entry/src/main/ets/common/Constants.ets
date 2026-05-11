@@ -55,6 +55,7 @@ export interface ThemeOption {
 }
 
 export const THEME_OPTIONS: ThemeOption[] = [
+  { name: 'system', label: '跟随系统', primaryColor: '#8E8E93', bgColor: '#FFFFFF', textColor: '#000000' },
   { name: 'light', label: '原味主题', primaryColor: '#C08A4A', bgColor: '#FEFAF6', textColor: '#3E2A1D' },
   { name: 'dark', label: '暗色主题', primaryColor: '#D4A85A', bgColor: '#1A1A1E', textColor: '#EAE2D8' },
 ]

@@ -58,7 +58,7 @@ export struct BBCodeContentView {
   @State private imageSizes: Map<string, ImageSize> = new Map()
   @State private loadedImages: Set<string> = new Set()
   @State private releasedImages: Set<string> = new Set()
-  @StorageProp('themeName') themeName: string = 'light'
+  @StorageProp('effectiveColorMode') effectiveColorMode: string = 'light'
   onImageClick: (urls: string[], index: number) => void = (_urls: string[], _index: number) => {}
   onLinkClick: (href: string) => void = (_href: string) => {}
 
@@ -253,7 +253,7 @@ export struct BBCodeContentView {
           .width(ctx.inQuote ? 26 : 50)
           .height(ctx.inQuote ? 26 : 50)
           .objectFit(ImageFit.Contain)
-          .textBackgroundStyle(this.themeName === 'dark' &&
+          .textBackgroundStyle(this.effectiveColorMode === 'dark' &&
             isEmotionCategoryNeedDarkBg(node.emotionCat)
             ? { color: Color.White } : { color: Color.Transparent })
       } else {
@@ -306,7 +306,7 @@ export struct BBCodeContentView {
           .width(ctx.inQuote ? 26 : 50)
           .height(ctx.inQuote ? 26 : 50)
           .objectFit(ImageFit.Contain)
-          .textBackgroundStyle(this.themeName === 'dark' &&
+          .textBackgroundStyle(this.effectiveColorMode === 'dark' &&
             isEmotionCategoryNeedDarkBg(child.emotionCat)
             ? { color: Color.White } : { color: Color.Transparent })
       } else {

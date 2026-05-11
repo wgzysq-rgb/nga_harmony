@@ -36,7 +36,7 @@ export struct ReplyDialog {
   @State selEnd: number = 0
   @State showEmojiPanel: boolean = false
   @State selectedCatKey: string = 'ac'
-  @StorageProp('themeName') themeName: string = 'light'
+  @StorageProp('effectiveColorMode') effectiveColorMode: string = 'light'
   private textAreaController: TextAreaController = new TextAreaController()
   onSend?: (text: string, isAnony: boolean) => Promise<void>
   onClose: () => void = () => {}
@@ -257,7 +257,7 @@ export struct ReplyDialog {
                 Column() {
                   Image(getEmotionResource(this.selectedCatKey, name))
                     .width(45).height(45).objectFit(ImageFit.Contain)
-                    .backgroundColor(this.themeName === 'dark' && isEmotionCategoryNeedDarkBg(this.selectedCatKey)
+                    .backgroundColor(this.effectiveColorMode === 'dark' && isEmotionCategoryNeedDarkBg(this.selectedCatKey)
                       ? Color.White : Color.Transparent)
                 }
                 .width(60).height(60)

@@ -1,4 +1,4 @@
-import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
+import { AbilityConstant, Configuration, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { fileIo } from '@kit.CoreFileKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { display, window } from '@kit.ArkUI';
@@ -23,16 +23,22 @@ export default class EntryAbility extends UIAbility {
       try {
         const themeCachePath = appContext.cacheDir + '/' + THEME_CACHE_FILE
         const cachedTheme = fileIo.readTextSync(themeCachePath).trim()
-        if (cachedTheme === 'dark') {
-          initialTheme = 'dark'
+        if (cachedTheme === 'dark' || cachedTheme === 'system') {
+          initialTheme = cachedTheme
         }
       } catch (e) {
         // 尚未缓存过主题，使用默认值
       }
-      if (initialTheme === 'dark') {
+      if (initialTheme === 'system') {
+        appContext.setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET)
+        const isDark = this.context.config.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK
+        AppStorage.setOrCreate('effectiveColorMode', isDark ? 'dark' : 'light')
+      } else if (initialTheme === 'dark') {
         appContext.setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_DARK)
+        AppStorage.setOrCreate('effectiveColorMode', 'dark')
       } else {
         appContext.setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_LIGHT)
+        AppStorage.setOrCreate('effectiveColorMode', 'light')
       }
       AppStorage.setOrCreate('themeName', initialTheme)
     } catch (err) {
@@ -49,6 +55,16 @@ export default class EntryAbility extends UIAbility {
       });
 
     hilog.info(DOMAIN, TAG, '%{public}s', 'Ability onCreate');
+  }
+
+  onConfigurationUpdate(newConfig: Configuration): void {
+    const themeName = AppStorage.get<string>('themeName') ?? 'light'
+    if (themeName === 'system') {
+      const isDark = newConfig.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK
+      const effective = isDark ? 'dark' : 'light'
+      AppStorage.setOrCreate('effectiveColorMode', effective)
+      updateStatusBarStyle(isDark)
+    }
   }
 
   onDestroy(): void {
@@ -70,7 +86,7 @@ export default class EntryAbility extends UIAbility {
         mainWindow.setWindowLayoutFullScreen(true)
 
         initStatusBarManager(mainWindow)
-        const isDark: boolean = (AppStorage.get<string>('themeName') ?? 'light') === 'dark'
+        const isDark: boolean = (AppStorage.get<string>('effectiveColorMode') ?? 'light') === 'dark'
         updateStatusBarStyle(isDark)
 
         const avoidArea = mainWindow.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM)
