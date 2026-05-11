@@ -18,8 +18,6 @@
 
 项目完整覆盖了 NGA 论坛的核心功能：板块浏览、帖子阅读、发帖回复、私信聊天、通知推送、用户分析等，并针对手机、平板、二合一设备做了自适应布局适配。
 
-> 项目同时包含 Android 参考实现 `open-nga` (forked from [Justwen/NGA-CLIENT-VER-OPEN-SOURCE](https://github.com/Justwen/NGA-CLIENT-VER-OPEN-SOURCE))，及相关 NGA API 文档供参考。
-
 ---
 
 ## 功能特性
