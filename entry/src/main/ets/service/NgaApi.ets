@@ -70,6 +70,7 @@ export class TopicListResult extends ApiResult {
 }
 
 export class PostInfo {
+  tid: number = 0;
   pid: number = 0;
   lou: number = 0;
   authorid: number = 0;
@@ -684,6 +685,7 @@ function fillThreadResult(raw: Record<string, Object>, result: ThreadResult,
   const mapRowToPost = (row: ThreadRowInfo): PostInfo => {
     const userInfo: Record<string, Object> | undefined = __U[String(row.authorid)] as Record<string, Object> | undefined;
     const post: PostInfo = new PostInfo();
+    post.tid = row.tid;
     post.pid = row.pid;
     post.lou = row.lou;
     post.authorid = row.authorid;

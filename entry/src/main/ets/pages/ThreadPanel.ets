@@ -1,5 +1,5 @@
 import { display } from '@kit.ArkUI'
-import { common } from '@kit.AbilityKit'
+import { common, Context } from '@kit.AbilityKit'
 import { motion } from '@kit.MultimodalAwarenessKit'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { appStore } from '../store/AppStore'
@@ -16,6 +16,7 @@ import { floatingLayerStore, FloatingPage } from '../store/FloatingLayerStore'
 import { voteRecordStore } from '../store/VoteRecordStore'
 import { replyManager, ReplyType } from '../common/ReplyManager'
 import { unescapeHtml } from '../common/Utils'
+import { shareThread, sharePost } from '../common/ShareUtils'
 import { ThreadPaginationManager } from '../common/ThreadPaginationManager'
 import type { ThreadInfo } from '../model/Thread'
 
@@ -613,6 +614,13 @@ export struct ThreadPanel {
                   }
                   floatingLayerStore.push(FloatingPage.REPLY_DIALOG)
                 },
+                onShare: (p: PostInfo): void => {
+                  let hostCtx: Context | undefined = this.getUIContext().getHostContext()
+                  if (hostCtx !== undefined) {
+                    let ctx: Context = hostCtx
+                    sharePost(ctx, p, this.threadSubject)
+                  }
+                },
                 isTopicAuthor: String(post.authorid) === this.threadAuthorId,
                 isOwnPost: appStore.auth.isAuthenticated && String(post.authorid) === appStore.auth.uid,
               })
@@ -846,6 +854,24 @@ export struct ThreadPanel {
                   const baseUrl: string = ngaClient.getActiveDomain()
                   const threadUrl: string = baseUrl + '/read.php?tid=' + this.threadTid
                   routerStore.navigateActivity(Screen.webview(threadUrl))
+                })
+            }
+            .width('100%')
+
+            Divider().width('100%').color(AppColors.separator)
+
+            Column() {
+              Text('分享帖子').fontSize(15)
+                .fontColor(AppColors.textPrimary)
+                .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+                .width('100%')
+                .onClick(() => {
+                  this.showMoreMenu = false
+                  let hostCtx: Context | undefined = this.getUIContext().getHostContext()
+                  if (hostCtx !== undefined) {
+                    let ctx: Context = hostCtx
+                    shareThread(ctx, Number(this.threadTid), this.threadSubject)
+                  }
                 })
             }
             .width('100%')

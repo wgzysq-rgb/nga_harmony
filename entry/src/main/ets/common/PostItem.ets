@@ -29,6 +29,7 @@ export struct PostItem {
   onReply: (post: PostInfo) => void = (_post: PostInfo) => {}
   onComment: (post: PostInfo) => void = (_post: PostInfo) => {}
   onEdit: (post: PostInfo) => void = (_post: PostInfo) => {}
+  onShare: (post: PostInfo) => void = (_post: PostInfo) => {}
   isTopicAuthor: boolean = false
   isOwnPost: boolean = false
 
@@ -239,6 +240,17 @@ export struct PostItem {
     .margin({ left: 6 })
     .alignItems(VerticalAlign.Center)
     .onClick(() => this.onReply(this.post))
+
+    Row() {
+      Image($r('app.media.icon_share'))
+        .width(16).height(16)
+        .fillColor(AppColors.textTertiary)
+    }
+    .padding({ left: 6, right: 6, top: 4, bottom: 4 })
+    .borderRadius(6)
+    .margin({ left: 6 })
+    .alignItems(VerticalAlign.Center)
+    .onClick(() => this.onShare(this.post))
 
     if (this.isOwnPost) {
       Row() {
