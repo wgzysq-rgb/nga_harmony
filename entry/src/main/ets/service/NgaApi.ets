@@ -514,7 +514,6 @@ export async function getTopicList(token: string, params: TopicListParams,
       if (params.fidgroup) ngaParams['fidgroup'] = params.fidgroup;
     }
 
-    if (params.twentyfour) ngaParams['twentyfour'] = params.twentyfour;
     if (params.recommend) {
       ngaParams['recommend'] = params.recommend;
       ngaParams['order_by'] = 'postdatedesc';

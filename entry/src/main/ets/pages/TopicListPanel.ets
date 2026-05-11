@@ -58,6 +58,7 @@ export struct TopicListPanel {
   private prefetchedThreads: object[] = []
   private prefetchedPage: number = 0
   private prefetchInProgress: boolean = false
+  private twentyFourCache: object[] = []
 
   private holdingCallback: Callback<HoldingHandStatus> = (data: HoldingHandStatus): void => {
     if (this.holdingDetected) {
@@ -131,7 +132,6 @@ export struct TopicListPanel {
       if (this.sortMode === 'recommend') {
         params.recommend = '1'
       } else if (this.sortMode === 'hot') {
-        params.recommend = '1'
         params.twentyfour = '1'
       }
     }
@@ -161,6 +161,112 @@ export struct TopicListPanel {
     }
   }
 
+  private async loadTwentyFourTopics(): Promise<void> {
+    this.hasError = false
+    this.clearPrefetch()
+
+    try {
+      const pages: number[] = [1, 2, 3, 4, 5]
+      const promises: Promise<TopicListResult>[] = []
+      for (let i = 0; i < pages.length; i++) {
+        const p: number = pages[i]
+        const params: TopicListParams = this.buildTopicParams(p)
+        promises.push(getTopicList(appStore.auth.token, params, appStore.getBlacklistIds(), appStore.getEnabledKeywords()))
+      }
+      const results: TopicListResult[] = await Promise.all(promises)
+
+      let curTime: number = 0
+      const allThreads: object[] = []
+
+      for (let i = 0; i < results.length; i++) {
+        const result: TopicListResult = results[i]
+        if (result.ok && result.data) {
+          if (curTime === 0) {
+            curTime = result.data.curTime
+          }
+          const list: object[] = result.data.threadPageList
+          for (let j = 0; j < list.length; j++) {
+            allThreads.push(list[j])
+          }
+        }
+      }
+
+      const filtered: object[] = []
+      for (let i = 0; i < allThreads.length; i++) {
+        const t: object = allThreads[i]
+        const postDate: number = Number((t as Record<string, Object>)['postDate'] ?? 0)
+        if (curTime - postDate <= 24 * 60 * 60) {
+          filtered.push(t)
+        }
+      }
+
+      filtered.sort((a: object, b: object): number => {
+        return Number((b as Record<string, Object>)['replies'] ?? 0) - Number((a as Record<string, Object>)['replies'] ?? 0)
+      })
+
+      const capped: object[] = []
+      const capLen: number = filtered.length > 50 ? 50 : filtered.length
+      for (let i = 0; i < capLen; i++) {
+        capped.push(filtered[i])
+      }
+
+      this.twentyFourCache = capped
+
+      const firstPageLen: number = capped.length > 20 ? 20 : capped.length
+      const firstPage: object[] = []
+      for (let i = 0; i < firstPageLen; i++) {
+        firstPage.push(capped[i])
+      }
+      this.threads = firstPage
+      this.threadsDataSource.replaceAll(firstPage)
+      this.currentPage = 1
+      this.totalPages = capped.length > 0 ? Math.ceil(capped.length / 20) : 0
+    } catch (e) {
+      this.hasError = true
+      this.errorMsg = (e as Error).message || '加载失败'
+    }
+
+    clearTimeout(this.loadingDelayTimer)
+    this.loadingDelayTimer = -1
+    this.loadingContentOpacity = 0
+    this.isLoading = false
+    this.isLoadingMore = false
+  }
+
+  private loadMoreTwentyFourTopics(page: number): void {
+    this.isLoadingMore = true
+
+    const end: number = page * 20
+    const count: number = end > this.twentyFourCache.length ? this.twentyFourCache.length : end
+
+    const existingTids: Set<number> = new Set()
+    for (let i = 0; i < this.threads.length; i++) {
+      const tid: number = Number((this.threads[i] as Record<string, Object>)['tid'] ?? 0)
+      if (tid) existingTids.add(tid)
+    }
+
+    const newItems: object[] = []
+    for (let i = 0; i < count; i++) {
+      const t: object = this.twentyFourCache[i]
+      const tid: number = Number((t as Record<string, Object>)['tid'] ?? 0)
+      if (!existingTids.has(tid)) {
+        newItems.push(t)
+        existingTids.add(tid)
+      }
+    }
+
+    if (newItems.length > 0) {
+      const arr: object[] = []
+      for (let i = 0; i < this.threads.length; i++) arr.push(this.threads[i])
+      for (let i = 0; i < newItems.length; i++) arr.push(newItems[i])
+      this.threads = arr
+      this.threadsDataSource.appendAll(newItems)
+    }
+
+    this.currentPage = page
+    this.isLoadingMore = false
+  }
+
   private async loadTopics(page: number): Promise<void> {
     if (page === 1) {
       this.isLoading = true
@@ -175,8 +281,16 @@ export struct TopicListPanel {
       }, 400)
       this.hasError = false
       this.clearPrefetch()
+      if (this.sortMode === 'hot') {
+        await this.loadTwentyFourTopics()
+        return
+      }
     } else {
       this.isLoadingMore = true
+      if (this.sortMode === 'hot') {
+        this.loadMoreTwentyFourTopics(page)
+        return
+      }
     }
 
     const params: TopicListParams = this.buildTopicParams(page)
