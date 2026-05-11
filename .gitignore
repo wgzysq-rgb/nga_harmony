@@ -11,3 +11,4 @@
 **/.test
 /.appanalyzer
 **/language-server.log
+/java
