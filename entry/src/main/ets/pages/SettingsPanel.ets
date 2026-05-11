@@ -68,7 +68,7 @@ export struct SettingsPanel {
 
               Divider().margin({ left: 60 }).color(AppColors.separator)
 
-              this.SettingRow($r('app.media.icon_text_fields'), IconColors.textFields, '用户备注', '', () => {
+              this.SettingRow($r('app.media.icon_person'), IconColors.textFields, '用户备注', '', () => {
                 routerStore.navigateActivity(Screen.notes())
               })
 
