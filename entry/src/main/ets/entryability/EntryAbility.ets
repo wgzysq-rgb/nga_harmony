@@ -6,6 +6,7 @@ import { sessionStore } from '../service/SessionStore';
 import { appStore } from '../store/AppStore';
 import { browseHistoryStore } from '../store/BrowseHistoryStore';
 import { voteRecordStore } from '../store/VoteRecordStore';
+import { initStatusBarManager, updateStatusBarStyle } from '../common/StatusBarManager';
 
 const DOMAIN = 0x0000;
 const TAG = 'EntryAbility';
@@ -33,6 +34,7 @@ export default class EntryAbility extends UIAbility {
       } else {
         appContext.setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_LIGHT)
       }
+      AppStorage.setOrCreate('themeName', initialTheme)
     } catch (err) {
       hilog.error(DOMAIN, TAG, 'Failed to set colorMode. Cause: %{public}s', JSON.stringify(err));
     }
@@ -67,13 +69,9 @@ export default class EntryAbility extends UIAbility {
 
         mainWindow.setWindowLayoutFullScreen(true)
 
-        const sysBarProps: window.SystemBarProperties = {
-          statusBarColor: '#00000000',
-          statusBarContentColor: '#000000',
-          navigationBarColor: '#00000000',
-          navigationBarContentColor: '#000000'
-        }
-        mainWindow.setWindowSystemBarProperties(sysBarProps)
+        initStatusBarManager(mainWindow)
+        const isDark: boolean = (AppStorage.get<string>('themeName') ?? 'light') === 'dark'
+        updateStatusBarStyle(isDark)
 
         const avoidArea = mainWindow.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM)
         const density = display.getDefaultDisplaySync().densityPixels

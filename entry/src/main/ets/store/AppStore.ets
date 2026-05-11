@@ -7,6 +7,7 @@ import type { Category } from '../model/Forum'
 import type { ProfileData } from '../model/User'
 import { checkin } from '../service/NgaApi'
 import { PreferencesStore } from './PreferencesStore'
+import { updateStatusBarStyle } from '../common/StatusBarManager'
 import type { UserNoteEntry } from '../model/NoteInfo'
 import { FilterKeyword } from '../model/FilterKeyword'
 import { FilterListManager } from './FilterListManager'
@@ -350,6 +351,12 @@ class AppStoreClass {
       hilog.error(DOMAIN, TAG, 'setColorMode failed: %{public}s', JSON.stringify(err))
     }
     AppStorage.setOrCreate('themeName', theme)
+
+    try {
+      updateStatusBarStyle(theme === 'dark')
+    } catch (err) {
+      hilog.error(DOMAIN, TAG, 'updateStatusBarStyle failed: %{public}s', JSON.stringify(err))
+    }
 
     // 缓存主题到文件，供下次冷启动时 EntryAbility 同步读取
     try {
