@@ -200,23 +200,38 @@ function guessMediaTypeFromExt(rawUrl: string): BBNodeType {
 function tryMatchBlock(state: ParseState, result: BBNode[]): boolean {
   const savedPos = state.pos
 
-  let pReplyRef: RegExp = /\[b\]Reply to \[/gi
+  let pReplyRef: RegExp = /\[b\]Reply to \[pid=(\d+),(\d+),(\d+)\]Reply\[\/pid\] Post by \[uid=(\d+)\](.*?)\[\/uid\] \(([^)]+)\)/gi
   pReplyRef.lastIndex = state.pos
   const rrm = pReplyRef.exec(state.content)
   if (rrm && rrm.index === state.pos) {
-    state.pos = pReplyRef.lastIndex
-    const closeIdx = state.content.indexOf('[/b]', state.pos)
-    if (closeIdx >= 0) {
-      const body = state.content.substring(state.pos, closeIdx)
-      state.pos = closeIdx + 4
-      const n = new BBNode()
-      n.type = BBNodeType.POST_BY
-      const childNodes: BBNode[] = []
-      parseInlineInto('[' + body, childNodes)
-      n.children = childNodes
-      result.push(n)
-      return true
+    const headerEnd: number = pReplyRef.lastIndex
+    const n = new BBNode()
+    n.type = BBNodeType.POST_BY
+    const headerBody: string = `pid=${rrm[1]},${rrm[2]},${rrm[3]}]Reply[/pid] Post by [uid=${rrm[4]}]${rrm[5]}[/uid] (${rrm[6]}):`
+    const childNodes: BBNode[] = []
+    parseInlineInto('[' + headerBody, childNodes)
+    n.children = childNodes
+    result.push(n)
+
+    state.pos = headerEnd
+    if (state.pos < state.len && state.content.charAt(state.pos) === ':') {
+      state.pos++
     }
+
+    const closeBIdx: number = state.content.indexOf('[/b]', state.pos)
+    if (closeBIdx >= 0) {
+      if (closeBIdx > state.pos) {
+        const extraContent: string = decodeHtmlEntities(state.content.substring(state.pos, closeBIdx))
+        const extraNodes: BBNode[] = parseBBCode(extraContent)
+        for (let i = 0; i < extraNodes.length; i++) {
+          result.push(extraNodes[i])
+        }
+      }
+      state.pos = closeBIdx + 4
+    } else {
+      state.pos = state.len
+    }
+    return true
   }
   state.pos = savedPos
 
