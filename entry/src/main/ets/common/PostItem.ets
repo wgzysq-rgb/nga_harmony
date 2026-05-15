@@ -21,6 +21,7 @@ export struct PostItem {
   @StorageProp('showSignature') showSignature: boolean = true
   @State private commentsExpanded: boolean = false
   @State private attachsExpanded: boolean = false
+  @State private sigExpanded: boolean = false
   onImageClick: (urls: string[], index: number) => void = (_urls: string[], _index: number) => {}
   onLinkClick: (href: string) => void = (_href: string) => {}
   onVideoClick: (url: string) => void = (_url: string) => {}
@@ -32,6 +33,12 @@ export struct PostItem {
   onShare: (post: PostInfo) => void = (_post: PostInfo) => {}
   isTopicAuthor: boolean = false
   isOwnPost: boolean = false
+
+  private isSignatureLong(): boolean {
+    if (!this.post.signature) return false
+    const plainText: string = this.post.signature.replace(/\[[^\]]*\]/g, '')
+    return plainText.length > 120
+  }
 
   build() {
     Column() {
@@ -90,13 +97,32 @@ export struct PostItem {
 
           if (this.showSignature && this.post.signature && this.post.signature.length > 0) {
             Column() {
-              BBCodeContentView({
-                nodes: getCachedBBNodes(this.post.signature),
-                onImageClick: this.onImageClick,
-                onLinkClick: this.onLinkClick,
-              })
+              Text('签名')
+                .fontSize(10).fontColor(AppColors.textTertiary)
+                .margin({ bottom: 4 })
+
+              Column() {
+                BBCodeContentView({
+                  nodes: getCachedBBNodes(this.post.signature),
+                  onImageClick: this.onImageClick,
+                  onLinkClick: this.onLinkClick,
+                })
+              }
+              .constraintSize({ maxHeight: this.sigExpanded ? 10000 : 70 })
+              .clip(true)
+
+              if (this.isSignatureLong()) {
+                Text(this.sigExpanded ? '收起签名' : '展开签名')
+                  .fontSize(11).fontColor(AppColors.primary)
+                  .margin({ top: 4 })
+                  .onClick(() => { this.sigExpanded = !this.sigExpanded })
+              }
             }
-            .margin({ top: 12 }).padding({ top: 4 }).border({ width: { top: 0.5 }, color: AppColors.separator })
+            .alignItems(HorizontalAlign.Start)
+            .margin({ top: 12 })
+            .padding({ left: 10, top: 4, bottom: 4 })
+            .border({ width: { left: 2 }, color: AppColors.separator })
+            .opacity(0.6)
           }
 
           if (this.post.comments.length > 0) {
