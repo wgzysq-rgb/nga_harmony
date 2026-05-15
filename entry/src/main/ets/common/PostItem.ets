@@ -34,12 +34,6 @@ export struct PostItem {
   isTopicAuthor: boolean = false
   isOwnPost: boolean = false
 
-  private isSignatureLong(): boolean {
-    if (!this.post.signature) return false
-    const plainText: string = this.post.signature.replace(/\[[^\]]*\]/g, '')
-    return plainText.length > 120
-  }
-
   build() {
     Column() {
         Row() {
@@ -97,9 +91,16 @@ export struct PostItem {
 
           if (this.showSignature && this.post.signature && this.post.signature.length > 0) {
             Column() {
-              Text('签名')
-                .fontSize(10).fontColor(AppColors.textTertiary)
-                .margin({ bottom: 4 })
+              Row() {
+                Text('签名')
+                  .fontSize(10).fontColor(AppColors.textTertiary)
+                Image($r('app.media.icon_chevron_down'))
+                  .width(12).height(12).fillColor(AppColors.textTertiary)
+                  .rotate({ angle: this.sigExpanded ? 180 : 0 })
+                  .margin({ left: 2 })
+              }
+              .margin({ bottom: 4 })
+              .onClick(() => { this.sigExpanded = !this.sigExpanded })
 
               Column() {
                 BBCodeContentView({
@@ -109,15 +110,8 @@ export struct PostItem {
                   hideFailedImages: true,
                 })
               }
-              .constraintSize({ maxHeight: this.sigExpanded ? 10000 : 70 })
+              .constraintSize({ maxHeight: this.sigExpanded ? 10000 : 150 })
               .clip(true)
-
-              if (this.isSignatureLong()) {
-                Text(this.sigExpanded ? '收起签名' : '展开签名')
-                  .fontSize(11).fontColor(AppColors.primary)
-                  .margin({ top: 4 })
-                  .onClick(() => { this.sigExpanded = !this.sigExpanded })
-              }
             }
             .alignItems(HorizontalAlign.Start)
             .margin({ top: 12 })
