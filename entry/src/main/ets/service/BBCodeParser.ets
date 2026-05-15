@@ -272,11 +272,11 @@ function tryMatchBlock(state: ParseState, result: BBNode[]): boolean {
     return true
   }
 
-  let pCollapse: RegExp = /\[collapse=(.*?)\]/gi
+  let pCollapse: RegExp = /\[collapse(?:=(.*?))?\]/gi
   pCollapse.lastIndex = state.pos
   const cm = pCollapse.exec(state.content)
   if (cm && cm.index === state.pos) {
-    const title = cm[1]
+    const title = cm[1] || '展开/折叠'
     state.pos = pCollapse.lastIndex
     const n = new BBNode()
     n.type = BBNodeType.COLLAPSE

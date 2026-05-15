@@ -65,9 +65,9 @@ export function parseNgaContent(content: string): string {
     }
   );
 
-  // [collapse=title]body[/collapse]
-  html = html.replace(/\[collapse=(.*?)\](.*?)\[\/collapse\]/gs,
-    (s: string, p1: string, p2: string): string => `<details><summary>${p1}</summary>${p2}</details>`
+  // [collapse] or [collapse=title]body[/collapse]
+  html = html.replace(/\[collapse(?:=(.*?))?\](.*?)\[\/collapse\]/gs,
+    (s: string, p1: string, p2: string): string => `<details><summary>${p1 || '展开/折叠'}</summary>${p2}</details>`
   );
 
   // [quote]body[/quote] 最多3层
