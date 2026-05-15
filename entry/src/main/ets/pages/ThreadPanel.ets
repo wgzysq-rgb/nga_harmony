@@ -17,6 +17,7 @@ import { voteRecordStore } from '../store/VoteRecordStore'
 import { replyManager, ReplyType } from '../common/ReplyManager'
 import { unescapeHtml } from '../common/Utils'
 import { shareThread, sharePost } from '../common/ShareUtils'
+import { openImageViewer as sharedOpenImageViewer, handleForumLink } from '../common/LinkUtils'
 import { ThreadPaginationManager } from '../common/ThreadPaginationManager'
 import type { ThreadInfo } from '../model/Thread'
 
@@ -513,38 +514,13 @@ export struct ThreadPanel {
   }
 
   private openImageViewer(urls: string[], index: number): void {
-    floatingLayerStore.imageViewerUrls = urls
-    floatingLayerStore.imageViewerIndex = index
-    floatingLayerStore.push(FloatingPage.IMAGE_VIEWER)
+    sharedOpenImageViewer(urls, index)
   }
 
   private handleLinkClick(href: string): void {
-    if (href.startsWith('#/thread?')) {
-      const params = new Map<string, string>()
-      const query = href.substring(href.indexOf('?') + 1)
-      const parts = query.split('&')
-      for (let i = 0; i < parts.length; i++) {
-        const kv = parts[i].split('=')
-        if (kv.length === 2) params.set(kv[0], kv[1])
-      }
-      const tid = params.get('tid') || ''
-      const pageStr = params.get('page') || '1'
-      const pid = params.get('pid') || ''
-      const page = parseInt(pageStr, 10) || 1
-      if (tid.length > 0) {
-        routerStore.navigateActivity(Screen.thread(tid, page, pid))
-      }
-    } else if (href.startsWith('#/profile?')) {
-      const uidStr = href.split('uid=')[1]
-      if (uidStr) {
-        this.showProfileCard(uidStr.split('&')[0], 200, 200)
-      }
-    } else if (href.startsWith('http://') || href.startsWith('https://')) {
-      try {
-        const ctx = getContext(this) as common.UIAbilityContext
-        ctx.openLink(href)
-      } catch (e) {}
-    }
+    handleForumLink(href, getContext(this) as common.UIAbilityContext, (uid: string) => {
+      this.showProfileCard(uid, 200, 200)
+    })
   }
 
   build() {

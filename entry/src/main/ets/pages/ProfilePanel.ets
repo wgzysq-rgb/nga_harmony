@@ -8,6 +8,10 @@ import { Avatar } from '../common/Avatar'
 import { AnonymousName } from '../common/AnonymousName'
 import { MakeNoteDialog } from '../common/Dialogs'
 import { PanelNavBar } from '../common/PanelNavBar'
+import { getCachedBBNodes } from '../service/BBCodeCache'
+import { BBCodeContentView } from '../common/BBCodeContentView'
+import { openImageViewer, handleForumLink } from '../common/LinkUtils'
+import { Context } from '@kit.AbilityKit'
 
 @Component
 export struct ProfilePanel {
@@ -422,14 +426,21 @@ export struct ProfilePanel {
               .alignItems(HorizontalAlign.Start)
             }
 
-            if (this.profile!.sign) {
+            if (this.profile!.sign && this.profile!.sign.length > 0) {
               Column() {
                 Text('签名')
                   .fontSize(13)
                   .fontColor(AppColors.textSecondary)
                   .margin({ bottom: 4 })
-                RichText(this.profile!.sign)
-                  .width('100%')
+                BBCodeContentView({
+                  nodes: getCachedBBNodes(this.profile!.sign),
+                  onImageClick: (urls: string[], index: number): void => {
+                    openImageViewer(urls, index)
+                  },
+                  onLinkClick: (href: string): void => {
+                    handleForumLink(href, getContext(this) as Context)
+                  },
+                }).width('100%')
               }
               .width('92%')
               .padding(16)

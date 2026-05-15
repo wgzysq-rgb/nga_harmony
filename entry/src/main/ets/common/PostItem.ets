@@ -18,7 +18,7 @@ export struct PostItem {
   @Prop votedUpPids: Set<string> = new Set()
   @Prop votedDownPids: Set<string> = new Set()
   @Prop holdingHand: number = 0
-  @State private sigExpanded: boolean = false
+  @StorageProp('showSignature') showSignature: boolean = true
   @State private commentsExpanded: boolean = false
   @State private attachsExpanded: boolean = false
   onImageClick: (urls: string[], index: number) => void = (_urls: string[], _index: number) => {}
@@ -88,8 +88,15 @@ export struct PostItem {
             this.AttachmentsSection()
           }
 
-          if (this.post.signature && this.post.signature.length > 0) {
-            this.SignatureSection()
+          if (this.showSignature && this.post.signature && this.post.signature.length > 0) {
+            Column() {
+              BBCodeContentView({
+                nodes: getCachedBBNodes(this.post.signature),
+                onImageClick: this.onImageClick,
+                onLinkClick: this.onLinkClick,
+              })
+            }
+            .margin({ top: 12 }).padding({ top: 4 }).border({ width: { top: 0.5 }, color: AppColors.separator })
           }
 
           if (this.post.comments.length > 0) {
@@ -173,25 +180,6 @@ export struct PostItem {
             this.onImageClick(urls, idx)
           }
         })
-    }
-  }
-
-  @Builder
-  SignatureSection() {
-    Row() {
-      Text(this.sigExpanded ? '收起签名' : '查看签名')
-        .fontSize(12).fontColor(AppColors.textTertiary)
-        .onClick(() => { this.sigExpanded = !this.sigExpanded })
-    }.margin({ top: 12 })
-    if (this.sigExpanded) {
-      Column() {
-        BBCodeContentView({
-          nodes: getCachedBBNodes(this.post.signature),
-          onImageClick: this.onImageClick,
-          onLinkClick: this.onLinkClick,
-        })
-      }
-      .margin({ top: 4 }).padding({ top: 4 }).border({ width: { top: 0.5 }, color: AppColors.separator })
     }
   }
 

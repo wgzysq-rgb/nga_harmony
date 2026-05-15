@@ -47,6 +47,7 @@ export class SettingsState {
   notes: UserNoteEntry[] = []
   holdingHand: number = 2
   smartGrip: boolean = true
+  showSignature: boolean = true
 }
 
 export class ToastState {
@@ -320,6 +321,12 @@ class AppStoreClass {
     this.persistSettings()
   }
 
+  setShowSignature(enabled: boolean): void {
+    this.settings.showSignature = enabled
+    AppStorage.setOrCreate('showSignature', enabled)
+    this.persistSettings()
+  }
+
   async autoCheckinIfNeeded(): Promise<void> {
     if (!this.auth.isAuthenticated || !this.settings.autoCheckin) {
       return
@@ -417,7 +424,9 @@ class AppStoreClass {
       if (saved.lastCheckinDate) this.settings.lastCheckinDate = saved.lastCheckinDate
       if (saved.holdingHand !== undefined) this.settings.holdingHand = saved.holdingHand
       if (saved.smartGrip !== undefined) this.settings.smartGrip = saved.smartGrip
+      if (saved.showSignature !== undefined) this.settings.showSignature = saved.showSignature
     }
+    AppStorage.setOrCreate('showSignature', this.settings.showSignature)
   }
 
   // ============== Categories Cache ==============
