@@ -25,6 +25,7 @@ export struct PostItem {
   @State private attachsExpanded: boolean = false
   @State private sigExpanded: boolean = false
   @State private videoSizes: Map<string, ImageSize> = new Map()
+  @State private menuExpanded: boolean = false
   onImageClick: (urls: string[], index: number) => void = (_urls: string[], _index: number) => {}
   onLinkClick: (href: string) => void = (_href: string) => {}
   onVideoClick: (url: string) => void = (_url: string) => {}
@@ -83,6 +84,8 @@ export struct PostItem {
           Text('该用户已被屏蔽').fontSize(14).fontColor(AppColors.textTertiary)
             .margin({ top: 16 }).width('100%').textAlign(TextAlign.Center).padding({ top: 20, bottom: 20 })
         } else {
+          Text(this.post.postdate).fontSize(11).fontColor(AppColors.textTertiary).margin({ top: 12 })
+
           BBCodeContentView({
             nodes: getCachedBBNodes(this.post.content),
             onImageClick: this.onImageClick,
@@ -214,105 +217,212 @@ export struct PostItem {
     }
   }
 
-  @Builder
-  VoteButtons() {
-    Row() {
-      Image($r('app.media.icon_thumb_up'))
-        .width(16).height(16)
-        .fillColor(this.votedUpPids.has(String(this.post.pid)) ? AppColors.primary : AppColors.textTertiary)
-      if (this.post.score > 0 || this.votedUpPids.has(String(this.post.pid))) {
-        Text(String(this.post.score))
-          .fontSize(13)
-          .fontColor(this.votedUpPids.has(String(this.post.pid)) ? AppColors.primary : AppColors.textSecondary)
-          .margin({ left: 3 })
-      }
-    }
-    .padding({ left: 6, right: 6, top: 4, bottom: 4 })
-    .borderRadius(6)
-    .alignItems(VerticalAlign.Center)
-    .onClick(() => this.onVote(this.post, 1))
-
-    Row() {
-      Image($r('app.media.icon_thumb_down'))
-        .width(16).height(16)
-        .fillColor(this.votedDownPids.has(String(this.post.pid)) ? AppColors.destructive : AppColors.textTertiary)
-      if (this.post.score_2 > 0 || this.votedDownPids.has(String(this.post.pid))) {
-        Text(String(this.post.score_2))
-          .fontSize(13)
-          .fontColor(this.votedDownPids.has(String(this.post.pid)) ? AppColors.destructive : AppColors.textSecondary)
-          .margin({ left: 3 })
-      }
-    }
-    .padding({ left: 6, right: 6, top: 4, bottom: 4 })
-    .borderRadius(6)
-    .margin({ left: 6 })
-    .alignItems(VerticalAlign.Center)
-    .onClick(() => this.onVote(this.post, -1))
-
-    Row() {
-      Image($r('app.media.icon_reply'))
-        .width(16).height(16)
-        .fillColor(AppColors.textTertiary)
-    }
-    .padding({ left: 6, right: 6, top: 4, bottom: 4 })
-    .borderRadius(6)
-    .margin({ left: 6 })
-    .alignItems(VerticalAlign.Center)
-    .onClick(() => this.onReply(this.post))
-
-    Row() {
-      Image($r('app.media.icon_share'))
-        .width(16).height(16)
-        .fillColor(AppColors.textTertiary)
-    }
-    .padding({ left: 6, right: 6, top: 4, bottom: 4 })
-    .borderRadius(6)
-    .margin({ left: 6 })
-    .alignItems(VerticalAlign.Center)
-    .onClick(() => this.onShare(this.post))
-
-    Row() {
-      Image($r('app.media.icon_ai'))
-        .width(16).height(16)
-        .fillColor(AppColors.textTertiary)
-    }
-    .padding({ left: 6, right: 6, top: 4, bottom: 4 })
-    .borderRadius(6)
-    .margin({ left: 6 })
-    .alignItems(VerticalAlign.Center)
-    .onClick(() => this.onSummarize(this.post))
-
-    if (this.isOwnPost) {
-      Row() {
-        Image($r('app.media.icon_compose'))
-          .width(16).height(16)
-          .fillColor(AppColors.textTertiary)
-      }
-      .padding({ left: 6, right: 6, top: 4, bottom: 4 })
-      .borderRadius(6)
-      .margin({ left: 6 })
-      .alignItems(VerticalAlign.Center)
-      .onClick(() => this.onEdit(this.post))
-    }
-  }
-
-  @Builder
+   @Builder
   VoteBar() {
     Row() {
-      if (this.holdingHand === 1) {
-        Row() { this.VoteButtons() }
-          .transition(TransitionEffect.OPACITY)
-        Text(this.post.postdate)
-          .fontSize(12).fontColor(AppColors.textTertiary)
-          .layoutWeight(1).textAlign(TextAlign.End)
-          .transition(TransitionEffect.OPACITY)
-      } else {
-        Text(this.post.postdate)
-          .fontSize(12).fontColor(AppColors.textTertiary)
-          .layoutWeight(1)
-          .transition(TransitionEffect.OPACITY)
-        Row() { this.VoteButtons() }
-          .transition(TransitionEffect.OPACITY)
+       if (this.holdingHand === 1) {
+         Row() {
+           Row() {
+             Row() {
+               Image($r('app.media.icon_more'))
+                 .width(16).height(16)
+                 .fillColor(this.menuExpanded ? AppColors.primary : AppColors.textTertiary)
+                 .rotate({ angle: this.menuExpanded ? -90 : 0 })
+             }
+             .padding({ left: 6, right: 6, top: 4, bottom: 4 })
+             .borderRadius(6)
+             .alignItems(VerticalAlign.Center)
+             .onClick(() => { animateTo({ duration: 150, curve: Curve.EaseInOut }, () => { this.menuExpanded = !this.menuExpanded }) })
+
+             if (this.menuExpanded) {
+               Row() {
+                 Image($r('app.media.icon_ai'))
+                   .width(16).height(16)
+                   .fillColor(AppColors.textTertiary)
+               }
+               .padding({ left: 6, right: 6, top: 4, bottom: 4 })
+               .borderRadius(6)
+               .margin({ left: 6 })
+               .alignItems(VerticalAlign.Center)
+               .transition(TransitionEffect.OPACITY)
+               .onClick(() => this.onSummarize(this.post))
+
+               Row() {
+                 Image($r('app.media.icon_share'))
+                   .width(16).height(16)
+                   .fillColor(AppColors.textTertiary)
+               }
+               .padding({ left: 6, right: 6, top: 4, bottom: 4 })
+               .borderRadius(6)
+               .margin({ left: 6 })
+               .alignItems(VerticalAlign.Center)
+               .transition(TransitionEffect.OPACITY)
+               .onClick(() => this.onShare(this.post))
+             }
+
+             if (this.isOwnPost) {
+               Row() {
+                 Image($r('app.media.icon_compose'))
+                   .width(16).height(16)
+                   .fillColor(AppColors.textTertiary)
+               }
+               .padding({ left: 6, right: 6, top: 4, bottom: 4 })
+               .borderRadius(6)
+               .margin({ left: 6 })
+               .alignItems(VerticalAlign.Center)
+               .onClick(() => this.onEdit(this.post))
+             }
+
+             Row() {
+               Image($r('app.media.icon_reply'))
+                 .width(16).height(16)
+                 .fillColor(AppColors.textTertiary)
+             }
+             .padding({ left: 6, right: 6, top: 4, bottom: 4 })
+             .borderRadius(6)
+             .margin({ left: 6 })
+             .alignItems(VerticalAlign.Center)
+             .onClick(() => this.onReply(this.post))
+
+             Row() {
+               Image($r('app.media.icon_thumb_down'))
+                 .width(16).height(16)
+                 .fillColor(this.votedDownPids.has(String(this.post.pid)) ? AppColors.destructive : AppColors.textTertiary)
+               if (this.post.score_2 > 0 || this.votedDownPids.has(String(this.post.pid))) {
+                 Text(String(this.post.score_2))
+                   .fontSize(13)
+                   .fontColor(this.votedDownPids.has(String(this.post.pid)) ? AppColors.destructive : AppColors.textSecondary)
+                   .margin({ left: 3 })
+               }
+             }
+             .padding({ left: 6, right: 6, top: 4, bottom: 4 })
+             .borderRadius(6)
+             .margin({ left: 6 })
+             .alignItems(VerticalAlign.Center)
+             .onClick(() => this.onVote(this.post, -1))
+
+             Row() {
+               Image($r('app.media.icon_thumb_up'))
+                 .width(16).height(16)
+                 .fillColor(this.votedUpPids.has(String(this.post.pid)) ? AppColors.primary : AppColors.textTertiary)
+               if (this.post.score > 0 || this.votedUpPids.has(String(this.post.pid))) {
+                 Text(String(this.post.score))
+                   .fontSize(13)
+                   .fontColor(this.votedUpPids.has(String(this.post.pid)) ? AppColors.primary : AppColors.textSecondary)
+                   .margin({ left: 3 })
+               }
+             }
+             .padding({ left: 6, right: 6, top: 4, bottom: 4 })
+             .borderRadius(6)
+             .margin({ left: 6 })
+             .alignItems(VerticalAlign.Center)
+             .onClick(() => this.onVote(this.post, 1))
+           }
+           .alignItems(VerticalAlign.Center)
+           .transition(TransitionEffect.OPACITY)
+
+            Row().layoutWeight(1)
+          }
+       } else {
+         Row().layoutWeight(1)
+        Row() {
+          Row() {
+            Image($r('app.media.icon_thumb_up'))
+              .width(16).height(16)
+              .fillColor(this.votedUpPids.has(String(this.post.pid)) ? AppColors.primary : AppColors.textTertiary)
+            if (this.post.score > 0 || this.votedUpPids.has(String(this.post.pid))) {
+              Text(String(this.post.score))
+                .fontSize(13)
+                .fontColor(this.votedUpPids.has(String(this.post.pid)) ? AppColors.primary : AppColors.textSecondary)
+                .margin({ left: 3 })
+            }
+          }
+          .padding({ left: 6, right: 6, top: 4, bottom: 4 })
+          .borderRadius(6)
+          .alignItems(VerticalAlign.Center)
+          .onClick(() => this.onVote(this.post, 1))
+
+          Row() {
+            Image($r('app.media.icon_thumb_down'))
+              .width(16).height(16)
+              .fillColor(this.votedDownPids.has(String(this.post.pid)) ? AppColors.destructive : AppColors.textTertiary)
+            if (this.post.score_2 > 0 || this.votedDownPids.has(String(this.post.pid))) {
+              Text(String(this.post.score_2))
+                .fontSize(13)
+                .fontColor(this.votedDownPids.has(String(this.post.pid)) ? AppColors.destructive : AppColors.textSecondary)
+                .margin({ left: 3 })
+            }
+          }
+          .padding({ left: 6, right: 6, top: 4, bottom: 4 })
+          .borderRadius(6)
+          .margin({ left: 6 })
+          .alignItems(VerticalAlign.Center)
+          .onClick(() => this.onVote(this.post, -1))
+
+          Row() {
+            Image($r('app.media.icon_reply'))
+              .width(16).height(16)
+              .fillColor(AppColors.textTertiary)
+          }
+          .padding({ left: 6, right: 6, top: 4, bottom: 4 })
+          .borderRadius(6)
+          .margin({ left: 6 })
+          .alignItems(VerticalAlign.Center)
+           .onClick(() => this.onReply(this.post))
+
+          if (this.isOwnPost) {
+            Row() {
+              Image($r('app.media.icon_compose'))
+                .width(16).height(16)
+                .fillColor(AppColors.textTertiary)
+            }
+            .padding({ left: 6, right: 6, top: 4, bottom: 4 })
+            .borderRadius(6)
+            .margin({ left: 6 })
+            .alignItems(VerticalAlign.Center)
+            .onClick(() => this.onEdit(this.post))
+          }
+
+          if (this.menuExpanded) {
+            Row() {
+              Image($r('app.media.icon_share'))
+                .width(16).height(16)
+                .fillColor(AppColors.textTertiary)
+            }
+            .padding({ left: 6, right: 6, top: 4, bottom: 4 })
+            .borderRadius(6)
+            .margin({ left: 6 })
+            .alignItems(VerticalAlign.Center)
+            .transition(TransitionEffect.OPACITY)
+            .onClick(() => this.onShare(this.post))
+
+            Row() {
+              Image($r('app.media.icon_ai'))
+                .width(16).height(16)
+                .fillColor(AppColors.textTertiary)
+            }
+            .padding({ left: 6, right: 6, top: 4, bottom: 4 })
+            .borderRadius(6)
+            .margin({ left: 6 })
+            .alignItems(VerticalAlign.Center)
+            .transition(TransitionEffect.OPACITY)
+            .onClick(() => this.onSummarize(this.post))
+          }
+
+          Row() {
+            Image($r('app.media.icon_more'))
+              .width(16).height(16)
+              .fillColor(this.menuExpanded ? AppColors.primary : AppColors.textTertiary)
+              .rotate({ angle: this.menuExpanded ? 90 : 0 })
+          }
+          .padding({ left: 6, right: 6, top: 4, bottom: 4 })
+          .borderRadius(6)
+          .margin({ left: 6 })
+          .alignItems(VerticalAlign.Center)
+          .onClick(() => { animateTo({ duration: 150, curve: Curve.EaseInOut }, () => { this.menuExpanded = !this.menuExpanded }) })
+        }
+        .alignItems(VerticalAlign.Center)
+        .transition(TransitionEffect.OPACITY)
       }
     }.width('100%').margin({ top: 12 }).alignItems(VerticalAlign.Center)
   }
