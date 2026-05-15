@@ -3,6 +3,7 @@ import { AppColors } from '../common/Constants'
 import { getEmotionResource, isEmotionCategoryNeedDarkBg } from '../common/EmotionResources'
 import { AudioPlayer } from '../common/AudioPlayer'
 import { ImageSize, fetchImageSize, getCachedImageSize } from '../common/ImageSizeUtil'
+import { fetchVideoSize, getCachedVideoSize } from '../common/VideoSizeUtil'
 
 function isInlineNode(type: BBNodeType): boolean {
   return type === BBNodeType.TEXT || type === BBNodeType.BOLD ||
@@ -59,6 +60,7 @@ export struct BBCodeContentView {
   @State private loadedImages: Set<string> = new Set()
   @State private failedImages: Set<string> = new Set()
   @State private releasedImages: Set<string> = new Set()
+  @State private videoSizes: Map<string, ImageSize> = new Map()
   @StorageProp('effectiveColorMode') effectiveColorMode: string = 'light'
   hideFailedImages: boolean = false
   onImageClick: (urls: string[], index: number) => void = (_urls: string[], _index: number) => {}
@@ -89,6 +91,29 @@ export struct BBCodeContentView {
         })
       } else {
         this.releaseImage(url)
+      }
+    }
+
+    const vm: Map<string, ImageSize> = new Map()
+    const vUrls: string[] = this.getVideoUrls()
+    for (let i = 0; i < vUrls.length; i++) {
+      const url: string = vUrls[i]
+      const cached: ImageSize | null = getCachedVideoSize(url)
+      if (cached) {
+        vm.set(url, cached)
+      }
+    }
+    if (vm.size > 0) {
+      this.videoSizes = vm
+    }
+    for (let i = 0; i < vUrls.length; i++) {
+      const url: string = vUrls[i]
+      if (!vm.has(url)) {
+        fetchVideoSize(url).then((size: ImageSize | null) => {
+          if (size) {
+            this.setVideoSize(url, size)
+          }
+        })
       }
     }
   }
@@ -149,6 +174,42 @@ export struct BBCodeContentView {
       return size.width / size.height
     }
     return 16 / 9
+  }
+
+  private setVideoSize(url: string, size: ImageSize): void {
+    const m: Map<string, ImageSize> = new Map()
+    this.videoSizes.forEach((v: ImageSize, k: string) => { m.set(k, v) })
+    m.set(url, size)
+    this.videoSizes = m
+  }
+
+  private getVideoAspectRatio(src: string): number {
+    const size: ImageSize | undefined = this.videoSizes.get(src)
+    if (size && size.width > 0 && size.height > 0) {
+      return size.width / size.height
+    }
+    return 16 / 9
+  }
+
+  private getVideoUrls(): string[] {
+    return this.collectVideoUrls(this.nodes)
+  }
+
+  private collectVideoUrls(nodes: BBNode[]): string[] {
+    const urls: string[] = []
+    for (let i = 0; i < nodes.length; i++) {
+      const n = nodes[i]
+      if (n.type === BBNodeType.VIDEO && n.src.length > 0) {
+        urls.push(n.src)
+      }
+      if (n.children.length > 0) {
+        const childUrls = this.collectVideoUrls(n.children)
+        for (let j = 0; j < childUrls.length; j++) {
+          urls.push(childUrls[j])
+        }
+      }
+    }
+    return urls
   }
 
   private getImageUrls(): string[] {
@@ -359,7 +420,8 @@ export struct BBCodeContentView {
       if (node.src.length > 0) {
         Video({ src: node.src })
           .width('100%')
-          .aspectRatio(16 / 9)
+          .aspectRatio(this.getVideoAspectRatio(node.src))
+          .objectFit(ImageFit.Contain)
           .controls(true)
           .borderRadius(8)
           .backgroundColor(AppColors.bgSecondary)

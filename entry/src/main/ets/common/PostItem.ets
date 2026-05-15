@@ -9,6 +9,8 @@ import { floatingLayerStore, FloatingPage } from '../store/FloatingLayerStore'
 import { appStore } from '../store/AppStore'
 import { BBNode, BBNodeType } from '../model/BBCodeNode'
 import { AudioPlayer } from '../common/AudioPlayer'
+import { ImageSize } from '../common/ImageSizeUtil'
+import { fetchVideoSize, getCachedVideoSize } from '../common/VideoSizeUtil'
 const VIDEO_EXTS: string[] = ['mp4', 'webm', 'ogg', 'mov', '3gp']
 const AUDIO_EXTS: string[] = ['mp3', 'wav', 'flac', 'aac', 'm4a']
 
@@ -22,6 +24,7 @@ export struct PostItem {
   @State private commentsExpanded: boolean = false
   @State private attachsExpanded: boolean = false
   @State private sigExpanded: boolean = false
+  @State private videoSizes: Map<string, ImageSize> = new Map()
   onImageClick: (urls: string[], index: number) => void = (_urls: string[], _index: number) => {}
   onLinkClick: (href: string) => void = (_href: string) => {}
   onVideoClick: (url: string) => void = (_url: string) => {}
@@ -139,7 +142,12 @@ export struct PostItem {
         }
         Text(this.attachsExpanded ? '收起附件' : `附件 (${this.post.attachs.length})`).fontSize(13).fontColor(AppColors.textTertiary)
       }
-        .onClick(() => { this.attachsExpanded = !this.attachsExpanded })
+        .onClick(() => {
+          this.attachsExpanded = !this.attachsExpanded
+          if (this.attachsExpanded) {
+            this.fetchAttachVideoSizes()
+          }
+        })
       }.margin({ top: 12 })
       if (this.attachsExpanded) {
       Column() {
@@ -162,7 +170,8 @@ export struct PostItem {
   renderVideoAttach(att: PostAttachInfo) {
     if (VIDEO_EXTS.indexOf(att.ext.toLowerCase()) >= 0) {
       Video({ src: att.attachurl })
-        .width('100%').aspectRatio(16 / 9).controls(true)
+        .width('100%').aspectRatio(this.getAttachVideoAspectRatio(att.attachurl)).objectFit(ImageFit.Contain)
+        .controls(true)
         .borderRadius(8).backgroundColor(AppColors.bgSecondary)
         .autoPlay(false).margin({ bottom: 6 })
     }
@@ -341,6 +350,39 @@ export struct PostItem {
       }
     }
     .width('80%').alignSelf(ItemAlign.End).padding(12).backgroundColor(AppColors.bgSecondary).borderRadius(8).margin({ top: 12 })
+  }
+
+  private getAttachVideoAspectRatio(url: string): number {
+    const size: ImageSize | undefined = this.videoSizes.get(url)
+    if (size && size.width > 0 && size.height > 0) {
+      return size.width / size.height
+    }
+    return 16 / 9
+  }
+
+  private setAttachVideoSize(url: string, size: ImageSize): void {
+    const m: Map<string, ImageSize> = new Map()
+    this.videoSizes.forEach((v: ImageSize, k: string) => { m.set(k, v) })
+    m.set(url, size)
+    this.videoSizes = m
+  }
+
+  private fetchAttachVideoSizes(): void {
+    for (let i = 0; i < this.post.attachs.length; i++) {
+      const att: PostAttachInfo = this.post.attachs[i]
+      if (VIDEO_EXTS.indexOf(att.ext.toLowerCase()) >= 0 && att.attachurl.length > 0) {
+        const cached: ImageSize | null = getCachedVideoSize(att.attachurl)
+        if (cached) {
+          this.setAttachVideoSize(att.attachurl, cached)
+        } else if (!this.videoSizes.has(att.attachurl)) {
+          fetchVideoSize(att.attachurl).then((size: ImageSize | null) => {
+            if (size) {
+              this.setAttachVideoSize(att.attachurl, size)
+            }
+          })
+        }
+      }
+    }
   }
 }
 
