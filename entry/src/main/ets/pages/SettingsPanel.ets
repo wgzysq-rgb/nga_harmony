@@ -80,21 +80,20 @@ export struct SettingsPanel {
             // ---- 主题选择 ----
             Column() {
               Text('主题选择').fontSize(15).fontColor(AppColors.textSecondary)
-                .width('100%').padding({ left: 16, bottom: 12 })
+                .width('100%').padding({ bottom: 10 })
 
-              Scroll() {
-                Row() {
-                  ForEach(THEME_OPTIONS, (theme: ThemeOption) => {
-                    this.ThemeCard(theme)
-                  }, (theme: ThemeOption) => theme.name)
-                }
-                .padding({ left: 10, right: 10 })
+              Row() {
+                ForEach(THEME_OPTIONS, (theme: ThemeOption) => {
+                  this.ThemeCard(theme)
+                }, (theme: ThemeOption) => theme.name)
               }
-              .scrollBar(BarState.Off)
-              .clip(false)
+              .width('100%')
             }
-            .width('100%')
-            .padding({ top: 16, bottom: 16 })
+            .width('92%')
+            .backgroundColor(AppColors.bgTertiary)
+            .borderRadius(12)
+            .padding(12)
+            .margin({ top: 16 })
 
             Column() {
               this.SettingRow($r('app.media.icon_block'), IconColors.block, '黑名单管理', '', () => {
@@ -205,70 +204,67 @@ export struct SettingsPanel {
   @Builder
   ThemeCard(theme: ThemeOption) {
     Column() {
-      // 预览区
       Stack() {
         if (theme.name === 'system') {
-          // 跟随系统：上下分半预览（上半浅色/下半深色）
           Column() {
             Stack() {
               Column() {
-                Row().width(48).height(4).backgroundColor('#C08A4A').borderRadius(2)
-                Row().width(36).height(4).backgroundColor('#3E2A1D').borderRadius(2).opacity(0.5).margin({ top: 8 })
-                Row().width(28).height(4).backgroundColor('#3E2A1D').borderRadius(2).opacity(0.25).margin({ top: 5 })
+                Row().width('80%').height(3).backgroundColor('#C08A4A').borderRadius(2)
+                Row().width('60%').height(3).backgroundColor('#3E2A1D').borderRadius(2).opacity(0.5).margin({ top: 5 })
+                Row().width('45%').height(3).backgroundColor('#3E2A1D').borderRadius(2).opacity(0.25).margin({ top: 4 })
               }
-              .padding(12).alignItems(HorizontalAlign.Start).width('100%')
+              .padding(8).alignItems(HorizontalAlign.Start).width('100%')
             }
-            .width('100%').height('50%').backgroundColor('#FEFAF6')
+            .width('100%').layoutWeight(1).backgroundColor('#FEFAF6')
 
             Stack() {
               Column() {
-                Row().width(48).height(4).backgroundColor('#D4A85A').borderRadius(2)
-                Row().width(36).height(4).backgroundColor('#EAE2D8').borderRadius(2).opacity(0.5).margin({ top: 8 })
-                Row().width(28).height(4).backgroundColor('#EAE2D8').borderRadius(2).opacity(0.25).margin({ top: 5 })
+                Row().width('80%').height(3).backgroundColor('#D4A85A').borderRadius(2)
+                Row().width('60%').height(3).backgroundColor('#EAE2D8').borderRadius(2).opacity(0.5).margin({ top: 5 })
+                Row().width('45%').height(3).backgroundColor('#EAE2D8').borderRadius(2).opacity(0.25).margin({ top: 4 })
               }
-              .padding(12).alignItems(HorizontalAlign.Start).width('100%')
+              .padding(8).alignItems(HorizontalAlign.Start).width('100%')
             }
-            .width('100%').height('50%').backgroundColor('#1A1A1E')
+            .width('100%').layoutWeight(1).backgroundColor('#1A1A1E')
           }
           .width('100%').height('100%')
         } else {
           Column() {
-            Row().width('100%').height(3).backgroundColor(theme.primaryColor)
+            Row().width('100%').height(2).backgroundColor(theme.primaryColor)
             Column() {
-              Row().width('55%').height(5).backgroundColor(theme.textColor).borderRadius(3).opacity(0.55)
-              Row().width('35%').height(5).backgroundColor(theme.textColor).borderRadius(3).opacity(0.25).margin({ top: 7 })
-              Row().width('70%').height(5).backgroundColor(theme.textColor).borderRadius(3).opacity(0.35).margin({ top: 7 })
-              Row().width('45%').height(5).backgroundColor(theme.textColor).borderRadius(3).opacity(0.15).margin({ top: 7 })
+              Row().width('55%').height(3).backgroundColor(theme.textColor).borderRadius(2).opacity(0.55)
+              Row().width('35%').height(3).backgroundColor(theme.textColor).borderRadius(2).opacity(0.25).margin({ top: 5 })
+              Row().width('70%').height(3).backgroundColor(theme.textColor).borderRadius(2).opacity(0.35).margin({ top: 5 })
+              Row().width('45%').height(3).backgroundColor(theme.textColor).borderRadius(2).opacity(0.15).margin({ top: 5 })
             }
-            .padding(14).alignItems(HorizontalAlign.Start).width('100%')
+            .padding(8).alignItems(HorizontalAlign.Start).width('100%')
           }
           .width('100%').height('100%').backgroundColor(theme.bgColor)
         }
       }
-      .width('100%').height(108).borderRadius(10)
+      .width('100%').height(90).borderRadius(8)
       .clip(true)
       .border({
         width: this.themeName === theme.name ? 2 : 1,
         color: this.themeName === theme.name ? AppColors.primary : AppColors.separator
       })
 
-      // 底部：标签 + 选中状态
       Row() {
-        Text(theme.label).fontSize(14).fontColor(AppColors.textPrimary).fontWeight(FontWeight.Medium)
+        Text(theme.label).fontSize(13).fontColor(AppColors.textPrimary).fontWeight(FontWeight.Medium)
         Blank()
         if (this.themeName === theme.name) {
-          Image($r('app.media.icon_check')).width(16).height(16).fillColor(AppColors.primary)
+          Image($r('app.media.icon_check')).width(14).height(14).fillColor(AppColors.primary)
         } else {
-          Stack().width(16).height(16).borderRadius(8).border({ width: 1.5, color: AppColors.separator })
+          Stack().width(14).height(14).borderRadius(7).border({ width: 1.5, color: AppColors.separator })
         }
       }
-      .width('100%').margin({ top: 10 })
+      .width('100%').margin({ top: 8 })
     }
-    .width(144)
-    .padding(12)
+    .layoutWeight(1)
+    .margin({ left: 4, right: 4 })
+    .padding(8)
     .backgroundColor(AppColors.bgSecondary)
-    .borderRadius(14)
-    .margin({ left: 6, right: 6 })
+    .borderRadius(10)
     .onClick(() => {
       if (theme.name !== this.themeName) {
         appStore.setTheme(theme.name)
