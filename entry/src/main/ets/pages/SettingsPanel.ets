@@ -48,8 +48,9 @@ export struct SettingsPanel {
       }
 
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext
+      const userName = session.nickName || `User${session.uid}`
       const documentSaveOptions = new picker.DocumentSaveOptions()
-      documentSaveOptions.newFileNames = ['nga_credentials.txt']
+      documentSaveOptions.newFileNames = [`nga_${userName}.txt`]
       documentSaveOptions.fileSuffixChoices = ['文档|.txt']
 
       const documentViewPicker = new picker.DocumentViewPicker(context)
@@ -63,7 +64,7 @@ export struct SettingsPanel {
       const file = fileIo.openSync(uris[0], fileIo.OpenMode.READ_WRITE)
       fileIo.writeSync(file.fd, content)
       fileIo.closeSync(file)
-      appStore.showToast('凭据已导出')
+      appStore.showToast('账号凭证已导出')
     } catch (e) {
       appStore.showToast('导出失败')
     }
@@ -133,10 +134,9 @@ export struct SettingsPanel {
 
               Row() {
                 Stack() {
-                  Image($r('app.media.icon_check')).width(17).height(17).fillColor(AppColors.white)
+                  Image($r('app.media.icon_calendar_check')).width(17).height(17).fillColor(AppColors.white)
                 }
                 .width(29).height(29).borderRadius(6).backgroundColor(IconColors.checkin).margin({ right: 12 })
-                .opacity(0.5)
 
                 Text('自动签到').fontSize(17).layoutWeight(1)
 
@@ -166,7 +166,7 @@ export struct SettingsPanel {
 
               Divider().margin({ left: 60 }).color(AppColors.separator)
 
-              this.SettingRow($r('app.media.icon_check'), IconColors.checkin, '导出凭据', '', () => {
+              this.SettingRow($r('app.media.icon_export'), IconColors.checkin, '导出账号凭证', '', () => {
                 this.handleExport()
               })
 
