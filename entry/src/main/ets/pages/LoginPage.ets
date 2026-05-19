@@ -9,6 +9,7 @@ import { ngaClient } from '../service/NgaClient'
 import { AppColors } from '../common/Constants'
 import { picker, fileIo } from '@kit.CoreFileKit'
 import { common } from '@kit.AbilityKit'
+import { BusinessError } from '@kit.BasicServicesKit'
 import { util } from '@kit.ArkTS'
 import { webview } from '@kit.ArkWeb'
 import router from '@ohos.router'
@@ -34,6 +35,7 @@ struct LoginPage {
   private loginDomain: string = ''
   private cookiePollTimer: number = -1
   private pollingActive: boolean = false
+  private authTriggered: boolean = false
 
   build() {
     Stack() {
@@ -185,6 +187,7 @@ struct LoginPage {
                 .onClick(() => { this.closeWebLogin() })
             }
             .width('100%').height(48).padding({ left: 16, right: 16 })
+            .margin({ top: this.statusBarHeight })
 
             Web({ src: this.loginDomain + '/nuke.php?__lib=login&__act=account&login', controller: this.webController })
               .layoutWeight(1).width('100%')
@@ -192,6 +195,25 @@ struct LoginPage {
               .domStorageAccess(true)
               .userAgent('Mozilla/5.0 (Linux; Android 10; HarmonyOS) AppleWebKit/537.36')
               .onPageEnd(() => { this.startCookiePolling() })
+              .onConsole((event) => {
+                const msg: string = event.message.getMessage()
+                if (msg.indexOf('loginSuccess') >= 0 && !this.authTriggered) {
+                  const colonIdx: number = msg.indexOf(':')
+                  if (colonIdx >= 0) {
+                    try {
+                      const jsonStr: string = msg.substring(colonIdx + 1).trim()
+                      const data: Record<string, Object> = JSON.parse(jsonStr) as Record<string, Object>
+                      if (data['uid'] && data['token']) {
+                        this.authTriggered = true
+                        this.handleWebLoginResult(String(data['uid']), String(data['token']))
+                      }
+                    } catch (e) {
+                      // ignore parse error
+                    }
+                  }
+                }
+                return false
+              })
           }
           .width('100%').height('100%')
 
@@ -334,6 +356,7 @@ struct LoginPage {
   private openWebLogin(): void {
     this.error = ''
     this.loginDomain = ngaClient.getActiveDomain()
+    this.authTriggered = false
     this.showWebLogin = true
   }
 
@@ -351,16 +374,16 @@ struct LoginPage {
   }
 
   private scheduleCookieCheck(): void {
-    if (!this.pollingActive || !this.showWebLogin) {
+    if (!this.pollingActive || !this.showWebLogin || this.authTriggered) {
       return
     }
-    const domains: string[] = ngaClient.getDomainList()
-    for (let i: number = 0; i < domains.length; i++) {
-      const domain: string = domains[i]
-      try {
-        const cookieStr: string = webview.WebCookieManager.fetchCookieSync(domain + '/')
-        if (cookieStr.length > 0 && cookieStr.indexOf('ngaPassportUid') >= 0) {
-          const parts: string[] = cookieStr.split(';')
+    try {
+      this.webController.runJavaScript('document.cookie', (err: BusinessError, result: string) => {
+        if (this.authTriggered) {
+          return
+        }
+        if (!err && result && result.indexOf('ngaPassportUid') >= 0 && result.indexOf('ngaPassportCid') >= 0) {
+          const parts: string[] = result.split(';')
           let uid: string = ''
           let cid: string = ''
           for (let j: number = 0; j < parts.length; j++) {
@@ -372,18 +395,25 @@ struct LoginPage {
             }
           }
           if (uid.length > 0 && cid.length > 0) {
+            this.authTriggered = true
             this.pollingActive = false
             this.handleWebLoginResult(uid, cid)
             return
           }
         }
-      } catch (e) {
-        continue
+        if (this.pollingActive && this.showWebLogin && !this.authTriggered) {
+          this.cookiePollTimer = setTimeout((): void => {
+            this.scheduleCookieCheck()
+          }, 1500)
+        }
+      })
+    } catch (e) {
+      if (!this.authTriggered) {
+        this.cookiePollTimer = setTimeout((): void => {
+          this.scheduleCookieCheck()
+        }, 1500)
       }
     }
-    this.cookiePollTimer = setTimeout((): void => {
-      this.scheduleCookieCheck()
-    }, 1500)
   }
 
   private stopCookiePolling(): void {
@@ -401,13 +431,16 @@ struct LoginPage {
       if (result.ok && result.token && result.user) {
         const user = result.user
         await appStore.setAuth(result.token, user.uid, user.nickName, user.avatarUrl)
+        this.showWebLogin = false
+        this.webLoginLoading = false
         router.replaceUrl({ url: 'pages/MainPage' })
       } else {
         this.error = result.error || '凭据验证失败'
+        this.webLoginLoading = false
+        this.showWebLogin = false
       }
     } catch (e) {
       this.error = (e as Error).message || '处理失败'
-    } finally {
       this.webLoginLoading = false
       this.showWebLogin = false
     }
