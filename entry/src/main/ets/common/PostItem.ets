@@ -129,7 +129,6 @@ export struct PostItem {
             .margin({ top: 12 })
             .padding({ left: 10, top: 4, bottom: 4 })
             .border({ width: { left: 2 }, color: AppColors.separator })
-            .opacity(0.6)
           }
 
           if (this.post.comments.length > 0) {
