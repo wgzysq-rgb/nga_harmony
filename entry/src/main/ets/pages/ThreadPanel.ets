@@ -359,8 +359,9 @@ export struct ThreadPanel {
       }
     } catch (e) {
       // silently fall back to on-demand load
+    } finally {
+      this.prefetchNextInProgress = false
     }
-    this.prefetchNextInProgress = false
   }
 
   private async prefetchPrev(): Promise<void> {
@@ -385,8 +386,9 @@ export struct ThreadPanel {
       }
     } catch (e) {
       // silently fall back to on-demand load
+    } finally {
+      this.prefetchPrevInProgress = false
     }
-    this.prefetchPrevInProgress = false
   }
 
   private recordBrowseHistory(result: ThreadResult): void {
