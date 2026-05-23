@@ -9,6 +9,7 @@ import { checkin } from '../service/NgaApi'
 import { PreferencesStore } from './PreferencesStore'
 import { updateStatusBarStyle } from '../common/StatusBarManager'
 import type { UserNoteEntry } from '../model/NoteInfo'
+import type { NgaNotification } from '../model/Notification'
 import { FilterKeyword } from '../model/FilterKeyword'
 import { FilterListManager } from './FilterListManager'
 
@@ -87,9 +88,16 @@ class AppStoreClass {
 
   unreadNotiCount: number = 0
 
+  /** 缓存的通知列表（轮询时保存，防止 NGA 消费后 UI 查询不到） */
+  cachedNotifications: NgaNotification[] = []
+
   private lastNotiQueryTime: number = 0
 
   private static readonly NOTI_QUERY_DELAY: number = 30 * 1000
+
+  private notificationsKey(): string {
+    return `cached_notifications_${this.auth.uid}`
+  }
 
   async refreshUnreadCount(): Promise<void> {
     if (!this.auth.isAuthenticated) return
@@ -107,8 +115,46 @@ class AppStoreClass {
         }
         this.unreadNotiCount = unreadCount
         AppStorage.setOrCreate('unreadNotiCount', this.unreadNotiCount)
+
+        // 缓存完整通知数据，防止 NGA 消费后 UI 再次查询为空
+        this.cachedNotifications = result.data
+        this.persistCachedNotifications()
       }
     } catch (e) {}
+  }
+
+  /** 从本地存储加载缓存的通知数据 */
+  async loadCachedNotifications(): Promise<void> {
+    if (!this.auth.uid) return
+    const saved = await this.store.getJSON<NgaNotification[]>(this.notificationsKey())
+    if (saved && saved.length > 0) {
+      this.cachedNotifications = saved
+    }
+  }
+
+  /** 将缓存的通知数据持久化到本地存储 */
+  persistCachedNotifications(): void {
+    if (!this.auth.uid) return
+    this.store.putJSON(this.notificationsKey(), this.cachedNotifications)
+  }
+
+  /** 获取缓存的通知列表 */
+  getCachedNotifications(): NgaNotification[] {
+    return this.cachedNotifications
+  }
+
+  /** 更新缓存的通知数据（来自 NotificationPanel 的 API 结果） */
+  updateCachedNotifications(data: NgaNotification[]): void {
+    this.cachedNotifications = data
+    this.persistCachedNotifications()
+  }
+
+  /** 清空缓存的通信数据 */
+  clearCachedNotifications(): void {
+    this.cachedNotifications = []
+    if (this.auth.uid) {
+      this.store.putJSON(this.notificationsKey(), [])
+    }
   }
 
   private static readonly REFRESH_DELAY: number = 10000
@@ -123,6 +169,7 @@ class AppStoreClass {
       if (this.auth.uid) {
         await this.loadUserSettings()
         await this.loadCachedProfiles()
+        await this.loadCachedNotifications()
       }
       this.applyCurrentTheme()
       hilog.info(DOMAIN, TAG, 'AppStore initialized')
@@ -145,6 +192,7 @@ class AppStoreClass {
     this.notesManager = new FilterListManager<UserNoteEntry>()
     this.filterKeywordsManager = new FilterListManager<FilterKeyword>()
     this.profileCache = {}
+    this.cachedNotifications = []
     this.favoritesLoaded = false
     this.refreshingUids = new Set()
   }
@@ -164,6 +212,7 @@ class AppStoreClass {
       this.resetUserState()
       await this.loadUserSettings()
       await this.loadCachedProfiles()
+      await this.loadCachedNotifications()
       this.applyCurrentTheme()
     }
   }

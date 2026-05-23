@@ -40,6 +40,11 @@ export struct NotificationPanel {
   private scroller: Scroller = new Scroller()
 
   aboutToAppear(): void {
+    const cached = appStore.getCachedNotifications() as NotificationInfo[]
+    if (cached.length > 0) {
+      this.notifications = cached
+      this.updateFilteredDataSource()
+    }
     this.loadNotifications()
   }
 
@@ -49,15 +54,29 @@ export struct NotificationPanel {
     try {
       const result = await getNotifications(appStore.auth.token)
       if (result.ok) {
-        this.notifications = result.data as NotificationInfo[]
-        this.updateFilteredDataSource()
+        if (result.data.length > 0) {
+          // API 返回了新数据，更新缓存和 UI
+          this.notifications = result.data as NotificationInfo[]
+          this.updateFilteredDataSource()
+          appStore.updateCachedNotifications(result.data)
+        }
+        // API 返回空（已被轮询消费），保留先前加载的缓存数据
       } else {
-        this.hasError = true
-        this.errorMsg = result.error || '加载失败'
+        // API 失败时保留缓存
+        if (this.notifications.length > 0) {
+          appStore.showToast('刷新通知失败')
+        } else {
+          this.hasError = true
+          this.errorMsg = result.error || '加载失败'
+        }
       }
     } catch (e) {
-      this.hasError = true
-      this.errorMsg = (e as Error).message || '加载失败'
+      if (this.notifications.length > 0) {
+        appStore.showToast('刷新通知失败')
+      } else {
+        this.hasError = true
+        this.errorMsg = (e as Error).message || '加载失败'
+      }
     }
     this.isLoading = false
     AppStorage.setOrCreate('unreadNotiCount', 0)
@@ -87,6 +106,7 @@ export struct NotificationPanel {
       await clearNotifications(appStore.auth.token)
       this.notifications = []
       this.notificationsDataSource.clear()
+      appStore.clearCachedNotifications()
       AppStorage.setOrCreate('unreadNotiCount', 0)
     } catch (e) {
       appStore.showToast('清除失败')
