@@ -820,6 +820,7 @@ export struct BBCodeContentView {
                   this.RenderChildren(cell.children, ctx)
                 }
                 .padding(6)
+                .layoutWeight(cell.colSpan > 1 ? cell.colSpan : 1)
                 .border({ width: 0.5, color: AppColors.separator })
                 .alignItems(HorizontalAlign.Start)
               }
