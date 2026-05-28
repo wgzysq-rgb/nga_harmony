@@ -97,6 +97,29 @@
 - 对于包含复杂子组件的动画，将其设置为 `renderGroup(true)`，减少渲染批次
 - 不可以在动画过程中频繁改变组件的 `width`、`height`、`padding`、`margin` 等布局属性，严重影响性能
 
+## CodeGraph - 代码知识图谱查询
+
+此项目有 CodeGraph MCP 服务已配置。CodeGraph 是基于 tree-sitter 解析的知识图谱，记录每个符号、调用关系和文件结构，查询速度亚毫秒级。
+
+### 使用原则
+
+| 场景 | 推荐工具 |
+|---|---|
+| "X 在哪定义" / "查找符号 X" | `codegraph_search` |
+| "谁调用了 Y" | `codegraph_callers` |
+| "Y 调用了什么" | `codegraph_callees` |
+| "X 如何流转到 Y" | `codegraph_trace` |
+| "改了 Z 会影响到什么" | `codegraph_impact` |
+| "给我 X 的签名/源码" | `codegraph_node` |
+| "给我某个任务的上下文" | `codegraph_context` |
+| "查看多个相关符号的源码" | `codegraph_explore` |
+| "查看路径下的文件" | `codegraph_files` |
+
+- 优先用 CodeGraph 而非 grep：结构类问题（调用关系、定义位置、影响分析）直接查图即可，无需 grep + Read 循环
+- 不要先 grep 再查符号：`codegraph_search` 一次返回位置 + 类型 + 签名
+- 不要链式调用 `search` + `node`：用 `codegraph_context` 一次搞定
+- 批量查符号用 `codegraph_explore` 而非多次 `codegraph_node`
+
 ## 工具使用规范
 
 - 进行网络搜索时，使用 MCP 工具 `mcp__web-search-prime__web_search_prime` 而非内置的 `WebSearch`
