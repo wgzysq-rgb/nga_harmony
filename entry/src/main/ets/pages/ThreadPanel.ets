@@ -18,6 +18,7 @@ import { floatingLayerStore, FloatingPage } from '../store/FloatingLayerStore'
 import { voteRecordStore } from '../store/VoteRecordStore'
 import { replyManager, ReplyType } from '../common/ReplyManager'
 import { unescapeHtml, bbNodesToPlainText } from '../common/Utils'
+import { TtsPlayer } from '../common/TtsPlayer'
 import { shareThread, sharePost } from '../common/ShareUtils'
 import { openImageViewer as sharedOpenImageViewer, handleForumLink } from '../common/LinkUtils'
 import { ThreadPaginationManager } from '../common/ThreadPaginationManager'
@@ -146,6 +147,7 @@ export struct ThreadPanel {
 
   aboutToDisappear(): void {
     this.stopHoldingHandMonitoring()
+    TtsPlayer.shutdown()
   }
 
   private onThreadChanged(): void {
@@ -636,6 +638,14 @@ export struct ThreadPanel {
                       threadSubject: this.threadSubject
                     }
                   })
+                },
+                onReadAloud: (p: PostInfo): void => {
+                  const plainText: string = bbNodesToPlainText(getCachedBBNodes(p.content))
+                  if (plainText.trim().length === 0) {
+                    appStore.showToast('该楼层没有可朗读的内容')
+                    return
+                  }
+                  TtsPlayer.speak(plainText, p.pid)
                 },
                 isTopicAuthor: String(post.authorid) === this.threadAuthorId,
                 isOwnPost: appStore.auth.isAuthenticated && String(post.authorid) === appStore.auth.uid,

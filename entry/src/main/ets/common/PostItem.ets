@@ -36,6 +36,7 @@ export struct PostItem {
   onEdit: (post: PostInfo) => void = (_post: PostInfo) => {}
   onShare: (post: PostInfo) => void = (_post: PostInfo) => {}
   onSummarize: (post: PostInfo) => void = (_post: PostInfo) => {}
+  onReadAloud: (post: PostInfo) => void = (_post: PostInfo) => {}
   isTopicAuthor: boolean = false
   isOwnPost: boolean = false
 
@@ -238,33 +239,45 @@ export struct PostItem {
              .alignItems(VerticalAlign.Center)
              .onClick(() => { animateTo({ duration: 150, curve: Curve.EaseInOut }, () => { this.menuExpanded = !this.menuExpanded }) })
 
-             if (this.menuExpanded) {
-               Row() {
-                 Image($r('app.media.icon_ai'))
-                   .width(16).height(16)
-                   .fillColor(AppColors.textTertiary)
-               }
-               .padding({ left: 6, right: 6, top: 4, bottom: 4 })
-               .borderRadius(6)
-               .margin({ left: 6 })
-               .alignItems(VerticalAlign.Center)
-               .transition(TransitionEffect.OPACITY)
-               .onClick(() => this.onSummarize(this.post))
+              if (this.menuExpanded) {
+                Row() {
+                  Image($r('app.media.icon_ai'))
+                    .width(16).height(16)
+                    .fillColor(AppColors.textTertiary)
+                }
+                .padding({ left: 6, right: 6, top: 4, bottom: 4 })
+                .borderRadius(6)
+                .margin({ left: 6 })
+                .alignItems(VerticalAlign.Center)
+                .transition(TransitionEffect.OPACITY)
+                .onClick(() => this.onSummarize(this.post))
 
-               Row() {
-                 Image($r('app.media.icon_share'))
-                   .width(16).height(16)
-                   .fillColor(AppColors.textTertiary)
-               }
-               .padding({ left: 6, right: 6, top: 4, bottom: 4 })
-               .borderRadius(6)
-               .margin({ left: 6 })
-               .alignItems(VerticalAlign.Center)
-               .transition(TransitionEffect.OPACITY)
-               .onClick(() => this.onShare(this.post))
-             }
+                Row() {
+                  Image($r('app.media.icon_volume_up'))
+                    .width(16).height(16)
+                    .fillColor(AppColors.textTertiary)
+                }
+                .padding({ left: 6, right: 6, top: 4, bottom: 4 })
+                .borderRadius(6)
+                .margin({ left: 6 })
+                .alignItems(VerticalAlign.Center)
+                .transition(TransitionEffect.OPACITY)
+                .onClick(() => this.onReadAloud(this.post))
 
-             if (this.isOwnPost) {
+                Row() {
+                  Image($r('app.media.icon_share'))
+                    .width(16).height(16)
+                    .fillColor(AppColors.textTertiary)
+                }
+                .padding({ left: 6, right: 6, top: 4, bottom: 4 })
+                .borderRadius(6)
+                .margin({ left: 6 })
+                .alignItems(VerticalAlign.Center)
+                .transition(TransitionEffect.OPACITY)
+                .onClick(() => this.onShare(this.post))
+              }
+
+              if (this.isOwnPost) {
                Row() {
                  Image($r('app.media.icon_compose'))
                    .width(16).height(16)
@@ -411,6 +424,18 @@ export struct PostItem {
             .alignItems(VerticalAlign.Center)
             .transition(TransitionEffect.OPACITY)
             .onClick(() => this.onSummarize(this.post))
+
+            Row() {
+              Image($r('app.media.icon_volume_up'))
+                .width(16).height(16)
+                .fillColor(AppColors.textTertiary)
+            }
+            .padding({ left: 6, right: 6, top: 4, bottom: 4 })
+            .borderRadius(6)
+            .margin({ left: 6 })
+            .alignItems(VerticalAlign.Center)
+            .transition(TransitionEffect.OPACITY)
+            .onClick(() => this.onReadAloud(this.post))
           }
 
           Row() {
