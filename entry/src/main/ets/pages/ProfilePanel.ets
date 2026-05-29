@@ -8,7 +8,7 @@ import { Avatar } from '../common/Avatar'
 import { AnonymousName } from '../common/AnonymousName'
 import { MakeNoteDialog } from '../common/Dialogs'
 import { PanelNavBar } from '../common/PanelNavBar'
-import { getCachedBBNodes } from '../service/BBCodeCache'
+import { getCachedBBNodes, preWarmBatch } from '../service/BBCodeCache'
 import { BBCodeContentView } from '../common/BBCodeContentView'
 import { openImageViewer, handleForumLink } from '../common/LinkUtils'
 import { Context } from '@kit.AbilityKit'
@@ -56,6 +56,7 @@ export struct ProfilePanel {
     const cached = appStore.getCachedProfile(this.uid)
     if (cached) {
       this.profile = cached
+      if (cached.sign) preWarmBatch([cached.sign])
       this.isLoading = false
     }
     appStore.ensureProfile(this.uid)
@@ -75,6 +76,7 @@ export struct ProfilePanel {
     const cached = appStore.getCachedProfile(this.uid)
     if (cached) {
       this.profile = cached
+      if (cached.sign) preWarmBatch([cached.sign])
       this.isLoading = false
     }
     appStore.ensureProfile(this.uid)
@@ -87,6 +89,7 @@ export struct ProfilePanel {
     const cached = appStore.getCachedProfile(this.uid)
     if (cached) {
       this.profile = cached
+      if (cached.sign) preWarmBatch([cached.sign])
       this.isLoading = false
       this.hasError = false
     }
