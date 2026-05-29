@@ -106,7 +106,7 @@ class AppStoreClass {
     this.lastNotiQueryTime = now
     try {
       const result = await getNotifications(this.auth.token)
-      if (result.ok && result.data) {
+      if (result.ok && result.data && result.data.length > 0) {
         let unreadCount: number = 0
         for (let i: number = 0; i < result.data.length; i++) {
           if (result.data[i].unread) {
