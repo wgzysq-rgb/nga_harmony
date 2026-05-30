@@ -10,6 +10,7 @@ import { BlacklistPanel } from './BlacklistPanel'
 import { NotesPanel } from './NotesPanel'
 import { FilterKeywordsPanel } from './FilterKeywordsPanel'
 import { SettingsPanel } from './SettingsPanel'
+import { TtsSettingsPanel } from './TtsSettingsPanel'
 import { BrowseHistoryPanel } from './BrowseHistoryPanel'
 import { TopicListPanel } from './TopicListPanel'
 import { WebViewPanel } from './WebViewPanel'
@@ -51,6 +52,8 @@ export struct ActivityPanelComponent {
           })
         } else if (entry.screen.type === 'profile') {
           ProfilePanel({ uid: entry.screen.uid })
+        } else if (entry.screen.type === 'ttsSettings') {
+          TtsSettingsPanel()
         } else if (entry.screen.type === 'settings') {
           SettingsPanel()
         } else if (entry.screen.type === 'webview') {

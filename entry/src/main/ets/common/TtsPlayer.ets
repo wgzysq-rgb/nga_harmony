@@ -6,6 +6,7 @@ const MAX_CHUNK_LEN: number = 10000
 
 let ttsEngine: textToSpeech.TextToSpeechEngine | null = null
 let engineReady: boolean = false
+let enginePerson: number = -1
 let pendingChunks: string[] = []
 let chunkIndex: number = 0
 let speakingPid: number = -1
@@ -40,6 +41,7 @@ function splitText(text: string): string[] {
 }
 
 function initEngine(): void {
+  const requestedPerson: number = appStore.settings.ttsPerson
   const extraParams: Record<string, Object> = {
     'style': 'interaction-broadcast',
     'locate': 'CN'
@@ -47,17 +49,22 @@ function initEngine(): void {
   const initParams: textToSpeech.CreateEngineParams = {
     language: 'zh-CN',
     online: 1,
-    person: 0,
+    person: requestedPerson,
     extraParams: extraParams
   }
   try {
     textToSpeech.createEngine(initParams, (err: BusinessError, engine: textToSpeech.TextToSpeechEngine) => {
       if (err) {
-        appStore.showToast('语音引擎不可用')
+        if (err.code === 1002300003 || err.code === 1002300005) {
+          appStore.showToast('音色未下载，请在设置中下载后使用')
+        } else {
+          appStore.showToast('语音引擎不可用')
+        }
         return
       }
       ttsEngine = engine
       engineReady = true
+      enginePerson = requestedPerson
       engine.setListener({
         onStart(requestId: string, response: textToSpeech.StartResponse) {
           appStore.showToast('正在朗读')
@@ -80,6 +87,7 @@ function initEngine(): void {
           chunkIndex = 0
           if (errorCode === 1002300007) {
             engineReady = false
+            enginePerson = -1
             ttsEngine = null
           }
           appStore.showToast('朗读出错')
@@ -100,9 +108,9 @@ function doSpeak(text: string): void {
   }
   const extraParams: Record<string, Object> = {
     'queueMode': 1,
-    'speed': 1,
-    'volume': 1,
-    'pitch': 1,
+    'speed': appStore.settings.ttsSpeed,
+    'volume': appStore.settings.ttsVolume,
+    'pitch': appStore.settings.ttsPitch,
     'languageContext': 'zh-CN',
     'audioType': 'pcm',
     'soundChannel': 3,
@@ -147,6 +155,14 @@ export class TtsPlayer {
       stopInternal()
       return
     }
+    if (engineReady && appStore.settings.ttsPerson !== enginePerson) {
+      try {
+        ttsEngine?.shutdown()
+      } catch (e) {
+      }
+      ttsEngine = null
+      engineReady = false
+    }
     stopInternal()
     speakingPid = pid
     pendingChunks = splitText(text)
@@ -174,5 +190,6 @@ export class TtsPlayer {
     }
     ttsEngine = null
     engineReady = false
+    enginePerson = -1
   }
 }

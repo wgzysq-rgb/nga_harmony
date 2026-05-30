@@ -49,6 +49,10 @@ export class SettingsState {
   holdingHand: number = 2
   smartGrip: boolean = true
   showSignature: boolean = true
+  ttsPerson: number = 13
+  ttsSpeed: number = 1.0
+  ttsVolume: number = 1.0
+  ttsPitch: number = 1.0
 }
 
 export class ToastState {
@@ -376,6 +380,26 @@ class AppStoreClass {
     this.persistSettings()
   }
 
+  setTtsPerson(v: number): void {
+    this.settings.ttsPerson = v
+    this.persistSettings()
+  }
+
+  setTtsSpeed(v: number): void {
+    this.settings.ttsSpeed = v
+    this.persistSettings()
+  }
+
+  setTtsVolume(v: number): void {
+    this.settings.ttsVolume = v
+    this.persistSettings()
+  }
+
+  setTtsPitch(v: number): void {
+    this.settings.ttsPitch = v
+    this.persistSettings()
+  }
+
   async autoCheckinIfNeeded(): Promise<void> {
     if (!this.auth.isAuthenticated || !this.settings.autoCheckin) {
       return
@@ -474,6 +498,10 @@ class AppStoreClass {
       if (saved.holdingHand !== undefined) this.settings.holdingHand = saved.holdingHand
       if (saved.smartGrip !== undefined) this.settings.smartGrip = saved.smartGrip
       if (saved.showSignature !== undefined) this.settings.showSignature = saved.showSignature
+      if (saved.ttsPerson !== undefined) this.settings.ttsPerson = saved.ttsPerson
+      if (saved.ttsSpeed !== undefined) this.settings.ttsSpeed = saved.ttsSpeed
+      if (saved.ttsVolume !== undefined) this.settings.ttsVolume = saved.ttsVolume
+      if (saved.ttsPitch !== undefined) this.settings.ttsPitch = saved.ttsPitch
     }
     AppStorage.setOrCreate('showSignature', this.settings.showSignature)
   }

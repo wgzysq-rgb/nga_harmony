@@ -56,6 +56,7 @@ export type ScreenType =
   | 'browseHistory'
   | 'topicList'
   | 'webview'
+  | 'ttsSettings'
 
 export class Screen {
   type: ScreenType = 'thread'
@@ -147,6 +148,12 @@ export class Screen {
     return s
   }
 
+  static ttsSettings(): Screen {
+    const s = new Screen()
+    s.type = 'ttsSettings'
+    return s
+  }
+
   static topicList(
     name: string, fid: number = 0,
     authorid: string = '', favor: string = '',
@@ -176,6 +183,7 @@ export class Screen {
       case 'browseHistory': return '浏览历史'
       case 'topicList': return this.topicListName || '主题列表'
       case 'webview': return 'NGA网页版'
+      case 'ttsSettings': return '语音朗读'
       default: return ''
     }
   }

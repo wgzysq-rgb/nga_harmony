@@ -194,6 +194,12 @@ export struct SettingsPanel {
             .margin({ top: 16 })
 
             Column() {
+              this.SettingRow($r('app.media.icon_volume_up'), '#5AC8FA', '语音朗读', '', () => {
+                routerStore.navigateActivity(Screen.ttsSettings())
+              })
+
+              Divider().margin({ left: 60 }).color(AppColors.separator)
+
               this.SettingRow($r('app.media.icon_block'), IconColors.block, '黑名单管理', '', () => {
                 routerStore.navigateActivity(Screen.blacklist())
               })
