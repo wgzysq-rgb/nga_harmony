@@ -7,6 +7,8 @@ import type { Category } from '../model/Forum'
 import type { ProfileData } from '../model/User'
 import { checkin } from '../service/NgaApi'
 import { PreferencesStore } from './PreferencesStore'
+import { SerialQueue } from './SerialQueue'
+import { LruCache } from '../common/LruCache'
 import { updateStatusBarStyle } from '../common/StatusBarManager'
 import type { UserNoteEntry } from '../model/NoteInfo'
 import type { NgaNotification } from '../model/Notification'
@@ -70,6 +72,7 @@ class PersistedAuth {
 
 class AppStoreClass {
   private store: PreferencesStore = new PreferencesStore()
+  private writeQueue: SerialQueue = new SerialQueue()
 
   auth: AuthState = new AuthState()
   settings: SettingsState = new SettingsState()
@@ -87,7 +90,7 @@ class AppStoreClass {
 
   private filterKeywordsManager: FilterListManager<FilterKeyword> = new FilterListManager<FilterKeyword>()
 
-  private profileCache: Record<string, ProfileData> = {}
+  private profileCache: LruCache<ProfileData> = new LruCache<ProfileData>(200)
   private profileVersion: number = 0
   private refreshingUids: Set<string> = new Set()
 
@@ -140,7 +143,9 @@ class AppStoreClass {
   /** 将缓存的通知数据持久化到本地存储 */
   persistCachedNotifications(): void {
     if (!this.auth.uid) return
-    this.store.putJSON(this.notificationsKey(), this.cachedNotifications)
+    this.writeQueue.enqueue(async (): Promise<void> => {
+      await this.store.putJSON(this.notificationsKey(), this.cachedNotifications)
+    })
   }
 
   /** 获取缓存的通知列表 */
@@ -158,7 +163,9 @@ class AppStoreClass {
   clearCachedNotifications(): void {
     this.cachedNotifications = []
     if (this.auth.uid) {
-      this.store.putJSON(this.notificationsKey(), [])
+      this.writeQueue.enqueue(async (): Promise<void> => {
+        await this.store.putJSON(this.notificationsKey(), [])
+      })
     }
   }
 
@@ -196,7 +203,7 @@ class AppStoreClass {
     this.blacklistManager = new FilterListManager<BlacklistEntry>()
     this.notesManager = new FilterListManager<UserNoteEntry>()
     this.filterKeywordsManager = new FilterListManager<FilterKeyword>()
-    this.profileCache = {}
+    this.profileCache.clear()
     this.cachedNotifications = []
     this.favoritesLoaded = false
     this.refreshingUids = new Set()
@@ -239,7 +246,9 @@ class AppStoreClass {
     data.uid = this.auth.uid
     data.nickName = this.auth.nickName
     data.avatarUrl = this.auth.avatarUrl
-    this.store.putJSON('auth', data)
+    this.writeQueue.enqueue(async (): Promise<void> => {
+      await this.store.putJSON('auth', data)
+    })
   }
 
   private async loadAuth(): Promise<void> {
@@ -471,7 +480,9 @@ class AppStoreClass {
 
   persistSettings(): void {
     if (!this.auth.uid) return
-    this.store.putJSON(this.settingsKey(), this.settings)
+    this.writeQueue.enqueue(async (): Promise<void> => {
+      await this.store.putJSON(this.settingsKey(), this.settings)
+    })
   }
 
   private async loadUserSettings(): Promise<void> {
@@ -520,7 +531,9 @@ class AppStoreClass {
   }
 
   private persistCategories(): void {
-    this.store.putJSON('cached_categories', this.cachedCategories)
+    this.writeQueue.enqueue(async (): Promise<void> => {
+      await this.store.putJSON('cached_categories', this.cachedCategories)
+    })
   }
 
   ensureCategories(): void {
@@ -561,24 +574,40 @@ class AppStoreClass {
     if (!this.auth.uid) return
     const saved = await this.store.getJSON<Record<string, ProfileData>>(this.profilesKey())
     if (saved) {
-      this.profileCache = saved
-      hilog.info(DOMAIN, TAG, 'Loaded cached profiles: %{public}d', Object.keys(saved).length)
+      const keys = Object.keys(saved)
+      for (let i = 0; i < keys.length; i++) {
+        const val = saved[keys[i]]
+        if (val) {
+          this.profileCache.set(keys[i], val)
+        }
+      }
+      hilog.info(DOMAIN, TAG, 'Loaded cached profiles: %{public}d', keys.length)
     }
   }
 
   private persistProfiles(): void {
     if (!this.auth.uid) return
-    this.store.putJSON(this.profilesKey(), this.profileCache)
+    const snapshot: Record<string, ProfileData> = {}
+    const keys: string[] = this.profileCache.keys()
+    for (let i = 0; i < keys.length; i++) {
+      const val = this.profileCache.get(keys[i])
+      if (val) {
+        snapshot[keys[i]] = val
+      }
+    }
+    this.writeQueue.enqueue(async (): Promise<void> => {
+      await this.store.putJSON(this.profilesKey(), snapshot)
+    })
   }
 
   getCachedProfile(uid: string): ProfileData | null {
-    return this.profileCache[uid] ?? null
+    return this.profileCache.get(uid) ?? null
   }
 
   ensureProfile(uid: string): void {
     if (this.refreshingUids.has(uid)) return
     this.refreshingUids.add(uid)
-    const hasCache = !!this.profileCache[uid]
+    const hasCache = this.profileCache.has(uid)
     setTimeout(async () => {
       await this.doRefreshProfile(uid)
       this.refreshingUids.delete(uid)
@@ -591,8 +620,9 @@ class AppStoreClass {
       const result = await getUserProfile(this.auth.token, uid)
       if (result.ok && result.data) {
         const newJson = JSON.stringify(result.data)
-        const oldJson = this.profileCache[uid] ? JSON.stringify(this.profileCache[uid]) : ''
-        this.profileCache[uid] = result.data
+        const cached: ProfileData | undefined = this.profileCache.get(uid)
+        const oldJson = cached ? JSON.stringify(cached) : ''
+        this.profileCache.set(uid, result.data)
         if (newJson !== oldJson) {
           this.profileVersion++
           AppStorage.setOrCreate('profileVersion', this.profileVersion)

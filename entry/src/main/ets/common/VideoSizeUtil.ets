@@ -1,29 +1,9 @@
 import media from '@ohos.multimedia.media'
 import { ImageSize } from './ImageSizeUtil'
+import { LruCache } from './LruCache'
 
-const cache: Map<string, ImageSize> = new Map()
+const cache: LruCache<ImageSize> = new LruCache<ImageSize>(100)
 const pending: Map<string, Promise<ImageSize | null>> = new Map()
-const MAX_CACHE_SIZE: number = 100
-const cacheOrder: string[] = []
-
-function touchCache(url: string): void {
-  for (let i: number = 0; i < cacheOrder.length; i++) {
-    if (cacheOrder[i] === url) {
-      cacheOrder.splice(i, 1)
-      break
-    }
-  }
-  cacheOrder.push(url)
-}
-
-function trimCache(): void {
-  while (cache.size > MAX_CACHE_SIZE) {
-    const oldest: string | undefined = cacheOrder.shift()
-    if (oldest !== undefined) {
-      cache.delete(oldest)
-    }
-  }
-}
 
 function applyOrientation(size: ImageSize, orientation: number): ImageSize {
   if (orientation === 90 || orientation === 270) {
@@ -73,8 +53,6 @@ async function doFetch(url: string): Promise<ImageSize | null> {
       const orient: number = Number(metadata.videoOrientation) || 0
       applyOrientation(s, orient)
       cache.set(url, s)
-      touchCache(url)
-      trimCache()
       return s
     }
     return null
@@ -106,7 +84,6 @@ function startFetch(url: string): Promise<ImageSize | null> {
 export function getCachedVideoSize(url: string): ImageSize | null {
   const r: ImageSize | undefined = cache.get(url)
   if (r) {
-    touchCache(url)
     return r
   }
   return null

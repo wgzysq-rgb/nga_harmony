@@ -1,5 +1,6 @@
 import { Context } from '@kit.AbilityKit'
 import { PreferencesStore } from './PreferencesStore'
+import { SerialQueue } from './SerialQueue'
 
 class VoteRecord {
   upPids: string[] = []
@@ -13,6 +14,7 @@ class VoteRecordStoreClass {
   private store: PreferencesStore | null = null
   private cache: Record<string, VoteRecord> = {}
   private loadedUid: string = ''
+  private writeQueue: SerialQueue = new SerialQueue()
 
   async init(context: Context): Promise<void> {
     this.store = new PreferencesStore()
@@ -43,11 +45,12 @@ class VoteRecordStoreClass {
   }
 
   async save(uid: string, tid: string, upPids: Set<string>, downPids: Set<string>): Promise<void> {
-    if (!this.store || uid.length === 0 || tid.length === 0) {
+    const store = this.store
+    if (!store || uid.length === 0 || tid.length === 0) {
       return
     }
     if (this.loadedUid !== uid) {
-      const saved = await this.store.getJSON<Record<string, VoteRecord>>(`votes_${uid}`)
+      const saved = await store.getJSON<Record<string, VoteRecord>>(`votes_${uid}`)
       this.cache = saved ?? {}
       this.loadedUid = uid
     }
@@ -61,15 +64,18 @@ class VoteRecordStoreClass {
     record.ts = Date.now()
     this.cache[tid] = record
     this.evictIfNeeded()
-    await this.store.putJSON(`votes_${uid}`, this.cache)
+    await this.writeQueue.enqueue(async (): Promise<void> => {
+      await store.putJSON(`votes_${uid}`, this.cache)
+    })
   }
 
   async remove(uid: string, tid: string): Promise<void> {
-    if (!this.store || uid.length === 0) {
+    const store = this.store
+    if (!store || uid.length === 0) {
       return
     }
     if (this.loadedUid !== uid) {
-      const saved = await this.store.getJSON<Record<string, VoteRecord>>(`votes_${uid}`)
+      const saved = await store.getJSON<Record<string, VoteRecord>>(`votes_${uid}`)
       this.cache = saved ?? {}
       this.loadedUid = uid
     }
@@ -81,16 +87,21 @@ class VoteRecordStoreClass {
       }
     }
     this.cache = newCache
-    await this.store.putJSON(`votes_${uid}`, this.cache)
+    await this.writeQueue.enqueue(async (): Promise<void> => {
+      await store.putJSON(`votes_${uid}`, this.cache)
+    })
   }
 
   async clear(uid: string): Promise<void> {
-    if (!this.store) {
+    const store = this.store
+    if (!store) {
       return
     }
     this.cache = {}
     this.loadedUid = uid
-    await this.store.putJSON(`votes_${uid}`, this.cache)
+    await this.writeQueue.enqueue(async (): Promise<void> => {
+      await store.putJSON(`votes_${uid}`, this.cache)
+    })
   }
 
   private evictIfNeeded(): void {

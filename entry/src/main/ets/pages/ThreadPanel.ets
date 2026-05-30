@@ -9,7 +9,7 @@ import { routerStore, Screen } from '../store/RouterStore'
 import { ngaClient } from '../service/NgaClient'
 import { browseHistoryStore, BrowseHistoryEntry } from '../store/BrowseHistoryStore'
 import { getThread, addFavorite, removeFavorite, votePost, ThreadResult, PostInfo, PostReplyResult, VoteResult } from '../service/NgaApi'
-import { preWarmBatch, preWarmBatchAwait, getCachedBBNodes } from '../service/BBCodeCache'
+import { preWarmBatchAwait, getCachedBBNodes } from '../service/BBCodeCache'
 import { AppColors } from '../common/Constants'
 import { PanelNavBar } from '../common/PanelNavBar'
 import { PostItem } from '../common/PostItem'
@@ -49,12 +49,8 @@ export struct ThreadPanel {
   @State isLoading: boolean = true
   @State hasError: boolean = false
   @State errorMsg: string = ''
-  @State allPosts: PostInfo[] = []
   private postsDataSource: PostInfoDataSource = new PostInfoDataSource()
-  @State currentPage: number = 1
   @State displayPage: number = 1
-  @State loadedPageStart: number = 1
-  @State totalPages: number = 0
   @State isLoadingMore: boolean = false
   @State isLoadingPrevious: boolean = false
   @State authorOnly: boolean = false
@@ -73,7 +69,7 @@ export struct ThreadPanel {
   private pagePickerOnSelect: ((page: number) => void) | null = null
   private scroller: Scroller = new Scroller()
   private pageSwitchPending: boolean = false
-  private mgr: ThreadPaginationManager = new ThreadPaginationManager()
+  @State mgr: ThreadPaginationManager = new ThreadPaginationManager()
   private prefetchNextInProgress: boolean = false
   private prefetchPrevInProgress: boolean = false
   @State loadingContentOpacity: number = 0
@@ -156,12 +152,8 @@ export struct ThreadPanel {
       return
     }
     this.mgr.reset()
-    this.allPosts = []
     this.postsDataSource.clear()
-    this.currentPage = 1
     this.displayPage = 1
-    this.loadedPageStart = 1
-    this.totalPages = 0
     this.isLoading = true
     this.isLoadingMore = false
     this.isLoadingPrevious = false
@@ -192,12 +184,7 @@ export struct ThreadPanel {
     }
   }
 
-  private preWarmPosts(posts: PostInfo[], priority?: taskpool.Priority): void {
-    const contents: string[] = this.collectPostContents(posts)
-    preWarmBatch(contents, priority)
-  }
-
-  private async preWarmPostsAwait(posts: PostInfo[], priority?: taskpool.Priority): Promise<void> {
+  private async preWarmPosts(posts: PostInfo[], priority?: taskpool.Priority): Promise<void> {
     const contents: string[] = this.collectPostContents(posts)
     try {
       await preWarmBatchAwait(contents, priority)
@@ -233,7 +220,6 @@ export struct ThreadPanel {
 
     if (mode === LOAD_REPLACE) {
       this.mgr.reset()
-      this.allPosts = []
       this.postsDataSource.clear()
       this.isLoading = true
       this.loadingContentOpacity = 0
@@ -248,7 +234,7 @@ export struct ThreadPanel {
       this.isLoadingMore = false
       this.isLoadingPrevious = false
       this.hasError = false
-      this.loadedPageStart = targetPage
+      this.mgr.loadedPageStart = targetPage
       if (targetPage > 1) {
         this.pageSwitchPending = true
       }
@@ -271,10 +257,10 @@ export struct ThreadPanel {
       if (gen !== this.mgr.getGeneration()) return
 
       if (result.ok) {
-        await this.preWarmPostsAwait(result.posts, taskpool.Priority.HIGH)
+        await this.preWarmPosts(result.posts, taskpool.Priority.HIGH)
 
         if (result.pagination) {
-          this.totalPages = result.pagination.totalPages
+          this.mgr.totalPages = result.pagination.totalPages
         }
         if (result.threadInfo) {
           const info: ThreadInfo = result.threadInfo
@@ -284,8 +270,7 @@ export struct ThreadPanel {
         }
 
         if (mode === LOAD_REPLACE) {
-          this.mgr.replaceWith(result.posts, targetPage, this.totalPages)
-          this.allPosts = result.posts
+          this.mgr.replaceWith(result.posts, targetPage, this.mgr.totalPages)
           this.postsDataSource.replaceAll(result.posts)
           if (appStore.auth.isAuthenticated) {
             this.recordBrowseHistory(result)
@@ -294,25 +279,22 @@ export struct ThreadPanel {
             this.onScrollToPid()
           }
         } else if (mode === LOAD_APPEND) {
-          const added: PostInfo[] = this.mgr.appendPosts(result.posts, targetPage, this.totalPages)
+          const added: PostInfo[] = this.mgr.appendPosts(result.posts, targetPage, this.mgr.totalPages)
           if (added.length > 0) {
-            this.allPosts = this.mgr.posts
             this.postsDataSource.appendAll(added)
           }
         } else {
           const added: PostInfo[] = this.mgr.prependPosts(result.posts, targetPage)
           if (added.length > 0) {
-            this.allPosts = this.mgr.posts
             this.postsDataSource.prependAll(added)
             this.scroller.scrollToIndex(added.length + 1)
           }
         }
-        this.syncManagerState()
         this.triggerPrefetches()
       } else if (mode === LOAD_REPLACE) {
         this.hasError = true
         this.errorMsg = result.error || '加载失败'
-        this.allPosts = []
+        this.mgr.posts = []
         this.postsDataSource.clear()
       }
     } catch (e) {
@@ -320,7 +302,7 @@ export struct ThreadPanel {
       if (mode === LOAD_REPLACE) {
         this.hasError = true
         this.errorMsg = (e as Error).message || '加载失败'
-        this.allPosts = []
+        this.mgr.posts = []
         this.postsDataSource.clear()
       } else {
         console.error('loadPosts failed: ' + (e as Error).message)
@@ -344,11 +326,6 @@ export struct ThreadPanel {
     }
   }
 
-  private syncManagerState(): void {
-    this.currentPage = this.mgr.currentPage
-    this.totalPages = this.mgr.totalPages
-    this.loadedPageStart = this.mgr.loadedPageStart
-  }
 
   private triggerPrefetches(): void {
     this.prefetchNext()
@@ -356,7 +333,7 @@ export struct ThreadPanel {
   }
 
   private async prefetchNext(): Promise<void> {
-    const nextPage: number = this.currentPage + 1
+    const nextPage: number = this.mgr.currentPage + 1
     if (!this.mgr.hasMore || this.prefetchNextInProgress) return
     if (this.mgr.prefetchedNextPage === nextPage) return
     this.prefetchNextInProgress = true
@@ -371,7 +348,11 @@ export struct ThreadPanel {
       )
       if (gen !== this.mgr.getGeneration()) return
       if (result.ok) {
-        this.preWarmPosts(result.posts, taskpool.Priority.MEDIUM)
+        try {
+          await this.preWarmPosts(result.posts, taskpool.Priority.MEDIUM)
+        } catch (e) {
+          // 预热失败不影响 posts 存储
+        }
         this.mgr.prefetchedNextPosts = result.posts
         this.mgr.prefetchedNextPage = nextPage
         this.mgr.prefetchedNextTotalPages = result.pagination.totalPages
@@ -384,7 +365,7 @@ export struct ThreadPanel {
   }
 
   private async prefetchPrev(): Promise<void> {
-    const prevPage: number = this.loadedPageStart - 1
+    const prevPage: number = this.mgr.loadedPageStart - 1
     if (prevPage < 1 || this.prefetchPrevInProgress) return
     if (this.mgr.prefetchedPrevPage === prevPage) return
     this.prefetchPrevInProgress = true
@@ -399,7 +380,11 @@ export struct ThreadPanel {
       )
       if (gen !== this.mgr.getGeneration()) return
       if (result.ok) {
-        this.preWarmPosts(result.posts, taskpool.Priority.MEDIUM)
+        try {
+          await this.preWarmPosts(result.posts, taskpool.Priority.MEDIUM)
+        } catch (e) {
+          // 预热失败不影响 posts 存储
+        }
         this.mgr.prefetchedPrevPosts = result.posts
         this.mgr.prefetchedPrevPage = prevPage
       }
@@ -438,7 +423,7 @@ export struct ThreadPanel {
       if (result.ok) {
         const isComment: boolean = replyManager.type === ReplyType.COMMENT
         appStore.showToast(isComment ? '贴条成功' : '回复成功')
-        if (this.currentPage >= this.totalPages) {
+        if (this.mgr.currentPage >= this.mgr.totalPages) {
           await this.loadPosts(1, LOAD_REPLACE)
         }
       } else {
@@ -594,7 +579,7 @@ export struct ThreadPanel {
                   this.handleVote(p, value)
                 },
                 onReply: (p: PostInfo): void => {
-                  replyManager.startFloorReply(p, Number(this.threadTid), this.threadFid, this.currentPage)
+                  replyManager.startFloorReply(p, Number(this.threadTid), this.threadFid, this.mgr.currentPage)
                   floatingLayerStore.replyDialogTitle = replyManager.dialogTitle
                   floatingLayerStore.replyOnSend = (text: string, isAnony: boolean): Promise<void> => {
                     return this.handleReplySend(text, isAnony)
@@ -658,7 +643,7 @@ export struct ThreadPanel {
                 if (this.isLoadingMore) {
                   LoadingProgress().width(16).height(16).color(AppColors.textTertiary)
                   Text('加载更多...').fontSize(13).fontColor(AppColors.textTertiary).margin({ left: 8 })
-                } else if (this.currentPage >= this.totalPages && this.mgr.posts.length > 0) {
+                } else if (this.mgr.currentPage >= this.mgr.totalPages && this.mgr.posts.length > 0) {
                   Text('已加载全部回复').fontSize(13).fontColor(AppColors.textTertiary)
                 }
               }.width('100%').justifyContent(FlexAlign.Center)
@@ -678,29 +663,25 @@ export struct ThreadPanel {
           if (this.mgr.isPrefetchedNextReady()) {
             const added: PostInfo[] = this.mgr.commitPrefetchedNext()
             if (added.length > 0) {
-              this.allPosts = this.mgr.posts
               this.postsDataSource.appendAll(added)
             }
-            this.syncManagerState()
             this.prefetchNext()
           } else {
-            this.loadPosts(this.currentPage + 1, LOAD_APPEND)
+            this.loadPosts(this.mgr.currentPage + 1, LOAD_APPEND)
           }
         })
         .onReachStart(() => {
           if (this.isLoadingPrevious || this.pageSwitchPending) return
-          if (this.loadedPageStart <= 1) return
+          if (this.mgr.loadedPageStart <= 1) return
           if (this.mgr.isPrefetchedPrevReady()) {
             const added: PostInfo[] = this.mgr.commitPrefetchedPrev()
             if (added.length > 0) {
-              this.allPosts = this.mgr.posts
               this.postsDataSource.prependAll(added)
               this.scroller.scrollToIndex(added.length + 1)
             }
-            this.syncManagerState()
             this.prefetchPrev()
           } else {
-            this.loadPosts(this.loadedPageStart - 1, LOAD_PREPEND)
+            this.loadPosts(this.mgr.loadedPageStart - 1, LOAD_PREPEND)
           }
         })
         .transition(TransitionEffect.OPACITY.animation({ duration: 200 }))
@@ -718,9 +699,9 @@ export struct ThreadPanel {
         .width('100%').position({ x: 0, y: 0 })
 
       Row() {
-        if (this.totalPages > 1) {
+        if (this.mgr.totalPages > 1) {
           Row() {
-            if (this.totalPages === 2) {
+            if (this.mgr.totalPages === 2) {
               Stack() {
                 Text('1').fontSize(14).fontColor(this.displayPage === 1 ? AppColors.primary : AppColors.textSecondary)
                   .fontWeight(this.displayPage === 1 ? FontWeight.Bold : FontWeight.Regular)
@@ -748,18 +729,18 @@ export struct ThreadPanel {
               Stack() {
                 Text('2').fontSize(14).fontColor(AppColors.textSecondary).fontWeight(FontWeight.Regular)
               }.width(24).height(28).onClick(() => this.loadPosts(2, LOAD_REPLACE))
-            } else if (this.displayPage === this.totalPages) {
+            } else if (this.displayPage === this.mgr.totalPages) {
               Stack() {
-                Text(String(this.totalPages - 1)).fontSize(14).fontColor(AppColors.textSecondary)
+                Text(String(this.mgr.totalPages - 1)).fontSize(14).fontColor(AppColors.textSecondary)
                   .fontWeight(FontWeight.Regular)
-              }.width(24).height(28).onClick(() => this.loadPosts(this.totalPages - 1, LOAD_REPLACE))
+              }.width(24).height(28).onClick(() => this.loadPosts(this.mgr.totalPages - 1, LOAD_REPLACE))
               Divider().vertical(true).height(16).color(AppColors.dividerStrong)
               Stack() {
-                Text(String(this.totalPages)).fontSize(14).fontColor(AppColors.primary)
+                Text(String(this.mgr.totalPages)).fontSize(14).fontColor(AppColors.primary)
                   .fontWeight(FontWeight.Bold)
                 Text('•').fontSize(10).fontColor(AppColors.primary)
                   .position({ x: '50%', y: 22 }).translate({ x: '-50%' })
-              }.width(24).height(28).onClick(() => this.loadPosts(this.totalPages, LOAD_REPLACE))
+              }.width(24).height(28).onClick(() => this.loadPosts(this.mgr.totalPages, LOAD_REPLACE))
             } else {
               Stack() {
                 Text(String(this.displayPage - 1)).fontSize(14).fontColor(AppColors.textSecondary)
@@ -778,12 +759,12 @@ export struct ThreadPanel {
                   .fontWeight(FontWeight.Regular)
               }.width(24).height(28).onClick(() => this.loadPosts(this.displayPage + 1, LOAD_REPLACE))
             }
-            if (this.totalPages > 2) {
+            if (this.mgr.totalPages > 2) {
               Divider().vertical(true).height(16).color(AppColors.dividerStrong)
               Text('到').fontSize(13).fontColor(AppColors.primary).padding({ left: 4, right: 2 })
                 .onClick(() => {
                   this.pagePickerCurrentPage = this.displayPage
-                  this.pagePickerTotalPages = this.totalPages
+                  this.pagePickerTotalPages = this.mgr.totalPages
                   this.pagePickerOnSelect = (page: number): void => {
                     if (page !== this.displayPage) {
                       this.loadPosts(page, LOAD_REPLACE)

@@ -2,10 +2,10 @@ import { taskpool } from '@kit.ArkTS'
 import { BBNode, BBNodeType } from '../model/BBCodeNode'
 import { parseBBCode } from './BBCodeParser'
 import { parseBBCodeTask, BBNodeJSON } from './BBCodeParseTask'
+import { LruCache } from '../common/LruCache'
 
 const MAX_CACHE_SIZE: number = 150
-const cache: Map<string, BBNode[]> = new Map()
-const keyOrder: string[] = []
+const cache: LruCache<BBNode[]> = new LruCache<BBNode[]>(MAX_CACHE_SIZE)
 const pendingSet: Set<string> = new Set()
 
 function bbNodesFromJSON(json: string): BBNode[] {
@@ -40,27 +40,17 @@ function jsonToBBNode(d: BBNodeJSON): BBNode {
   return n
 }
 
-function cachePut(content: string, nodes: BBNode[]): void {
-  if (cache.size >= MAX_CACHE_SIZE && keyOrder.length > 0) {
-    const oldest: string | undefined = keyOrder.shift()
-    if (oldest) cache.delete(oldest)
-  }
-  cache.set(content, nodes)
-  keyOrder.push(content)
-}
-
 export function getCachedBBNodes(content: string): BBNode[] {
   const cached: BBNode[] | undefined = cache.get(content)
   if (cached) return cached
 
   const nodes: BBNode[] = parseBBCode(content)
-  cachePut(content, nodes)
+  cache.set(content, nodes)
   return nodes
 }
 
 export function clearBBCodeCache(): void {
   cache.clear()
-  keyOrder.length = 0
 }
 
 export function preWarmBBCache(content: string): void {
@@ -90,7 +80,7 @@ export async function preWarmBatchAwait(contents: string[], priority?: taskpool.
   }
   const results: Object[] = await taskpool.execute(group, p) as Object[]
   for (let i: number = 0; i < results.length; i++) {
-    cachePut(toParse[i], bbNodesFromJSON(results[i] as string))
+    cache.set(toParse[i], bbNodesFromJSON(results[i] as string))
     pendingSet.delete(toParse[i])
   }
 }

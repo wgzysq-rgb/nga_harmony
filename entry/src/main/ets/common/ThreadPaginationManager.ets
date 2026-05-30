@@ -1,5 +1,6 @@
 import { PostInfo } from '../service/NgaApi'
 
+@Observed
 export class ThreadPaginationManager {
   posts: PostInfo[] = []
   pageOfIndex: number[] = []

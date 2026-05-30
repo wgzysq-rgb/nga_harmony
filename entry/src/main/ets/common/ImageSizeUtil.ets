@@ -1,33 +1,13 @@
 import { http } from '@kit.NetworkKit';
+import { LruCache } from './LruCache';
 
 export class ImageSize {
   width: number = 0;
   height: number = 0;
 }
 
-const cache: Map<string, ImageSize> = new Map();
+const cache: LruCache<ImageSize> = new LruCache<ImageSize>(500);
 const pending: Map<string, Promise<ImageSize | null>> = new Map();
-const MAX_CACHE_SIZE: number = 500;
-const cacheOrder: string[] = [];
-
-function touchCache(url: string): void {
-  for (let i = 0; i < cacheOrder.length; i++) {
-    if (cacheOrder[i] === url) {
-      cacheOrder.splice(i, 1);
-      break;
-    }
-  }
-  cacheOrder.push(url);
-}
-
-function trimCache(): void {
-  while (cache.size > MAX_CACHE_SIZE) {
-    const oldest: string | undefined = cacheOrder.shift();
-    if (oldest !== undefined) {
-      cache.delete(oldest);
-    }
-  }
-}
 
 const MAX_CONCURRENT: number = 6;
 let activeCount: number = 0;
@@ -199,8 +179,6 @@ async function doFetchRequest(url: string): Promise<ImageSize | null> {
     const size: ImageSize | null = parseBuf(buf, extractExt(url));
     if (size) {
       cache.set(url, size);
-      touchCache(url);
-      trimCache();
     }
     return size;
   } catch (e) {
@@ -229,7 +207,6 @@ function doFetch(url: string): Promise<ImageSize | null> {
 export function getCachedImageSize(url: string): ImageSize | null {
   const r: ImageSize | undefined = cache.get(url);
   if (r) {
-    touchCache(url);
     return r;
   }
   return null;

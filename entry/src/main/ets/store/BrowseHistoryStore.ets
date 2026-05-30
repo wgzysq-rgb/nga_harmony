@@ -1,5 +1,6 @@
 import { Context } from '@kit.AbilityKit'
 import { PreferencesStore } from './PreferencesStore'
+import { SerialQueue } from './SerialQueue'
 
 export class BrowseHistoryEntry {
   tid: string = ''
@@ -19,6 +20,7 @@ class BrowseHistoryStoreClass {
   private items: BrowseHistoryEntry[] = []
   private loadedUid: string = ''
   private version: number = 0
+  private writeQueue: SerialQueue = new SerialQueue()
 
   async init(context: Context): Promise<void> {
     this.store = new PreferencesStore()
@@ -90,12 +92,15 @@ class BrowseHistoryStoreClass {
   }
 
   private async persist(uid: string): Promise<void> {
-    if (!this.store) {
+    const store = this.store
+    if (!store) {
       return
     }
-    await this.store.putJSON(`history_${uid}`, this.items)
-    this.version++
-    AppStorage.setOrCreate('browseHistoryVersion', this.version)
+    await this.writeQueue.enqueue(async (): Promise<void> => {
+      await store.putJSON(`history_${uid}`, this.items)
+      this.version++
+      AppStorage.setOrCreate('browseHistoryVersion', this.version)
+    })
   }
 }
 
