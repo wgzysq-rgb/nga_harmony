@@ -199,7 +199,7 @@ export struct ThreadPanel {
     for (let i: number = 0; i < posts.length; i++) {
       const p: PostInfo = posts[i]
       if (p.content) contents.push(p.content)
-      if (p.signature) contents.push(p.signature)
+      if (appStore.settings.showSignature && p.signature) contents.push(p.signature)
       const comments: PostInfo[] = p.comments
       for (let j: number = 0; j < comments.length; j++) {
         if (comments[j].content) contents.push(comments[j].content)
