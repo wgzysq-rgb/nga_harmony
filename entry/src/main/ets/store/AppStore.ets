@@ -16,6 +16,7 @@ import { FilterListManager } from './FilterListManager'
 const TAG = 'AppStore'
 const DOMAIN = 0x0000
 
+@Observed
 export class AuthState {
   token: string = ''
   uid: string = ''

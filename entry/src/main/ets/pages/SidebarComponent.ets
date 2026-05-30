@@ -1,4 +1,4 @@
-import { appStore } from '../store/AppStore'
+import { appStore, AuthState } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
 import { AppColors } from '../common/Constants'
 import { Avatar } from '../common/Avatar'
@@ -8,17 +8,18 @@ import { CommunityTabContent } from './CommunityTabContent'
 export struct SidebarComponent {
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'sm'
   @StorageProp('statusBarHeight') statusBarHeight: number = 0
+  @State private authState: AuthState = appStore.auth
 
   build() {
     Column() {
       Column() {
         Avatar({
-          avatar: appStore.auth.avatarUrl,
-          uid: appStore.auth.uid,
-          name: appStore.auth.nickName,
+          avatar: this.authState.avatarUrl,
+          uid: this.authState.uid,
+          name: this.authState.nickName,
           avatarSize: 36
         })
-        Text(appStore.auth.nickName || '未登录')
+        Text(this.authState.nickName || '未登录')
           .fontSize(13)
           .fontWeight(FontWeight.Bold)
           .maxLines(1)
@@ -30,8 +31,8 @@ export struct SidebarComponent {
       .alignItems(HorizontalAlign.Center)
       .border({ width: { bottom: 0.5 }, color: AppColors.separator })
       .onClick(() => {
-        if (appStore.auth.uid) {
-          routerStore.navigateActivity(Screen.profile(appStore.auth.uid))
+        if (this.authState.uid) {
+          routerStore.navigateActivity(Screen.profile(this.authState.uid))
         }
       })
 

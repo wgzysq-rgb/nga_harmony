@@ -1,4 +1,4 @@
-import { appStore, FavBoard } from '../store/AppStore'
+import { appStore, AuthState, FavBoard } from '../store/AppStore'
 import { routerStore, RouterStoreClass, Screen } from '../store/RouterStore'
 import { AppColors } from '../common/Constants'
 import { CategoryDataSource, SidebarDataSource, SidebarSection, SidebarBoardItem } from '../common/LazyDataSource'
@@ -11,6 +11,7 @@ export struct CommunityTabContent {
   @State favoritesList: FavBoard[] = []
   @State selectedSectionId: string = ''
   @State private router: RouterStoreClass = routerStore
+  @State private authState: AuthState = appStore.auth
   @Prop currentBreakpoint: string = 'sm'
   @StorageProp('statusBarHeight') statusBarHeight: number = 0
   @StorageProp('favVersion') @Watch('onFavVersionChange') favVersion: number = 0
@@ -274,12 +275,12 @@ export struct CommunityTabContent {
         Column() {
           Column() {
             Avatar({
-              avatar: appStore.auth.avatarUrl,
-              uid: appStore.auth.uid,
-              name: appStore.auth.nickName,
+              avatar: this.authState.avatarUrl,
+              uid: this.authState.uid,
+              name: this.authState.nickName,
               avatarSize: 36
             })
-            Text(appStore.auth.nickName || '未登录')
+            Text(this.authState.nickName || '未登录')
               .fontSize(13).fontWeight(FontWeight.Bold)
               .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
               .margin({ top: 8 })
@@ -288,8 +289,8 @@ export struct CommunityTabContent {
           .padding({ top: 14 + this.statusBarHeight, bottom: 14 })
           .alignItems(HorizontalAlign.Center)
           .onClick(() => {
-            if (appStore.auth.uid) {
-              routerStore.navigateActivity(Screen.profile(appStore.auth.uid))
+            if (this.authState.uid) {
+              routerStore.navigateActivity(Screen.profile(this.authState.uid))
             }
           })
 
