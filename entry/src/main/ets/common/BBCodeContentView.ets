@@ -88,22 +88,24 @@ export struct BBCodeContentView {
   onImageClick: (urls: string[], index: number) => void = (_urls: string[], _index: number) => {}
   onLinkClick: (href: string) => void = (_href: string) => {}
 
+  private allImageUrls: string[] = []
+
   aboutToAppear(): void {
-    const m: Map<string, ImageSize> = new Map()
-    const urls: string[] = this.getImageUrls()
+    this.cachedGroups = this.splitIntoGroups(this.nodes)
+    this.groupsReady = true
+    this.allImageUrls = this.getImageUrls()
+    const urls: string[] = this.allImageUrls
     for (let i = 0; i < urls.length; i++) {
       const url: string = urls[i]
       const cached: ImageSize | null = getCachedImageSize(url)
       if (cached) {
-        m.set(url, cached)
+        this.imageSizes.set(url, cached)
+        this.releasedImages.add(url)
       }
-    }
-    if (m.size > 0) {
-      this.imageSizes = m
     }
     for (let i = 0; i < urls.length; i++) {
       const url: string = urls[i]
-      if (!m.has(url)) {
+      if (!this.imageSizes.has(url)) {
         fetchImageSize(url).then((size: ImageSize | null) => {
           if (size) {
             this.setImageSize(url, size)
@@ -111,26 +113,20 @@ export struct BBCodeContentView {
             this.markImageFailed(url)
           }
         })
-      } else {
-        this.releaseImage(url)
       }
     }
 
-    const vm: Map<string, ImageSize> = new Map()
     const vUrls: string[] = this.getVideoUrls()
     for (let i = 0; i < vUrls.length; i++) {
       const url: string = vUrls[i]
       const cached: ImageSize | null = getCachedVideoSize(url)
       if (cached) {
-        vm.set(url, cached)
+        this.videoSizes.set(url, cached)
       }
-    }
-    if (vm.size > 0) {
-      this.videoSizes = vm
     }
     for (let i = 0; i < vUrls.length; i++) {
       const url: string = vUrls[i]
-      if (!vm.has(url)) {
+      if (!this.videoSizes.has(url)) {
         fetchVideoSize(url).then((size: ImageSize | null) => {
           if (size) {
             this.setVideoSize(url, size)
@@ -141,51 +137,30 @@ export struct BBCodeContentView {
   }
 
   private setImageSize(url: string, size: ImageSize): void {
-    const m: Map<string, ImageSize> = new Map()
-    this.imageSizes.forEach((v: ImageSize, k: string) => {
-      m.set(k, v)
-    })
-    m.set(url, size)
-    this.imageSizes = m
-    this.releaseImage(url)
+    this.imageSizes.set(url, size)
+    this.releasedImages.add(url)
   }
 
   private markImageFailed(url: string): void {
     if (!this.failedImages.has(url)) {
-      const s: Set<string> = new Set()
-      this.failedImages.forEach((v: string) => { s.add(v) })
-      s.add(url)
-      this.failedImages = s
+      this.failedImages.add(url)
     }
-    this.onImageLoaded(url)
+    this.loadedImages.add(url)
   }
 
   private releaseImage(url: string): void {
-    if (!this.releasedImages.has(url)) {
-      const rs: Set<string> = new Set()
-      this.releasedImages.forEach((v: string) => { rs.add(v) })
-      rs.add(url)
-      this.releasedImages = rs
-    }
+    this.releasedImages.add(url)
   }
 
   private onImageLoaded(src: string, imgWidth?: number, imgHeight?: number): void {
-    if (!this.loadedImages.has(src)) {
-      const s: Set<string> = new Set()
-      this.loadedImages.forEach((v: string) => { s.add(v) })
-      s.add(src)
-      this.loadedImages = s
-    }
+    this.loadedImages.add(src)
     if (imgWidth !== undefined && imgHeight !== undefined && imgWidth > 0 && imgHeight > 0) {
       if (!this.imageSizes.has(src)) {
-        const m: Map<string, ImageSize> = new Map()
-        this.imageSizes.forEach((v: ImageSize, k: string) => { m.set(k, v) })
         const size: ImageSize = new ImageSize()
         size.width = imgWidth
         size.height = imgHeight
-        m.set(src, size)
-        this.imageSizes = m
-        this.releaseImage(src)
+        this.imageSizes.set(src, size)
+        this.releasedImages.add(src)
       }
     }
   }
@@ -199,10 +174,7 @@ export struct BBCodeContentView {
   }
 
   private setVideoSize(url: string, size: ImageSize): void {
-    const m: Map<string, ImageSize> = new Map()
-    this.videoSizes.forEach((v: ImageSize, k: string) => { m.set(k, v) })
-    m.set(url, size)
-    this.videoSizes = m
+    this.videoSizes.set(url, size)
   }
 
   private getVideoAspectRatio(src: string): number {
@@ -290,9 +262,12 @@ export struct BBCodeContentView {
     return groups
   }
 
+  private cachedGroups: NodeGroup[] = []
+  private groupsReady: boolean = false
+
   @Builder
   RenderChildren(nodes: BBNode[], ctx: RenderContext) {
-    ForEach(this.splitIntoGroups(nodes), (group: NodeGroup) => {
+    ForEach(nodes === this.nodes && this.groupsReady ? this.cachedGroups : this.splitIntoGroups(nodes), (group: NodeGroup) => {
       if (group.kind === 'inline') {
         if (!isInlineGroupBlank(group.nodes)) {
           Text() {
@@ -542,9 +517,9 @@ export struct BBCodeContentView {
             }
           })
           .onClick(() => {
-            const allUrls = this.getImageUrls()
+            const allUrls: string[] = this.allImageUrls.length > 0 ? this.allImageUrls : [src]
             if (allUrls.length > 0) {
-              let clickIdx = 0
+              let clickIdx: number = 0
               for (let i = 0; i < allUrls.length; i++) {
                 if (allUrls[i] === src) {
                   clickIdx = i
@@ -552,8 +527,6 @@ export struct BBCodeContentView {
                 }
               }
               this.onImageClick(allUrls, clickIdx)
-            } else {
-              this.onImageClick([src], 0)
             }
           })
       }
@@ -660,13 +633,11 @@ export struct BBCodeContentView {
       .backgroundColor(AppColors.bgSecondary)
       .borderRadius(8)
       .onClick(() => {
-        const s = new Set(this.collapseKeys)
-        if (s.has(node.title)) {
-          s.delete(node.title)
+        if (this.collapseKeys.has(node.title)) {
+          this.collapseKeys.delete(node.title)
         } else {
-          s.add(node.title)
+          this.collapseKeys.add(node.title)
         }
-        this.collapseKeys = s
       })
 
       if (this.collapseKeys.has(node.title)) {
