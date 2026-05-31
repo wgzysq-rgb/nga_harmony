@@ -1,3 +1,8 @@
+class TopicPrefetchData {
+  threads: object[] = []
+  totalPages: number = 0
+}
+
 @Observed
 export class TopicPaginationManager {
   threads: object[] = []
@@ -5,9 +10,8 @@ export class TopicPaginationManager {
   totalPages: number = 0
   hasMore: boolean = true
 
-  prefetchedThreads: object[] = []
-  prefetchedPage: number = 0
   prefetchInProgress: boolean = false
+  private prefetchedPages: Map<number, TopicPrefetchData> = new Map()
 
   private generation: number = 0
 
@@ -25,8 +29,7 @@ export class TopicPaginationManager {
     this.currentPage = 1
     this.totalPages = 0
     this.hasMore = true
-    this.prefetchedThreads = []
-    this.prefetchedPage = 0
+    this.prefetchedPages.clear()
     this.generation = 0
   }
 
@@ -37,10 +40,7 @@ export class TopicPaginationManager {
     this.hasMore = page < totalPages
   }
 
-  /**
-   * 追加并去重，返回新增项（供 DataSource 使用）
-   */
-  appendWith(list: object[], page: number): object[] {
+  appendWith(list: object[], page: number, totalPages: number): object[] {
     const existingTids: Set<number> = new Set()
     for (let i: number = 0; i < this.threads.length; i++) {
       const t: number = Number((this.threads[i] as Record<string, Object>)['tid'] ?? 0)
@@ -61,20 +61,33 @@ export class TopicPaginationManager {
       this.threads = arr
     }
     this.currentPage = page
+    this.totalPages = totalPages
+    this.hasMore = page < totalPages
     return deduped
   }
 
-  isPrefetchedReady(nextPage: number): boolean {
-    return this.prefetchedThreads.length > 0 && this.prefetchedPage === nextPage
+  hasPrefetchedPage(page: number): boolean {
+    return this.prefetchedPages.has(page)
   }
 
-  setPrefetched(threads: object[], page: number): void {
-    this.prefetchedThreads = threads
-    this.prefetchedPage = page
+  setPrefetchedPage(page: number, threads: object[], totalPages: number): void {
+    const data: TopicPrefetchData = new TopicPrefetchData()
+    for (let i = 0; i < threads.length; i++) {
+      data.threads.push(threads[i])
+    }
+    data.totalPages = totalPages
+    this.prefetchedPages.set(page, data)
   }
 
-  clearPrefetch(): void {
-    this.prefetchedThreads = []
-    this.prefetchedPage = 0
+  commitPrefetchedPage(page: number): object[] {
+    const data: TopicPrefetchData | undefined = this.prefetchedPages.get(page)
+    if (data === undefined || data.threads.length === 0) return []
+    const added: object[] = this.appendWith(data.threads, page, data.totalPages)
+    this.prefetchedPages.delete(page)
+    return added
+  }
+
+  clearPrefetchedPages(): void {
+    this.prefetchedPages.clear()
   }
 }

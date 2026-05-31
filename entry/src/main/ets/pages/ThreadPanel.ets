@@ -39,6 +39,11 @@ const LOAD_PREPEND: string = 'prepend'
 const NAV_BAR_H: number = 44
 const PAGE_SCROLL_DELAY: number = 80
 
+class FetchPageResult {
+  page: number = 0
+  result: ThreadResult | null = null
+}
+
 @Component
 export struct ThreadPanel {
   @State holdingStatus: HoldingHandStatus = appStore.settings.holdingHand as HoldingHandStatus
@@ -333,48 +338,59 @@ export struct ThreadPanel {
     this.prefetchPrev()
   }
 
-  private async prefetchNext(): Promise<void> {
-    const defaultPage: number = this.mgr.currentPage + 1
-    if (!this.mgr.hasMore || defaultPage > this.mgr.totalPages) return
-    if (this.prefetchNextInProgress) return
+  private lastPrefetchTime: number = 0
+  private readonly PREFETCH_COOLDOWN_MS: number = 400
 
-    let targetPage: number = defaultPage
-    if (this.mgr.prefetchedNextPage === targetPage) {
-      targetPage++
+  private async prefetchNext(): Promise<void> {
+    const now: number = Date.now()
+    if (now - this.lastPrefetchTime < this.PREFETCH_COOLDOWN_MS) return
+    if (!this.mgr.hasMore) return
+    if (this.prefetchNextInProgress) return
+    const pagesToFetch: number[] = []
+    const maxPrefetchPage: number = Math.min(this.mgr.currentPage + 5, this.mgr.totalPages)
+    this.lastPrefetchTime = now
+    for (let p: number = this.mgr.currentPage + 1; p <= maxPrefetchPage; p++) {
+      if (!this.mgr.hasPrefetchedPage(p)) {
+        pagesToFetch.push(p)
+      }
     }
-    if (targetPage > this.mgr.totalPages) return
+    if (pagesToFetch.length === 0) return
 
     this.prefetchNextInProgress = true
     const gen: number = this.mgr.getGeneration()
-    let ok: boolean = false
     try {
       const noteMap: Record<string, string> = appStore.getNoteMap()
-      const result: ThreadResult = await withTimeout<ThreadResult>(getThread(
-        appStore.auth.token, this.threadTid, '',
-        this.authorOnly ? this.threadAuthorId : '', String(targetPage),
-        appStore.getBlacklistIds(), appStore.getEnabledKeywords(),
-        noteMap
-      ), 10000)
+      const promises: Promise<FetchPageResult | null>[] = []
+      for (let i = 0; i < pagesToFetch.length; i++) {
+        const page: number = pagesToFetch[i]
+        promises.push(
+          withTimeout<ThreadResult>(getThread(
+            appStore.auth.token, this.threadTid, '',
+            this.authorOnly ? this.threadAuthorId : '', String(page),
+            appStore.getBlacklistIds(), appStore.getEnabledKeywords(),
+            noteMap
+          ), 10000).then((r: ThreadResult) => {
+            const fpr: FetchPageResult = new FetchPageResult()
+            fpr.page = page
+            fpr.result = r
+            return fpr
+          }).catch(() => null)
+        )
+      }
+      const results: (FetchPageResult | null)[] = await Promise.all(promises)
       if (gen !== this.mgr.getGeneration()) return
-      if (result.ok) {
-        ok = true
-        try {
-          await this.preWarmPosts(result.posts, taskpool.Priority.MEDIUM)
-        } catch (e) {
-          // 预热失败不影响 posts 存储
+      for (let i = 0; i < results.length; i++) {
+        const item: FetchPageResult | null = results[i]
+        if (item === null || item.result === null) continue
+        if (item.result.ok) {
+          this.mgr.setPrefetchedPage(item.page, item.result.posts, item.result.pagination.totalPages)
+          this.preWarmPosts(item.result.posts, taskpool.Priority.MEDIUM).catch(() => {})
         }
-        this.mgr.prefetchedNextPosts = result.posts
-        this.mgr.prefetchedNextPage = targetPage
-        this.mgr.prefetchedNextTotalPages = result.pagination.totalPages
       }
     } catch (e) {
       // silently fall back to on-demand load
     } finally {
       this.prefetchNextInProgress = false
-    }
-
-    if (ok) {
-      // pipeline 由 onReachEnd 提交后触发，无需在此串联
     }
   }
 
@@ -688,14 +704,15 @@ export struct ThreadPanel {
         })
         .onReachEnd(() => {
           if (this.isLoadingMore || !this.mgr.hasMore) return
-          if (this.mgr.isPrefetchedNextReady()) {
-            const added: PostInfo[] = this.mgr.commitPrefetchedNext()
+          const nextPage: number = this.mgr.currentPage + 1
+          if (this.mgr.hasPrefetchedPage(nextPage)) {
+            const added: PostInfo[] = this.mgr.commitPrefetchedPage(nextPage)
             if (added.length > 0) {
               this.postsDataSource.appendAll(added)
             }
             this.prefetchNext()
           } else {
-            this.loadPosts(this.mgr.currentPage + 1, LOAD_APPEND)
+            this.loadPosts(nextPage, LOAD_APPEND)
           }
         })
         .onReachStart(() => {

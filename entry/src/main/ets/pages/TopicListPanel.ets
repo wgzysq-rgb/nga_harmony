@@ -138,7 +138,7 @@ export struct TopicListPanel {
 
   private async loadTwentyFourTopics(): Promise<void> {
     this.hasError = false
-    this.mgr.clearPrefetch()
+    this.mgr.clearPrefetchedPages()
 
     try {
       const pages: number[] = [1, 2, 3, 4, 5]
@@ -254,7 +254,7 @@ export struct TopicListPanel {
         }
       }, 400)
       this.hasError = false
-      this.mgr.clearPrefetch()
+      this.mgr.clearPrefetchedPages()
       if (this.sortMode === 'hot') {
         await this.loadTwentyFourTopics()
         return
@@ -278,7 +278,7 @@ export struct TopicListPanel {
           this.mgr.replaceWith(list, page, result.data.pagination.totalPages)
           this.threadsDataSource.replaceAll(list)
         } else {
-          const added: object[] = this.mgr.appendWith(list, page)
+          const added: object[] = this.mgr.appendWith(list, page, result.data.pagination.totalPages)
           if (added.length > 0) {
             this.threadsDataSource.appendAll(added)
           }
@@ -301,38 +301,53 @@ export struct TopicListPanel {
     this.isLoadingMore = false
   }
 
+  private lastPrefetchTime: number = 0
+  private readonly PREFETCH_COOLDOWN_MS: number = 400
+
   private triggerPrefetch(): void {
-    const nextPage: number = this.mgr.currentPage + 1
-    if (nextPage > this.mgr.totalPages || this.mgr.prefetchInProgress) return
-    if (this.mgr.prefetchedPage === nextPage) return
-    this.startPrefetch(nextPage)
-  }
-
-  private async startPrefetch(page: number): Promise<void> {
-    this.mgr.prefetchInProgress = true
-    let ok: boolean = false
-    try {
-      const params: TopicListParams = this.buildTopicParams(page)
-      const result: TopicListResult = await withTimeout<TopicListResult>(getTopicList(appStore.auth.token, params, appStore.getBlacklistIds(), appStore.getEnabledKeywords()), 10000)
-      if (result.ok && result.data) {
-        ok = true
-        this.mgr.setPrefetched(result.data.threadPageList, page)
+    const now: number = Date.now()
+    if (now - this.lastPrefetchTime < this.PREFETCH_COOLDOWN_MS) return
+    if (this.mgr.prefetchInProgress) return
+    const pagesToFetch: number[] = []
+    const maxPage: number = Math.min(this.mgr.currentPage + 3, this.mgr.totalPages)
+    for (let p: number = this.mgr.currentPage + 1; p <= maxPage; p++) {
+      if (!this.mgr.hasPrefetchedPage(p)) {
+        pagesToFetch.push(p)
       }
-    } catch (e) {
-      this.mgr.clearPrefetch()
     }
-    this.mgr.prefetchInProgress = false
-
-    if (ok) {
-      this.pipelineNextPrefetch(page)
-    }
+    if (pagesToFetch.length === 0) return
+    this.lastPrefetchTime = now
+    this.startPrefetch(pagesToFetch)
   }
 
-  private pipelineNextPrefetch(justFetchedPage: number): void {
-    const nextPage: number = justFetchedPage + 1
-    if (nextPage > this.mgr.totalPages) return
-    if (this.mgr.isPrefetchedReady(nextPage)) return
-    this.startPrefetch(nextPage)
+  private async startPrefetch(pages: number[]): Promise<void> {
+    this.mgr.prefetchInProgress = true
+    try {
+      const promises: Promise<void>[] = []
+      for (let i = 0; i < pages.length; i++) {
+        const page: number = pages[i]
+        promises.push(
+          (async (): Promise<void> => {
+            try {
+              const params: TopicListParams = this.buildTopicParams(page)
+              const result: TopicListResult = await withTimeout<TopicListResult>(
+                getTopicList(appStore.auth.token, params, appStore.getBlacklistIds(), appStore.getEnabledKeywords()), 10000
+              )
+              if (result.ok && result.data) {
+                this.mgr.setPrefetchedPage(page, result.data.threadPageList, result.data.pagination.totalPages)
+              }
+            } catch (e) {
+              // silently skip this page
+            }
+          })()
+        )
+      }
+      await Promise.all(promises)
+    } catch (e) {
+      // silently fall back
+    } finally {
+      this.mgr.prefetchInProgress = false
+    }
   }
 
   private async handleRemoveFav(tid: number): Promise<void> {
@@ -444,15 +459,15 @@ export struct TopicListPanel {
           .cachedCount(3)
           .onReachEnd(() => {
             if (this.isLoadingMore || this.mgr.currentPage >= this.mgr.totalPages) return
-            if (this.mgr.isPrefetchedReady(this.mgr.currentPage + 1)) {
-              const added: object[] = this.mgr.appendWith(this.mgr.prefetchedThreads, this.mgr.currentPage + 1)
+            const nextPage: number = this.mgr.currentPage + 1
+            if (this.mgr.hasPrefetchedPage(nextPage)) {
+              const added: object[] = this.mgr.commitPrefetchedPage(nextPage)
               if (added.length > 0) {
                 this.threadsDataSource.appendAll(added)
               }
-              this.mgr.clearPrefetch()
               this.triggerPrefetch()
             } else {
-              this.loadTopics(this.mgr.currentPage + 1)
+              this.loadTopics(nextPage)
             }
           })
           .transition(TransitionEffect.OPACITY.animation({ duration: 200 }))

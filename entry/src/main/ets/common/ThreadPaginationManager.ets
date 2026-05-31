@@ -1,5 +1,10 @@
 import { PostInfo } from '../service/NgaApi'
 
+class PrefetchedPageData {
+  posts: PostInfo[] = []
+  totalPages: number = 0
+}
+
 @Observed
 export class ThreadPaginationManager {
   posts: PostInfo[] = []
@@ -10,9 +15,7 @@ export class ThreadPaginationManager {
   totalPages: number = 0
   hasMore: boolean = true
 
-  prefetchedNextPosts: PostInfo[] = []
-  prefetchedNextPage: number = 0
-  prefetchedNextTotalPages: number = 0
+  private prefetchedPages: Map<number, PrefetchedPageData> = new Map()
 
   prefetchedPrevPosts: PostInfo[] = []
   prefetchedPrevPage: number = 0
@@ -36,28 +39,34 @@ export class ThreadPaginationManager {
     this.currentPage = 1
     this.totalPages = 0
     this.hasMore = true
-    this.prefetchedNextPosts = []
-    this.prefetchedNextPage = 0
-    this.prefetchedNextTotalPages = 0
+    this.prefetchedPages.clear()
     this.prefetchedPrevPosts = []
     this.prefetchedPrevPage = 0
   }
 
-  isPrefetchedNextReady(): boolean {
-    return this.prefetchedNextPosts.length > 0 && this.prefetchedNextPage > 0
+  hasPrefetchedPage(page: number): boolean {
+    return this.prefetchedPages.has(page)
   }
 
-  commitPrefetchedNext(): PostInfo[] {
-    if (!this.isPrefetchedNextReady()) return []
-    const added: PostInfo[] = this.appendPosts(
-      this.prefetchedNextPosts,
-      this.prefetchedNextPage,
-      this.prefetchedNextTotalPages
-    )
-    this.prefetchedNextPosts = []
-    this.prefetchedNextPage = 0
-    this.prefetchedNextTotalPages = 0
+  setPrefetchedPage(page: number, posts: PostInfo[], totalPages: number): void {
+    const data: PrefetchedPageData = new PrefetchedPageData()
+    for (let i = 0; i < posts.length; i++) {
+      data.posts.push(posts[i])
+    }
+    data.totalPages = totalPages
+    this.prefetchedPages.set(page, data)
+  }
+
+  commitPrefetchedPage(page: number): PostInfo[] {
+    const data: PrefetchedPageData | undefined = this.prefetchedPages.get(page)
+    if (data === undefined || data.posts.length === 0) return []
+    const added: PostInfo[] = this.appendPosts(data.posts, page, data.totalPages)
+    this.prefetchedPages.delete(page)
     return added
+  }
+
+  clearPrefetchedPages(): void {
+    this.prefetchedPages.clear()
   }
 
   isPrefetchedPrevReady(): boolean {
