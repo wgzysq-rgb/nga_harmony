@@ -374,15 +374,8 @@ export struct ThreadPanel {
     }
 
     if (ok) {
-      this.pipelineNext(targetPage)
+      // pipeline 由 onReachEnd 提交后触发，无需在此串联
     }
-  }
-
-  private pipelineNext(justFetchedPage: number): void {
-    const nextPage: number = justFetchedPage + 1
-    if (nextPage > this.mgr.totalPages) return
-    if (this.mgr.prefetchedNextPage === nextPage) return
-    this.prefetchNext()
   }
 
   private async prefetchPrev(): Promise<void> {
@@ -425,15 +418,8 @@ export struct ThreadPanel {
     }
 
     if (ok) {
-      this.pipelinePrev(targetPage)
+      // pipeline 由 onReachStart 提交后触发，无需在此串联
     }
-  }
-
-  private pipelinePrev(justFetchedPage: number): void {
-    const prevPage: number = justFetchedPage - 1
-    if (prevPage < 1) return
-    if (this.mgr.prefetchedPrevPage === prevPage) return
-    this.prefetchPrev()
   }
 
   private recordBrowseHistory(result: ThreadResult): void {
@@ -676,7 +662,6 @@ export struct ThreadPanel {
                 isTopicAuthor: String(post.authorid) === this.threadAuthorId,
                 isOwnPost: appStore.auth.isAuthenticated && String(post.authorid) === appStore.auth.uid,
               })
-                .reuseId('PostItem')
             }
           }, (post: PostInfo) => String(post.pid))
           ListItem() {

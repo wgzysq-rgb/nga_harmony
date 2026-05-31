@@ -420,7 +420,6 @@ export struct TopicListPanel {
                     }
                   }
                 })
-                  .reuseId('TopicCard')
               }
             }, (thread: object) => {
               const t = thread as Record<string, Object>
@@ -496,16 +495,11 @@ export struct TopicListPanel {
 }
 
 @Component
-@Reusable
 struct TopicCardComponent {
   @Prop thread: Record<string, Object> = {}
   @Prop isFavorites: boolean = false
   onRemoveFav: (tid: number) => void = (_tid: number) => {}
   onCardClick: (tid: string) => void = (_tid: string) => {}
-
-  aboutToReuse(params: Record<string, Object>): void {
-    // no expandable @State variables to reset
-  }
 
   build() {
     Column() {

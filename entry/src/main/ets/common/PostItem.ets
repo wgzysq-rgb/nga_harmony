@@ -15,7 +15,6 @@ const VIDEO_EXTS: string[] = ['mp4', 'webm', 'ogg', 'mov', '3gp']
 const AUDIO_EXTS: string[] = ['mp3', 'wav', 'flac', 'aac', 'm4a']
 
 @Component
-@Reusable
 export struct PostItem {
   @Prop post: PostInfo = new PostInfo()
   @Prop isVotedUp: boolean = false
