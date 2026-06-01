@@ -5,7 +5,6 @@ import { AudioPlayer } from '../common/AudioPlayer'
 import { ImageSize, fetchImageSize, getCachedImageSize } from '../common/ImageSizeUtil'
 import { fetchVideoSize, getCachedVideoSize } from '../common/VideoSizeUtil'
 import { isWifiConnected } from '../common/NetworkUtil'
-import { appStore } from '../store/AppStore'
 import { LengthMetrics } from '@kit.ArkUI'
 
 function isInlineNode(type: BBNodeType): boolean {
@@ -87,6 +86,7 @@ export struct BBCodeContentView {
   @State private videoSizes: Map<string, ImageSize> = new Map()
   @StorageProp('effectiveColorMode') effectiveColorMode: string = 'light'
   @StorageProp('networkChangeVersion') networkChangeVersion: number = 0
+  @StorageProp('imageLoadStrategy') imageLoadStrategy: string = '0'
   hideFailedImages: boolean = false
   onImageClick: (urls: string[], index: number) => void = (_urls: string[], _index: number) => {}
   onLinkClick: (href: string) => void = (_href: string) => {}
@@ -98,7 +98,7 @@ export struct BBCodeContentView {
     this.groupsReady = true
     this.allImageUrls = this.getImageUrls()
     const urls: string[] = this.allImageUrls
-    const strategy: string = appStore.settings.imageLoadStrategy
+    const strategy: string = this.imageLoadStrategy
     const skipSizePrefetch: boolean = strategy === '1' || (strategy === '2' && !isWifiConnected())
     if (!skipSizePrefetch) {
       for (let i = 0; i < urls.length; i++) {
@@ -191,7 +191,7 @@ export struct BBCodeContentView {
   }
 
   private shouldUsePassive(): boolean {
-    let strategy: string = appStore.settings.imageLoadStrategy
+    let strategy: string = this.imageLoadStrategy
     if (strategy === '0') {
       return false
     }

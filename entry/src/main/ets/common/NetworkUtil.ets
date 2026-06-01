@@ -17,6 +17,6 @@ export function isWifiConnected(): boolean {
     return true
   } catch (e) {
     hilog.warn(DOMAIN, TAG, 'isWifiConnected error: %{public}s', JSON.stringify(e))
-    return true
+    return false
   }
 }

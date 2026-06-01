@@ -174,7 +174,7 @@ export struct SettingsPanel {
 
   private imageStrategyLabel(strategy: string): string {
     if (strategy === '1') {
-      return '始终关闭'
+      return '手动加载'
     }
     if (strategy === '2') {
       return 'WiFi下加载'
@@ -185,7 +185,7 @@ export struct SettingsPanel {
   private imageStrategyOptions(): ActionOption[] {
     return [
       { label: '始终加载（主动式）', value: 0 },
-      { label: '始终关闭（被动式）', value: 1 },
+      { label: '手动加载（被动式）', value: 1 },
       { label: '只在WiFi下加载', value: 2 },
     ]
   }

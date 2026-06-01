@@ -218,48 +218,12 @@ export struct PostItem {
         .width(100).height(100).borderRadius(8)
         .backgroundColor(AppColors.bgSecondary)
         .margin({ right: 6, top: 6 })
-        .onClick(() => {
-          const urls: string[] = []
-          for (let i = 0; i < this.post.attachs.length; i++) {
-            const url = this.post.attachs[i].attachurl
-            if (url && url.length > 0) {
-              urls.push(url)
-            }
-          }
-          if (urls.length > 0) {
-            let idx = 0
-            for (let i = 0; i < urls.length; i++) {
-              if (urls[i] === att.attachurl) {
-                idx = i
-                break
-              }
-            }
-            this.onImageClick(urls, idx)
-          }
-        })
+        .onClick(() => { this.dispatchAttachClick(att.attachurl) })
       } else {
         Image(att.attachurl).width(100).height(100).borderRadius(8)
           .objectFit(ImageFit.Cover).backgroundColor(AppColors.bgSecondary)
           .margin({ right: 6, top: 6 }).onError(() => {})
-          .onClick(() => {
-            const urls: string[] = []
-            for (let i = 0; i < this.post.attachs.length; i++) {
-              const url = this.post.attachs[i].attachurl
-              if (url && url.length > 0) {
-                urls.push(url)
-              }
-            }
-            if (urls.length > 0) {
-              let idx = 0
-              for (let i = 0; i < urls.length; i++) {
-                if (urls[i] === att.attachurl) {
-                  idx = i
-                  break
-                }
-              }
-              this.onImageClick(urls, idx)
-            }
-          })
+          .onClick(() => { this.dispatchAttachClick(att.attachurl) })
       }
     }
   }
@@ -565,6 +529,26 @@ export struct PostItem {
     const et: number | null = parseAlterinfoTs(this.post.alterinfo)
     if (et === null) return ''
     return ' [在' + formatTimestampCST(et) + '修改]'
+  }
+
+  private dispatchAttachClick(targetUrl: string): void {
+    const urls: string[] = []
+    for (let i = 0; i < this.post.attachs.length; i++) {
+      const url = this.post.attachs[i].attachurl
+      if (url && url.length > 0) {
+        urls.push(url)
+      }
+    }
+    if (urls.length > 0) {
+      let idx = 0
+      for (let i = 0; i < urls.length; i++) {
+        if (urls[i] === targetUrl) {
+          idx = i
+          break
+        }
+      }
+      this.onImageClick(urls, idx)
+    }
   }
 
   private shouldUsePassive(): boolean {

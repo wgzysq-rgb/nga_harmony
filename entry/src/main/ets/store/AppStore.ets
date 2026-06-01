@@ -414,6 +414,8 @@ class AppStoreClass {
   setImageLoadStrategy(v: string): void {
     this.settings.imageLoadStrategy = v
     AppStorage.setOrCreate('imageLoadStrategy', v)
+    let version: number = AppStorage.get<number>('networkChangeVersion') ?? 0
+    AppStorage.setOrCreate('networkChangeVersion', version + 1)
     this.persistSettings()
   }
 
