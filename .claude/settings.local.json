@@ -8,7 +8,17 @@
       "mcp__codegraph__codegraph_explore",
       "Skill(claude-api)",
       "Skill(claude-api:*)",
-      "mcp__playwright_fetcher__fetch_url"
+      "mcp__playwright_fetcher__fetch_url",
+      "mcp__arkts-lsp__arkts_hover",
+      "mcp__arkts-lsp__arkts_definition",
+      "mcp__arkts-lsp__arkts_references",
+      "mcp__arkts-lsp__arkts_diagnostics",
+      "mcp__arkts-lsp__arkts_signature_help",
+      "mcp__arkts-lsp__arkts_workspace_symbols",
+      "Bash(export DEVECO_SDK_HOME=\"C:/Program Files/Huawei/DevEco Studio/sdk\")",
+      "Bash(\"/c/Program Files/Huawei/DevEco Studio/tools/hvigor/bin/hvigorw.bat\" assembleHap --mode module -p module=entry@default -p buildMode=debug --no-daemon)",
+      "Bash(\"/c/Program Files/Huawei/DevEco Studio/tools/hvigor/bin/hvigorw.bat\" clean)",
+      "Bash(export DEVECO_SDK_HOME=\"C:/Program Files/Huawei/DevEco Studio/sdk\" && \"/c/Program Files/Huawei/DevEco Studio/tools/hvigor/bin/hvigorw.bat\" clean 2>&1 && \"/c/Program Files/Huawei/DevEco Studio/tools/hvigor/bin/hvigorw.bat\" assembleHap --mode module -p module=entry@default -p buildMode=debug --no-daemon 2>&1 | grep -a \"ArkTS:WARN\" | sed 's/.*File: //' | sort > /tmp/warnings.txt && cat /tmp/warnings.txt | sed 's/\\\\\\(.*\\\\/ets\\\\/.*\\\\\\):[0-9]*:[0-9]*/\\\\1/' | uniq -c | sort -rn)"
     ]
   },
   "enableAllProjectMcpServers": true,
