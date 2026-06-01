@@ -7,6 +7,7 @@ import { appStore } from '../store/AppStore';
 import { browseHistoryStore } from '../store/BrowseHistoryStore';
 import { voteRecordStore } from '../store/VoteRecordStore';
 import { initStatusBarManager, updateStatusBarStyle } from '../common/StatusBarManager';
+import { startNetworkMonitor } from '../common/NetworkMonitor';
 
 const DOMAIN = 0x0000;
 const TAG = 'EntryAbility';
@@ -53,6 +54,8 @@ export default class EntryAbility extends UIAbility {
       .catch((e: Error) => {
         hilog.error(DOMAIN, TAG, 'Store init failed: %{public}s', JSON.stringify(e));
       });
+
+    startNetworkMonitor();
 
     hilog.info(DOMAIN, TAG, '%{public}s', 'Ability onCreate');
   }

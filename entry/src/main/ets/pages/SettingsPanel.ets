@@ -6,7 +6,7 @@ import router from '@ohos.router'
 import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
 import { AppColors, IconColors, THEME_OPTIONS, ThemeOption } from '../common/Constants'
-import { ConfirmDialog } from '../common/Dialogs'
+import { ConfirmDialog, ActionSheetDialog, ActionOption } from '../common/Dialogs'
 import { PanelNavBar } from '../common/PanelNavBar'
 import { sessionStore } from '../service/SessionStore'
 import { picker, fileIo, storageStatistics } from '@kit.CoreFileKit'
@@ -19,6 +19,7 @@ export struct SettingsPanel {
   @StorageProp('statusBarHeight') statusBarHeight: number = 0
   @State cacheSizeText: string = ''
   @State clearingCache: boolean = false
+  @State imageStrategyBadge: string = '始终加载'
 
   clearCacheDialogController?: CustomDialogController = new CustomDialogController({
     builder: ConfirmDialog({
@@ -36,6 +37,7 @@ export struct SettingsPanel {
     customStyle: true
   })
 
+  imageStrategyDialogController?: CustomDialogController
   logoutDialogController?: CustomDialogController = new CustomDialogController({
     builder: ConfirmDialog({
       title: '退出登录',
@@ -55,11 +57,13 @@ export struct SettingsPanel {
 
   aboutToAppear(): void {
     this.refreshCacheSize()
+    this.imageStrategyBadge = this.imageStrategyLabel(appStore.settings.imageLoadStrategy)
   }
 
   aboutToDisappear() {
     this.clearCacheDialogController = undefined
     this.logoutDialogController = undefined
+    this.imageStrategyDialogController = undefined
   }
 
   private formatSize(bytes: number): string {
@@ -166,6 +170,41 @@ export struct SettingsPanel {
     } catch (e) {
       appStore.showToast('导出失败')
     }
+  }
+
+  private imageStrategyLabel(strategy: string): string {
+    if (strategy === '1') {
+      return '始终关闭'
+    }
+    if (strategy === '2') {
+      return 'WiFi下加载'
+    }
+    return '始终加载'
+  }
+
+  private imageStrategyOptions(): ActionOption[] {
+    return [
+      { label: '始终加载（主动式）', value: 0 },
+      { label: '始终关闭（被动式）', value: 1 },
+      { label: '只在WiFi下加载', value: 2 },
+    ]
+  }
+
+  private showImageStrategyPicker(): void {
+    this.imageStrategyDialogController = new CustomDialogController({
+      builder: ActionSheetDialog({
+        title: '图片加载模式',
+        options: this.imageStrategyOptions(),
+        selected: parseInt(appStore.settings.imageLoadStrategy),
+        onSelect: (v: number): void => {
+          appStore.setImageLoadStrategy(String(v))
+          this.imageStrategyBadge = this.imageStrategyLabel(String(v))
+        }
+      }),
+      autoCancel: true,
+      customStyle: true
+    })
+    this.imageStrategyDialogController?.open()
   }
 
   build() {
@@ -278,8 +317,27 @@ export struct SettingsPanel {
             .borderRadius(12)
             .margin({ top: 12 })
 
-            // ---- Block 3: 导出账号凭证 / 清除缓存 / 退出登录 ----
+            // ---- Block 3: 图片加载模式 / 导出账号凭证 / 清除缓存 / 退出登录 ----
             Column() {
+              Row() {
+                Stack() {
+                  Image($r('app.media.icon_image')).width(17).height(17).fillColor(AppColors.white)
+                }
+                .width(29).height(29).borderRadius(6).backgroundColor(IconColors.globe).margin({ right: 12 })
+
+                Text('图片加载模式').fontSize(17).layoutWeight(1)
+
+                Text(this.imageStrategyBadge).fontSize(15).fontColor(AppColors.textSecondary).margin({ right: 8 })
+
+                Text('>').fontSize(16).fontColor(AppColors.chevron)
+              }
+              .width('100%').height(44).padding({ left: 16, right: 16 }).alignItems(VerticalAlign.Center)
+              .onClick(() => {
+                this.showImageStrategyPicker()
+              })
+
+              Divider().margin({ left: 60 }).color(AppColors.separator)
+
               this.SettingRow($r('app.media.icon_export'), IconColors.checkin, '导出账号凭证', '', () => {
                 this.handleExport()
               })

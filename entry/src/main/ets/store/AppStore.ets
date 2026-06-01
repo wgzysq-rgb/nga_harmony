@@ -56,6 +56,7 @@ export class SettingsState {
   ttsSpeed: number = 1.0
   ttsVolume: number = 1.0
   ttsPitch: number = 1.0
+  imageLoadStrategy: string = '0' // "0"=始终加载 "1"=始终关闭 "2"=只在WIFI下
 }
 
 export class ToastState {
@@ -410,6 +411,12 @@ class AppStoreClass {
     this.persistSettings()
   }
 
+  setImageLoadStrategy(v: string): void {
+    this.settings.imageLoadStrategy = v
+    AppStorage.setOrCreate('imageLoadStrategy', v)
+    this.persistSettings()
+  }
+
   async autoCheckinIfNeeded(): Promise<void> {
     if (!this.auth.isAuthenticated || !this.settings.autoCheckin) {
       return
@@ -514,8 +521,10 @@ class AppStoreClass {
       if (saved.ttsSpeed !== undefined) this.settings.ttsSpeed = saved.ttsSpeed
       if (saved.ttsVolume !== undefined) this.settings.ttsVolume = saved.ttsVolume
       if (saved.ttsPitch !== undefined) this.settings.ttsPitch = saved.ttsPitch
+      if (saved.imageLoadStrategy !== undefined) this.settings.imageLoadStrategy = saved.imageLoadStrategy
     }
     AppStorage.setOrCreate('showSignature', this.settings.showSignature)
+    AppStorage.setOrCreate('imageLoadStrategy', this.settings.imageLoadStrategy)
   }
 
   // ============== Categories Cache ==============

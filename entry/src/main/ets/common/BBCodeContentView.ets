@@ -4,6 +4,8 @@ import { getEmotionResource, isEmotionCategoryNeedDarkBg } from '../common/Emoti
 import { AudioPlayer } from '../common/AudioPlayer'
 import { ImageSize, fetchImageSize, getCachedImageSize } from '../common/ImageSizeUtil'
 import { fetchVideoSize, getCachedVideoSize } from '../common/VideoSizeUtil'
+import { isWifiConnected } from '../common/NetworkUtil'
+import { appStore } from '../store/AppStore'
 import { LengthMetrics } from '@kit.ArkUI'
 
 function isInlineNode(type: BBNodeType): boolean {
@@ -84,6 +86,7 @@ export struct BBCodeContentView {
   @State private releasedImages: Set<string> = new Set()
   @State private videoSizes: Map<string, ImageSize> = new Map()
   @StorageProp('effectiveColorMode') effectiveColorMode: string = 'light'
+  @StorageProp('networkChangeVersion') networkChangeVersion: number = 0
   hideFailedImages: boolean = false
   onImageClick: (urls: string[], index: number) => void = (_urls: string[], _index: number) => {}
   onLinkClick: (href: string) => void = (_href: string) => {}
@@ -95,24 +98,38 @@ export struct BBCodeContentView {
     this.groupsReady = true
     this.allImageUrls = this.getImageUrls()
     const urls: string[] = this.allImageUrls
-    for (let i = 0; i < urls.length; i++) {
-      const url: string = urls[i]
-      const cached: ImageSize | null = getCachedImageSize(url)
-      if (cached) {
-        this.imageSizes.set(url, cached)
-        this.releasedImages.add(url)
+    const strategy: string = appStore.settings.imageLoadStrategy
+    const skipSizePrefetch: boolean = strategy === '1' || (strategy === '2' && !isWifiConnected())
+    if (!skipSizePrefetch) {
+      for (let i = 0; i < urls.length; i++) {
+        const url: string = urls[i]
+        const cached: ImageSize | null = getCachedImageSize(url)
+        if (cached) {
+          this.imageSizes.set(url, cached)
+          this.releasedImages.add(url)
+        }
       }
-    }
-    for (let i = 0; i < urls.length; i++) {
-      const url: string = urls[i]
-      if (!this.imageSizes.has(url)) {
-        fetchImageSize(url).then((size: ImageSize | null) => {
-          if (size) {
-            this.setImageSize(url, size)
-          } else {
-            this.markImageFailed(url)
-          }
-        })
+      for (let i = 0; i < urls.length; i++) {
+        const url: string = urls[i]
+        if (!this.imageSizes.has(url)) {
+          fetchImageSize(url).then((size: ImageSize | null) => {
+            if (size) {
+              this.setImageSize(url, size)
+            } else {
+              this.markImageFailed(url)
+            }
+          })
+        }
+      }
+    } else {
+      // 被动模式：仅从缓存恢复已有尺寸，零网络请求
+      for (let i = 0; i < urls.length; i++) {
+        const url: string = urls[i]
+        const cached: ImageSize | null = getCachedImageSize(url)
+        if (cached) {
+          this.imageSizes.set(url, cached)
+          this.releasedImages.add(url)
+        }
       }
     }
 
@@ -171,6 +188,26 @@ export struct BBCodeContentView {
       return size.width / size.height
     }
     return 16 / 9
+  }
+
+  private shouldUsePassive(): boolean {
+    let strategy: string = appStore.settings.imageLoadStrategy
+    if (strategy === '0') {
+      return false
+    }
+    if (strategy === '1') {
+      return true
+    }
+    return !isWifiConnected()
+  }
+
+  private getImageIndex(src: string): number {
+    for (let i = 0; i < this.allImageUrls.length; i++) {
+      if (this.allImageUrls[i] === src) {
+        return i
+      }
+    }
+    return 0
   }
 
   private setVideoSize(url: string, size: ImageSize): void {
@@ -489,58 +526,78 @@ export struct BBCodeContentView {
 
   @Builder
   RenderImageContent(src: string, inQuote: boolean) {
-    Stack() {
-      if (!this.loadedImages.has(src)) {
-        Column() {
-          LoadingProgress()
-            .width(24).height(24)
-            .color(AppColors.textTertiary)
+    if (this.shouldUsePassive()) {
+      // 被动式：紧凑占位图
+      Row() {
+        Stack() {
+          Image($r('app.media.icon_image'))
+            .width(18).height(18)
+            .fillColor(AppColors.textTertiary)
+            .opacity(0.45)
         }
-        .width('100%').height('100%')
-        .justifyContent(FlexAlign.Center)
-        .alignItems(HorizontalAlign.Center)
-      }
+        .width(28).height(28)
+        .borderRadius(6)
+        .backgroundColor(AppColors.bgSecondary)
 
-      if (this.releasedImages.has(src) || this.getImageAspectRatio(src) > 0) {
-        Image(src)
-          .width('100%').height('100%')
-          .objectFit(inQuote ? ImageFit.Cover : ImageFit.Contain)
-          .borderRadius(inQuote ? 6 : 8)
-          .onError(() => {
-            this.markImageFailed(src)
-          })
-          .onComplete((event) => {
-            if (event) {
-              this.onImageLoaded(src, event.width, event.height)
-            } else {
-              this.onImageLoaded(src)
-            }
-          })
-          .onClick(() => {
-            const allUrls: string[] = this.allImageUrls.length > 0 ? this.allImageUrls : [src]
-            if (allUrls.length > 0) {
-              let clickIdx: number = 0
-              for (let i = 0; i < allUrls.length; i++) {
-                if (allUrls[i] === src) {
-                  clickIdx = i
-                  break
-                }
-              }
-              this.onImageClick(allUrls, clickIdx)
-            }
-          })
+        Text('点击查看图片').fontSize(13).fontColor(AppColors.textTertiary).margin({ left: 8 })
       }
+      .padding({ left: 10, right: 10 })
+      .height(40)
+      .borderRadius(8)
+      .backgroundColor(AppColors.bgSecondary)
+      .margin({ top: 6, bottom: 4 })
+      .onClick(() => {
+        let urls: string[] = this.allImageUrls.length > 0 ? this.allImageUrls : [src]
+        let idx: number = this.getImageIndex(src)
+        this.onImageClick(urls, idx)
+      })
+    } else {
+      // 主动式：原有加载行为
+      Stack() {
+        if (!this.loadedImages.has(src)) {
+          Column() {
+            LoadingProgress()
+              .width(24).height(24)
+              .color(AppColors.textTertiary)
+          }
+          .width('100%').height('100%')
+          .justifyContent(FlexAlign.Center)
+          .alignItems(HorizontalAlign.Center)
+        }
+
+        if (this.releasedImages.has(src) || this.getImageAspectRatio(src) > 0) {
+          Image(src)
+            .width('100%').height('100%')
+            .objectFit(inQuote ? ImageFit.Cover : ImageFit.Contain)
+            .borderRadius(inQuote ? 6 : 8)
+            .onError(() => {
+              this.markImageFailed(src)
+            })
+            .onComplete((event) => {
+              if (event) {
+                this.onImageLoaded(src, event.width, event.height)
+              } else {
+                this.onImageLoaded(src)
+              }
+            })
+            .onClick(() => {
+              let urls: string[] = this.allImageUrls.length > 0 ? this.allImageUrls : [src]
+              let idx: number = this.getImageIndex(src)
+              this.onImageClick(urls, idx)
+            })
+        }
+      }
+      .width('100%')
+      .aspectRatio(this.getImageAspectRatio(src))
+      .constraintSize({
+        maxWidth: '100%',
+        maxHeight: inQuote ? 200 : 10000,
+        minHeight: 60,
+      })
+      .backgroundColor(this.loadedImages.has(src) ? Color.Transparent : AppColors.bgSecondary)
+      .borderRadius(inQuote ? 6 : 8)
+      .margin({ top: 6, bottom: 4 })
     }
-    .width('100%')
-    .aspectRatio(this.getImageAspectRatio(src))
-    .constraintSize({
-      maxWidth: '100%',
-      maxHeight: inQuote ? 200 : 10000,
-      minHeight: 60,
-    })
-    .backgroundColor(this.loadedImages.has(src) ? Color.Transparent : AppColors.bgSecondary)
-    .borderRadius(inQuote ? 6 : 8)
-    .margin({ top: 6, bottom: 4 })
   }
 
   @Builder

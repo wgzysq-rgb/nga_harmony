@@ -17,6 +17,8 @@ import { parseNgaError } from '../parser/ErrorParser';
 import { parseFromClient } from '../parser/ClientParser';
 import { resolveAttachUrl } from './ContentParser';
 import { fetchImageSize } from '../common/ImageSizeUtil';
+import { appStore } from '../store/AppStore';
+import { isWifiConnected } from '../common/NetworkUtil';
 import type { Category } from '../model/Forum';
 import type { ThreadData, ThreadRowInfo, Attachment, ThreadInfo } from '../model/Thread';
 import type { TopicListInfo } from '../model/Topic';
@@ -672,6 +674,13 @@ export async function getThread(token: string, tid: string, pid: string,
  * 在帖子数据就绪后，提前预热所有图片的尺寸头
  */
 function prefetchPostImages(posts: PostInfo[]): void {
+  let strategy: string = appStore.settings.imageLoadStrategy
+  if (strategy === '1') {
+    return
+  }
+  if (strategy === '2' && !isWifiConnected()) {
+    return
+  }
   for (let i = 0; i < posts.length; i++) {
     const post: PostInfo = posts[i]
     const attachs: PostAttachInfo[] = post.attachs

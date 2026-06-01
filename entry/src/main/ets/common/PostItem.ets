@@ -11,6 +11,7 @@ import { BBNode, BBNodeType } from '../model/BBCodeNode'
 import { AudioPlayer } from '../common/AudioPlayer'
 import { ImageSize } from '../common/ImageSizeUtil'
 import { fetchVideoSize, getCachedVideoSize } from '../common/VideoSizeUtil'
+import { isWifiConnected } from '../common/NetworkUtil'
 const VIDEO_EXTS: string[] = ['mp4', 'webm', 'ogg', 'mov', '3gp']
 const AUDIO_EXTS: string[] = ['mp3', 'wav', 'flac', 'aac', 'm4a']
 
@@ -21,6 +22,8 @@ export struct PostItem {
   @Prop isVotedDown: boolean = false
   @Prop holdingHand: number = 0
   @StorageProp('showSignature') showSignature: boolean = true
+  @StorageProp('imageLoadStrategy') imageLoadStrategy: string = '0'
+  @StorageProp('networkChangeVersion') networkChangeVersion: number = 0
   @State private commentsExpanded: boolean = false
   @State private attachsExpanded: boolean = false
   @State private sigExpanded: boolean = false
@@ -205,9 +208,16 @@ export struct PostItem {
   @Builder
   renderImageAttach(att: PostAttachInfo) {
     if (VIDEO_EXTS.indexOf(att.ext.toLowerCase()) < 0 && AUDIO_EXTS.indexOf(att.ext.toLowerCase()) < 0) {
-      Image(att.attachurl).width(100).height(100).borderRadius(8)
-        .objectFit(ImageFit.Cover).backgroundColor(AppColors.bgSecondary)
-        .margin({ right: 6, top: 6 }).onError(() => {})
+      if (this.shouldUsePassive()) {
+        Stack() {
+          Image($r('app.media.icon_image'))
+            .width(20).height(20)
+            .fillColor(AppColors.textTertiary)
+            .opacity(0.45)
+        }
+        .width(100).height(100).borderRadius(8)
+        .backgroundColor(AppColors.bgSecondary)
+        .margin({ right: 6, top: 6 })
         .onClick(() => {
           const urls: string[] = []
           for (let i = 0; i < this.post.attachs.length; i++) {
@@ -227,6 +237,30 @@ export struct PostItem {
             this.onImageClick(urls, idx)
           }
         })
+      } else {
+        Image(att.attachurl).width(100).height(100).borderRadius(8)
+          .objectFit(ImageFit.Cover).backgroundColor(AppColors.bgSecondary)
+          .margin({ right: 6, top: 6 }).onError(() => {})
+          .onClick(() => {
+            const urls: string[] = []
+            for (let i = 0; i < this.post.attachs.length; i++) {
+              const url = this.post.attachs[i].attachurl
+              if (url && url.length > 0) {
+                urls.push(url)
+              }
+            }
+            if (urls.length > 0) {
+              let idx = 0
+              for (let i = 0; i < urls.length; i++) {
+                if (urls[i] === att.attachurl) {
+                  idx = i
+                  break
+                }
+              }
+              this.onImageClick(urls, idx)
+            }
+          })
+      }
     }
   }
 
@@ -531,6 +565,17 @@ export struct PostItem {
     const et: number | null = parseAlterinfoTs(this.post.alterinfo)
     if (et === null) return ''
     return ' [在' + formatTimestampCST(et) + '修改]'
+  }
+
+  private shouldUsePassive(): boolean {
+    let strategy: string = this.imageLoadStrategy
+    if (strategy === '0') {
+      return false
+    }
+    if (strategy === '1') {
+      return true
+    }
+    return !isWifiConnected()
   }
 
   private fetchAttachVideoSizes(): void {
