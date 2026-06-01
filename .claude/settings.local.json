@@ -5,7 +5,10 @@
       "mcp__web-search-prime__web_search_prime",
       "mcp__web-reader__webReader",
       "mcp__zread__read_file",
-      "mcp__codegraph__codegraph_explore"
+      "mcp__codegraph__codegraph_explore",
+      "Skill(claude-api)",
+      "Skill(claude-api:*)",
+      "mcp__playwright_fetcher__fetch_url"
     ]
   },
   "enableAllProjectMcpServers": true,
