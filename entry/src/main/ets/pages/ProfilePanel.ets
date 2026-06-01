@@ -441,7 +441,7 @@ export struct ProfilePanel {
                     openImageViewer(urls, index)
                   },
                   onLinkClick: (href: string): void => {
-                    handleForumLink(href, getContext(this) as Context)
+                    handleForumLink(href, this.getUIContext().getHostContext() as Context)
                   },
                 }).width('100%')
               }

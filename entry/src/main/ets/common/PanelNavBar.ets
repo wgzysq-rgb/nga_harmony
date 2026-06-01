@@ -10,7 +10,7 @@ export struct PanelNavBar {
   @Prop rightLabel: string = ''
   @Prop rightLabelColor: ResourceColor = ''
   onRightClick?: () => void
-  @Prop rightIcon?: Resource
+  @Prop rightIcon: ResourceStr = ''
   @Prop rightIconColor: string = ''
   @Prop rightIconBadge: number = 0
 

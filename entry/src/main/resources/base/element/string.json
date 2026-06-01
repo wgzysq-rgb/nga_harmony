@@ -11,6 +11,10 @@
     {
       "name": "EntryAbility_label",
       "value": "label"
+    },
+    {
+      "name": "write_imagevideo_reason",
+      "value": "用于保存图片到相册"
     }
   ]
 }

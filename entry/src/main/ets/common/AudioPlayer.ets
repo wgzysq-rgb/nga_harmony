@@ -119,13 +119,19 @@ export struct AudioPlayer {
       return
     }
     if (this.isPlaying) {
-      p.pause()
+      try {
+        p.pause()
+      } catch (e) {}
     } else if (this.isCompleted) {
       this.isCompleted = false
-      p.seek(0)
-      p.play()
+      try {
+        p.seek(0)
+        p.play()
+      } catch (e) {}
     } else {
-      p.play()
+      try {
+        p.play()
+      } catch (e) {}
     }
   }
 

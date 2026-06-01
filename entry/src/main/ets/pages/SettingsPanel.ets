@@ -2,7 +2,7 @@
  * 设置面板 - 从 SettingsPage 迁移, 统一 Panel 架构
  */
 
-import router from '@ohos.router'
+
 import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
 import { AppColors, IconColors, THEME_OPTIONS, ThemeOption } from '../common/Constants'
@@ -47,7 +47,7 @@ export struct SettingsPanel {
       icon: $r('app.media.icon_exit'),
       onConfirm: () => {
         appStore.clearAuth()
-        router.replaceUrl({ url: 'pages/LoginPage' })
+        this.getUIContext().getRouter().replaceUrl({ url: 'pages/LoginPage' })
       },
       onCancel: () => {}
     }),

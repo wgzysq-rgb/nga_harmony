@@ -12,7 +12,7 @@ import { common } from '@kit.AbilityKit'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { util } from '@kit.ArkTS'
 import { webview } from '@kit.ArkWeb'
-import router from '@ohos.router'
+
 
 @Entry
 @Component
@@ -193,7 +193,9 @@ struct LoginPage {
               .layoutWeight(1).width('100%')
               .javaScriptAccess(true)
               .domStorageAccess(true)
-              .userAgent('Mozilla/5.0 (Linux; Android 10; HarmonyOS) AppleWebKit/537.36')
+              .onControllerAttached(() => {
+                this.webController.setCustomUserAgent('Mozilla/5.0 (Linux; Android 10; HarmonyOS) AppleWebKit/537.36')
+              })
               .onPageEnd(() => { this.startCookiePolling() })
               .onConsole((event) => {
                 const msg: string = event.message.getMessage()
@@ -255,7 +257,7 @@ struct LoginPage {
         if (result.ok && result.token) {
           const user = result.user!
           await appStore.setAuth(result.token, user.uid, user.nickName, user.avatarUrl)
-          router.replaceUrl({ url: 'pages/MainPage' })
+          this.getUIContext().getRouter().replaceUrl({ url: 'pages/MainPage' })
         } else if (result.needCaptcha) {
           this.loginToken = result.loginToken
           this.captchaId = result.captchaId
@@ -328,7 +330,7 @@ struct LoginPage {
       if (result.ok && result.token && result.user) {
         const user = result.user
         await appStore.setAuth(result.token, user.uid, user.nickName, user.avatarUrl)
-        router.replaceUrl({ url: 'pages/MainPage' })
+        this.getUIContext().getRouter().replaceUrl({ url: 'pages/MainPage' })
       } else {
         this.error = result.error || '凭据验证失败'
       }
@@ -433,7 +435,7 @@ struct LoginPage {
         await appStore.setAuth(result.token, user.uid, user.nickName, user.avatarUrl)
         this.showWebLogin = false
         this.webLoginLoading = false
-        router.replaceUrl({ url: 'pages/MainPage' })
+        this.getUIContext().getRouter().replaceUrl({ url: 'pages/MainPage' })
       } else {
         this.error = result.error || '凭据验证失败'
         this.webLoginLoading = false

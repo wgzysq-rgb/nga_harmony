@@ -61,7 +61,7 @@ export struct TopicListPanel {
 
   private holdingCallback: Callback<HoldingHandStatus> = (data: HoldingHandStatus): void => {
     if (this.holdingDetected) {
-      animateTo({ duration: 300, curve: Curve.EaseInOut }, (): void => {
+      this.getUIContext()?.animateTo({ duration: 300, curve: Curve.EaseInOut }, (): void => {
         this.holdingStatus = data
       })
     } else {
@@ -248,7 +248,7 @@ export struct TopicListPanel {
       clearTimeout(this.loadingDelayTimer)
       this.loadingDelayTimer = setTimeout((): void => {
         if (this.isLoading) {
-          animateTo({ duration: 150, curve: Curve.EaseInOut }, (): void => {
+          this.getUIContext()?.animateTo({ duration: 150, curve: Curve.EaseInOut }, (): void => {
             this.loadingContentOpacity = 1
           })
         }

@@ -84,7 +84,7 @@ export struct PostItem {
             }
             const uid = String(this.post.authorid)
             if (uid) {
-              this.onProfileClick(uid, event.screenX, event.screenY)
+              this.onProfileClick(uid, event.windowX, event.windowY)
             }
           })
 
@@ -243,7 +243,7 @@ export struct PostItem {
              .padding({ left: 6, right: 6, top: 4, bottom: 4 })
              .borderRadius(6)
              .alignItems(VerticalAlign.Center)
-             .onClick(() => { animateTo({ duration: 150, curve: Curve.EaseInOut }, () => { this.menuExpanded = !this.menuExpanded }) })
+             .onClick(() => { this.getUIContext()?.animateTo({ duration: 150, curve: Curve.EaseInOut }, () => { this.menuExpanded = !this.menuExpanded }) })
 
               if (this.menuExpanded) {
                 Row() {
@@ -454,7 +454,7 @@ export struct PostItem {
           .borderRadius(6)
           .margin({ left: 6 })
           .alignItems(VerticalAlign.Center)
-          .onClick(() => { animateTo({ duration: 150, curve: Curve.EaseInOut }, () => { this.menuExpanded = !this.menuExpanded }) })
+          .onClick(() => { this.getUIContext()?.animateTo({ duration: 150, curve: Curve.EaseInOut }, () => { this.menuExpanded = !this.menuExpanded }) })
         }
         .alignItems(VerticalAlign.Center)
         .transition(TransitionEffect.OPACITY)
@@ -475,7 +475,7 @@ export struct PostItem {
               }
               const uid = String(c.authorid)
               if (uid) {
-                this.onProfileClick(uid, event.screenX, event.screenY)
+                this.onProfileClick(uid, event.windowX, event.windowY)
               }
             })
 

@@ -1,4 +1,4 @@
-import router from '@ohos.router'
+
 import { FunctionComponent, FunctionController } from '@kit.AgentFrameworkKit'
 import { pasteboard, BusinessError } from '@kit.BasicServicesKit'
 import { appStore } from '../store/AppStore'
@@ -17,7 +17,7 @@ struct PostSummaryPage {
   @State threadSubject: string = ''
 
   aboutToAppear(): void {
-    const params: Record<string, Object> = router.getParams() as Record<string, Object>
+    const params: Record<string, Object> = this.getUIContext().getRouter().getParams() as Record<string, Object>
     if (params) {
       this.postContent = (params['postContent'] as string) ?? ''
       this.authorName = (params['authorName'] as string) ?? ''
@@ -60,7 +60,7 @@ struct PostSummaryPage {
           .width(32).height(32)
           .backgroundColor(AppColors.bgSecondary)
           .borderRadius(16)
-          .onClick(() => router.back())
+          .onClick(() => this.getUIContext().getRouter().back())
         }
         .width('100%')
         .padding({ top: 48, bottom: 8, left: 16, right: 16 })

@@ -126,7 +126,12 @@ export default class EntryAbility extends UIAbility {
   }
 
   private updateBreakpoint(windowWidth: number): void {
-    const densityPixels = display.getDefaultDisplaySync().densityPixels
+    let densityPixels: number = 1
+    try {
+      densityPixels = display.getDefaultDisplaySync().densityPixels
+    } catch (e) {
+      hilog.error(DOMAIN, TAG, 'getDefaultDisplaySync failed')
+    }
     const widthVp = windowWidth / densityPixels
     let newBp: string = 'sm'
     if (widthVp < 600) {

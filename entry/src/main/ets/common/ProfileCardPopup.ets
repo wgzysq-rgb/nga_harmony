@@ -6,7 +6,7 @@ import { formatTime, fmtNum, escHtml, unescapeHtml } from '../common/Utils'
 import { Avatar } from '../common/Avatar'
 import { MakeNoteDialog } from '../common/Dialogs'
 import { deviceInfo } from '@kit.BasicServicesKit'
-import router from '@ohos.router'
+
 import { getUserActivityAnalysis, UserActivityAnalysis } from '../service/NgaApi'
 
 @Component
@@ -43,7 +43,7 @@ export struct ProfileCardPopup {
           topicSubjects: result.topicSubjects,
           replySnippets: result.replySnippets
         })
-        router.pushUrl({
+        this.getUIContext().getRouter().pushUrl({
           url: 'pages/AgentAnalysisPage',
           params: {
             analysisData: json,

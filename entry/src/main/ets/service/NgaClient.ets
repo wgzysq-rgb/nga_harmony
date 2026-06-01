@@ -176,14 +176,38 @@ async function encryptPassword(password: string): Promise<string> {
     data: base64.decodeSync(NGA_RSA_PUBLIC_KEY),
   };
 
-  const keyGenerator = cryptoFramework.createAsyKeyGenerator('RSA2048');
-  const keyPair = await keyGenerator.convertKey(pubKeyData, null);
-  const cipher = cryptoFramework.createCipher('RSA2048|PKCS1');
-  await cipher.init(cryptoFramework.CryptoMode.ENCRYPT_MODE, keyPair.pubKey, null);
+  let keyGenerator: cryptoFramework.AsyKeyGenerator
+  try {
+    keyGenerator = cryptoFramework.createAsyKeyGenerator('RSA2048')
+  } catch (e) {
+    throw new Error('RSA密钥生成器创建失败')
+  }
+  let keyPair: cryptoFramework.KeyPair
+  try {
+    keyPair = await keyGenerator.convertKey(pubKeyData, null)
+  } catch (e) {
+    throw new Error('RSA密钥转换失败')
+  }
+  let cipher: cryptoFramework.Cipher
+  try {
+    cipher = cryptoFramework.createCipher('RSA2048|PKCS1')
+  } catch (e) {
+    throw new Error('RSA密码器创建失败')
+  }
+  try {
+    await cipher.init(cryptoFramework.CryptoMode.ENCRYPT_MODE, keyPair.pubKey, null);
+  } catch (e) {
+    throw new Error('RSA加密初始化失败');
+  }
   const inputData: cryptoFramework.DataBlob = {
     data: stringToUint8Array(password),
   };
-  const output = await cipher.doFinal(inputData);
+  let output: cryptoFramework.DataBlob;
+  try {
+    output = await cipher.doFinal(inputData);
+  } catch (e) {
+    throw new Error('RSA加密失败');
+  }
   return uint8ArrayToBase64(output.data);
 }
 

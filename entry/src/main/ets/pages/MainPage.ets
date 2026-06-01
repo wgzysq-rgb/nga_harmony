@@ -16,7 +16,7 @@
 import { appStore } from '../store/AppStore'
 import { routerStore, RouterStoreClass } from '../store/RouterStore'
 import { verifyToken } from '../service/NgaApi'
-import router from '@ohos.router'
+
 import { floatingLayerStore, FloatingLayerStoreClass, FloatingPage } from '../store/FloatingLayerStore'
 import { AppColors } from '../common/Constants'
 import { ActivityPanelComponent } from './ActivityPanelComponent'
@@ -142,14 +142,14 @@ struct MainPage {
 
   private async checkAuth(): Promise<void> {
     if (!appStore.auth.isAuthenticated) {
-      router.replaceUrl({ url: 'pages/LoginPage' })
+      try { this.getUIContext().getRouter().replaceUrl({ url: 'pages/LoginPage' }) } catch (e) { console.error('route failed: ' + e) }
       return
     }
 
     const valid = await verifyToken(appStore.auth.token)
     if (!valid) {
       appStore.clearAuth()
-      router.replaceUrl({ url: 'pages/LoginPage' })
+      try { this.getUIContext().getRouter().replaceUrl({ url: 'pages/LoginPage' }) } catch (e) { console.error('route failed: ' + e) }
       return
     }
 

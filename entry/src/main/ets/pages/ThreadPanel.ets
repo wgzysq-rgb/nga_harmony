@@ -3,7 +3,7 @@ import { common, Context } from '@kit.AbilityKit'
 import { motion } from '@kit.MultimodalAwarenessKit'
 import { BusinessError, deviceInfo } from '@kit.BasicServicesKit'
 import { taskpool } from '@kit.ArkTS'
-import router from '@ohos.router'
+
 import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
 import { ngaClient } from '../service/NgaClient'
@@ -83,7 +83,7 @@ export struct ThreadPanel {
 
   private holdingCallback: Callback<HoldingHandStatus> = (data: HoldingHandStatus): void => {
     if (this.holdingDetected) {
-      animateTo({ duration: 300, curve: Curve.EaseInOut }, (): void => {
+      this.getUIContext()?.animateTo({ duration: 300, curve: Curve.EaseInOut }, (): void => {
         this.holdingStatus = data
       })
     } else {
@@ -232,7 +232,7 @@ export struct ThreadPanel {
       clearTimeout(this.loadingDelayTimer)
       this.loadingDelayTimer = setTimeout((): void => {
         if (this.isLoading) {
-          animateTo({ duration: 150, curve: Curve.EaseInOut }, (): void => {
+          this.getUIContext()?.animateTo({ duration: 150, curve: Curve.EaseInOut }, (): void => {
             this.loadingContentOpacity = 1
           })
         }
@@ -568,7 +568,7 @@ export struct ThreadPanel {
   }
 
   private handleLinkClick(href: string): void {
-    handleForumLink(href, getContext(this) as common.UIAbilityContext, (uid: string) => {
+    handleForumLink(href, this.getUIContext().getHostContext() as common.UIAbilityContext, (uid: string) => {
       this.showProfileCard(uid, 200, 200)
     })
   }
@@ -657,7 +657,7 @@ export struct ThreadPanel {
                     appStore.showToast('该楼层没有可总结的内容')
                     return
                   }
-                  router.pushUrl({
+                  this.getUIContext().getRouter().pushUrl({
                     url: 'pages/PostSummaryPage',
                     params: {
                       postContent: plainText,

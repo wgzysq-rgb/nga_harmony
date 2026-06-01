@@ -4,7 +4,7 @@ import { replyManager, ReplyManagerClass, ReplyType } from './ReplyManager'
 import { appStore } from '../store/AppStore'
 import { getEmotionResource, CATEGORY_KEYS, getCategoryLabel, getCategoryNames, isEmotionCategoryNeedDarkBg } from './EmotionResources'
 import fileIo from '@ohos.file.fs'
-import picker from '@ohos.file.picker'
+import { photoAccessHelper } from '@kit.MediaLibraryKit'
 
 interface FormatAction {
   label: string
@@ -96,8 +96,11 @@ export struct ReplyDialog {
 
   private async handleImagePick(): Promise<void> {
     try {
-      const photoPicker: picker.PhotoViewPicker = new picker.PhotoViewPicker()
-      const pickResult: picker.PhotoSelectResult = await photoPicker.select({ maxSelectNumber: 1 })
+      const photoPicker: photoAccessHelper.PhotoViewPicker = new photoAccessHelper.PhotoViewPicker()
+      const pickResult: photoAccessHelper.PhotoSelectResult = await photoPicker.select({
+        MIMEType: photoAccessHelper.PhotoViewMIMETypes.IMAGE_TYPE,
+        maxSelectNumber: 1
+      })
       const photoUris: string[] = pickResult.photoUris
       if (!photoUris || photoUris.length === 0) {
         return

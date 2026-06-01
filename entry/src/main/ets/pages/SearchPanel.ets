@@ -58,7 +58,7 @@ export struct SearchPanel {
 
   private async loadHistory(): Promise<void> {
     try {
-      const ctx = getContext(this) as Context
+      const ctx = this.getUIContext().getHostContext() as Context
       const pref = await preferences.getPreferences(ctx, 'nga_app_store')
       const raw = (await pref.get('search_history', '[]')) as string
       this.history = JSON.parse(raw) as string[]
@@ -73,7 +73,7 @@ export struct SearchPanel {
       list.unshift(kw)
       if (list.length > 20) list.length = 20
       this.history = [...list]
-      const ctx = getContext(this) as Context
+      const ctx = this.getUIContext().getHostContext() as Context
       const pref = await preferences.getPreferences(ctx, 'nga_app_store')
       await pref.put('search_history', JSON.stringify(list))
       await pref.flush()
@@ -83,7 +83,7 @@ export struct SearchPanel {
   private async removeHistory(kw: string): Promise<void> {
     this.history = this.history.filter((k: string) => k !== kw)
     try {
-      const ctx = getContext(this) as Context
+      const ctx = this.getUIContext().getHostContext() as Context
       const pref = await preferences.getPreferences(ctx, 'nga_app_store')
       await pref.put('search_history', JSON.stringify(this.history))
       await pref.flush()
@@ -93,7 +93,7 @@ export struct SearchPanel {
   private async clearHistoryAll(): Promise<void> {
     this.history = []
     try {
-      const ctx = getContext(this) as Context
+      const ctx = this.getUIContext().getHostContext() as Context
       const pref = await preferences.getPreferences(ctx, 'nga_app_store')
       await pref.put('search_history', '[]')
       await pref.flush()

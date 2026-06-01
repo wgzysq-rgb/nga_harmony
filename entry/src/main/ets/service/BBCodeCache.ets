@@ -78,12 +78,25 @@ export async function preWarmBatchAwait(contents: string[], priority?: taskpool.
   const p: taskpool.Priority = priority !== undefined ? priority : taskpool.Priority.MEDIUM
   const group: taskpool.TaskGroup = new taskpool.TaskGroup()
   for (let i: number = 0; i < toParse.length; i++) {
-    group.addTask(new taskpool.Task(parseBBCodeTask, toParse[i]))
+    try {
+      group.addTask(new taskpool.Task(parseBBCodeTask, toParse[i]))
+    } catch (e) {
+      console.error('addTask failed:', (e as Error).message)
+    }
   }
-  const results: Object[] = await withTimeout<Object[]>(
-    taskpool.execute(group, p) as Promise<Object[]>,
-    10000
-  ) as Object[]
+  let results: Object[];
+  try {
+    results = await withTimeout<Object[]>(
+      taskpool.execute(group, p) as Promise<Object[]>,
+      10000
+    ) as Object[]
+  } catch (e) {
+    console.error('taskpool execute failed:', (e as Error).message)
+    for (let i: number = 0; i < toParse.length; i++) {
+      pendingSet.delete(toParse[i])
+    }
+    return
+  }
   for (let i: number = 0; i < results.length; i++) {
     cache.set(toParse[i], bbNodesFromJSON(results[i] as string))
     pendingSet.delete(toParse[i])

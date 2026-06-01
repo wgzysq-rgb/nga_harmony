@@ -78,22 +78,22 @@ export struct NotesPanel {
     this.notesDataSource.replaceAll(appStore.settings.notes)
   }
 
-  private showProfileCard(uid: string, screenX: number, screenY: number): void {
+  private showProfileCard(uid: string, windowX: number, windowY: number): void {
     const cardW: number = 280
     const cardH: number = 400
     const pad: number = 8
-    let posX: number = screenX
-    let posY: number = screenY
+    let posX: number = windowX
+    let posY: number = windowY
     try {
       const context = this.getUIContext()
       const displayInfo = display.getDefaultDisplaySync()
       const screenW = context.px2vp(displayInfo.width)
       const screenH = context.px2vp(displayInfo.height)
-      posX = Math.max(pad, Math.min(screenX - cardW / 2, screenW - cardW - pad))
-      posY = Math.max(pad, Math.min(screenY + pad, screenH - cardH - pad))
+      posX = Math.max(pad, Math.min(windowX - cardW / 2, screenW - cardW - pad))
+      posY = Math.max(pad, Math.min(windowY + pad, screenH - cardH - pad))
     } catch (e) {
-      posX = screenX - cardW / 2
-      posY = screenY + pad
+      posX = windowX - cardW / 2
+      posY = windowY + pad
     }
     floatingLayerStore.profileCardUid = uid
     floatingLayerStore.profileCardX = posX
@@ -145,7 +145,7 @@ export struct NotesPanel {
                   }
                   .layoutWeight(1).margin({ left: 12 }).alignItems(HorizontalAlign.Start)
                   .onClick((event: ClickEvent) => {
-                    this.showProfileCard(entry.userId, event.screenX, event.screenY)
+                    this.showProfileCard(entry.userId, event.windowX, event.windowY)
                   })
 
                   Stack() {

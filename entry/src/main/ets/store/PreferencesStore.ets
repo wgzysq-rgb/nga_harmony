@@ -9,13 +9,22 @@ export class PreferencesStore {
   private pref: preferences.Preferences | null = null
 
   async init(context: Context, name: string): Promise<void> {
-    this.pref = await preferences.getPreferences(context, name)
-    hilog.info(DOMAIN, TAG, 'Initialized: %{public}s', name)
+    try {
+      this.pref = await preferences.getPreferences(context, name)
+      hilog.info(DOMAIN, TAG, 'Initialized: %{public}s', name)
+    } catch (e) {
+      hilog.error(DOMAIN, TAG, 'init failed: %{public}s', name)
+    }
   }
 
   async getString(key: string, def: string = ''): Promise<string> {
     if (!this.pref) return def
-    return (await this.pref.get(key, def)) as string
+    try {
+      return (await this.pref.get(key, def)) as string
+    } catch (e) {
+      hilog.error(DOMAIN, TAG, 'getString failed: %{public}s', key)
+      return def
+    }
   }
 
   async putString(key: string, value: string, flush: boolean = true): Promise<void> {

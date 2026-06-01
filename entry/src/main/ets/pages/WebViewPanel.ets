@@ -25,8 +25,8 @@ export struct WebViewPanel {
     }
     const baseUrl: string = ngaClient.getActiveDomain()
     try {
-      webview.WebCookieManager.setCookie(baseUrl, 'ngaPassportUid=' + session.uid + '; Path=/')
-      webview.WebCookieManager.setCookie(baseUrl, 'ngaPassportCid=' + session.cid + '; Path=/')
+      webview.WebCookieManager.configCookieSync(baseUrl, 'ngaPassportUid=' + session.uid + '; Path=/')
+      webview.WebCookieManager.configCookieSync(baseUrl, 'ngaPassportCid=' + session.cid + '; Path=/')
     } catch (e) {
       console.error('[WebViewPanel] setCookie failed: ' + JSON.stringify(e))
     }
@@ -48,7 +48,11 @@ export struct WebViewPanel {
         .geolocationAccess(true)
         .zoomAccess(true)
         .overviewModeAccess(true)
-        .userAgent('Mozilla/5.0 (Linux; Android 10; HarmonyOS) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.144 Mobile Safari/537.36')
+        .onControllerAttached(() => {
+          try {
+            this.controller.setCustomUserAgent('Mozilla/5.0 (Linux; Android 10; HarmonyOS) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.144 Mobile Safari/537.36')
+          } catch (e) { console.error('setCustomUserAgent failed: ' + e) }
+        })
         .onTitleReceive((event: Object): void => {
           const evt = event as Record<string, Object>
           this.pageTitle = String(evt['title'] ?? '')

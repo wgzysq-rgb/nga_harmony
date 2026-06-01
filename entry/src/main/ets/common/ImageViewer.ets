@@ -260,7 +260,7 @@ export struct ImageViewer {
     this.swipeTranslateX = oldSwipeX + dir * this.containerW
     this.imgNaturalW = 0
     this.imgNaturalH = 0
-    animateTo({
+    this.getUIContext()?.animateTo({
       duration: 250,
       curve: Curve.FastOutSlowIn,
       onFinish: () => {
@@ -272,7 +272,7 @@ export struct ImageViewer {
   }
 
   private doSwipeBounceBack(): void {
-    animateTo({ duration: 200, curve: Curve.FastOutSlowIn }, () => {
+    this.getUIContext()?.animateTo({ duration: 200, curve: Curve.FastOutSlowIn }, () => {
       this.swipeTranslateX = 0
     })
   }
@@ -352,7 +352,7 @@ export struct ImageViewer {
               .onAction((event: GestureEvent) => {
                 if (this.isPageAnimating) return
                 if (this.zoomScale > 1.01) {
-                  animateTo({ duration: 250, curve: Curve.FastOutSlowIn }, () => {
+                  this.getUIContext()?.animateTo({ duration: 250, curve: Curve.FastOutSlowIn }, () => {
                     this.zoomScale = 1
                     this.zoomOffsetX = 0
                     this.zoomOffsetY = 0
@@ -376,7 +376,7 @@ export struct ImageViewer {
                   let rawOY: number = tapY - cby * newScale - imgY * newScale
                   let clampedOX: number = this.clampOffsetX(newScale, rawOX)
                   let clampedOY: number = this.clampOffsetY(newScale, rawOY)
-                  animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
+                  this.getUIContext()?.animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
                     this.zoomScale = newScale
                     this.zoomOffsetX = clampedOX
                     this.zoomOffsetY = clampedOY
@@ -436,7 +436,7 @@ export struct ImageViewer {
                     this.zoomOffsetX + flickX)
                   let targetY: number = this.clampOffsetY(this.zoomScale,
                     this.zoomOffsetY + flickY)
-                  animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
+                  this.getUIContext()?.animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
                     this.zoomOffsetX = targetX
                     this.zoomOffsetY = targetY
                   })

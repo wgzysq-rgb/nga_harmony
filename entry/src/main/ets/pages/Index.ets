@@ -6,7 +6,7 @@
 import { appStore } from '../store/AppStore'
 import { AppColors } from '../common/Constants'
 import { verifyToken } from '../service/NgaApi'
-import router from '@ohos.router'
+
 
 @Entry
 @Component
@@ -22,13 +22,13 @@ struct Index {
       if (appStore.auth.isAuthenticated) {
         const valid = await verifyToken(appStore.auth.token)
         if (valid) {
-          router.replaceUrl({ url: 'pages/MainPage' })
+          try { this.getUIContext().getRouter().replaceUrl({ url: 'pages/MainPage' }) } catch (e) { console.error('route to MainPage failed: ' + e) }
         } else {
           appStore.clearAuth()
-          router.replaceUrl({ url: 'pages/LoginPage' })
+          try { this.getUIContext().getRouter().replaceUrl({ url: 'pages/LoginPage' }) } catch (e) { console.error('route to LoginPage failed: ' + e) }
         }
       } else {
-        router.replaceUrl({ url: 'pages/LoginPage' })
+        try { this.getUIContext().getRouter().replaceUrl({ url: 'pages/LoginPage' }) } catch (e) { console.error('route to LoginPage failed: ' + e) }
       }
     } else {
       setTimeout(() => this.waitAndRoute(), 50)
