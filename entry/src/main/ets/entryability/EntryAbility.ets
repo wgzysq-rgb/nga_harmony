@@ -1,58 +1,35 @@
 import { AbilityConstant, Configuration, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
-import { fileIo } from '@kit.CoreFileKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { display, window } from '@kit.ArkUI';
-import { sessionStore } from '../service/SessionStore';
 import { appStore } from '../store/AppStore';
-import { browseHistoryStore } from '../store/BrowseHistoryStore';
-import { voteRecordStore } from '../store/VoteRecordStore';
 import { initStatusBarManager, updateStatusBarStyle } from '../common/StatusBarManager';
 import { startNetworkMonitor } from '../common/NetworkMonitor';
 
 const DOMAIN = 0x0000;
 const TAG = 'EntryAbility';
-const THEME_CACHE_FILE = 'theme_cache.txt'
 
 export default class EntryAbility extends UIAbility {
   private curBp: string = 'sm'
 
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     // 在 loadContent 前尽可能早地应用用户保存的主题，减少主题切换闪烁
+    // 注意：此时 appStore 尚未 init，直接使用默认主题；appStore.init 完成后会通过 applyCurrentTheme 修正
     try {
       const appContext = this.context.getApplicationContext()
-      let initialTheme: string = 'light'
-      try {
-        const themeCachePath = appContext.cacheDir + '/' + THEME_CACHE_FILE
-        const cachedTheme = fileIo.readTextSync(themeCachePath).trim()
-        if (cachedTheme === 'dark' || cachedTheme === 'system') {
-          initialTheme = cachedTheme
-        }
-      } catch (e) {
-        // 尚未缓存过主题，使用默认值
-      }
-      if (initialTheme === 'system') {
-        appContext.setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET)
-        const isDark = this.context.config.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK
-        AppStorage.setOrCreate('effectiveColorMode', isDark ? 'dark' : 'light')
-      } else if (initialTheme === 'dark') {
-        appContext.setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_DARK)
-        AppStorage.setOrCreate('effectiveColorMode', 'dark')
-      } else {
-        appContext.setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_LIGHT)
-        AppStorage.setOrCreate('effectiveColorMode', 'light')
-      }
-      AppStorage.setOrCreate('themeName', initialTheme)
+      appContext.setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET)
+      AppStorage.setOrCreate('themeName', 'light')
+      AppStorage.setOrCreate('effectiveColorMode', 'light')
     } catch (err) {
       hilog.error(DOMAIN, TAG, 'Failed to set colorMode. Cause: %{public}s', JSON.stringify(err));
     }
 
-    // 初始化 SessionStore 和 AppStore（异步，Index 页面会等待 initialized 标志）
-    Promise.all([sessionStore.init(this.context), appStore.init(this.context), browseHistoryStore.init(this.context), voteRecordStore.init(this.context)])
+    // 初始化 AppStore（异步，Index 页面会等待 initialized 标志）
+    appStore.init(this.context)
       .then(() => {
-        hilog.info(DOMAIN, TAG, 'All stores initialized');
+        hilog.info(DOMAIN, TAG, 'AppStore initialized');
       })
       .catch((e: Error) => {
-        hilog.error(DOMAIN, TAG, 'Store init failed: %{public}s', JSON.stringify(e));
+        hilog.error(DOMAIN, TAG, 'AppStore init failed: %{public}s', JSON.stringify(e));
       });
 
     startNetworkMonitor();
@@ -120,8 +97,8 @@ export default class EntryAbility extends UIAbility {
   }
 
   onBackground(): void {
-    // 应用进入后台时持久化会话，防止被系统杀死后丢失
-    sessionStore.flushNow();
+    // 应用进入后台时持久化所有数据，防止被系统杀死后丢失
+    appStore.flushAll();
     hilog.info(DOMAIN, TAG, '%{public}s', 'Ability onBackground');
   }
 

@@ -7,6 +7,7 @@ const DOMAIN = 0x0000
 
 export class PreferencesStore {
   private pref: preferences.Preferences | null = null
+  private flushTimer: number = -1
 
   async init(context: Context, name: string): Promise<void> {
     try {
@@ -71,5 +72,12 @@ export class PreferencesStore {
     } catch (e) {
       hilog.error(DOMAIN, TAG, 'flush failed')
     }
+  }
+
+  scheduleFlush(delay: number = 500): void {
+    clearTimeout(this.flushTimer)
+    this.flushTimer = setTimeout(async (): Promise<void> => {
+      await this.flush()
+    }, delay)
   }
 }

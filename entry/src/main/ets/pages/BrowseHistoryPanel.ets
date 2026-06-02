@@ -1,8 +1,7 @@
 import { AppColors } from '../common/Constants'
 import { formatTime, unescapeHtml } from '../common/Utils'
-import { appStore } from '../store/AppStore'
+import { appStore, BrowseHistoryEntry } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
-import { browseHistoryStore, BrowseHistoryEntry } from '../store/BrowseHistoryStore'
 import { floatingLayerStore } from '../store/FloatingLayerStore'
 import { PanelNavBar } from '../common/PanelNavBar'
 import { HistoryItemDataSource } from '../common/LazyDataSource'
@@ -26,7 +25,7 @@ export struct BrowseHistoryPanel {
       return
     }
     try {
-      this.items = await browseHistoryStore.getItems(appStore.auth.uid)
+      this.items = await appStore.getBrowseHistory(appStore.auth.uid)
       this.historyDataSource.replaceAll(this.items as object[])
     } catch (e) {
       this.items = []
@@ -36,13 +35,13 @@ export struct BrowseHistoryPanel {
   private async removeItem(tid: string): Promise<void> {
     this.items = this.items.filter((item: BrowseHistoryEntry) => item.tid !== tid)
     this.historyDataSource.replaceAll(this.items as object[])
-    await browseHistoryStore.remove(appStore.auth.uid, tid)
+    await appStore.removeBrowseHistory(appStore.auth.uid, tid)
   }
 
   private async clearAll(): Promise<void> {
     this.items = []
     this.historyDataSource.clear()
-    await browseHistoryStore.clear(appStore.auth.uid)
+    await appStore.clearBrowseHistory(appStore.auth.uid)
   }
 
   build() {

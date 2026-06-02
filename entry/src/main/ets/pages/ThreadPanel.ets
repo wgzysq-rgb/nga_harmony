@@ -4,10 +4,9 @@ import { motion } from '@kit.MultimodalAwarenessKit'
 import { BusinessError, deviceInfo } from '@kit.BasicServicesKit'
 import { taskpool } from '@kit.ArkTS'
 
-import { appStore } from '../store/AppStore'
+import { appStore, BrowseHistoryEntry } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
 import { ngaClient } from '../service/NgaClient'
-import { browseHistoryStore, BrowseHistoryEntry } from '../store/BrowseHistoryStore'
 import { getThread, addFavorite, removeFavorite, votePost, ThreadResult, PostInfo, PostReplyResult, VoteResult } from '../service/NgaApi'
 import { preWarmBatchAwait, getCachedBBNodes } from '../service/BBCodeCache'
 import { AppColors } from '../common/Constants'
@@ -15,7 +14,6 @@ import { PanelNavBar } from '../common/PanelNavBar'
 import { PostItem } from '../common/PostItem'
 import { PostInfoDataSource } from '../common/LazyDataSource'
 import { floatingLayerStore, FloatingPage } from '../store/FloatingLayerStore'
-import { voteRecordStore } from '../store/VoteRecordStore'
 import { replyManager, ReplyType } from '../common/ReplyManager'
 import { withTimeout } from '../common/TimeoutUtils'
 import { unescapeHtml, bbNodesToPlainText } from '../common/Utils'
@@ -175,7 +173,7 @@ export struct ThreadPanel {
 
   private async loadPersistedVotes(): Promise<void> {
     if (!appStore.auth.isAuthenticated) return
-    const result = await voteRecordStore.load(appStore.auth.uid, this.threadTid)
+    const result = await appStore.loadVoteRecord(appStore.auth.uid, this.threadTid)
     this.votedUpPids = result[0]
     this.votedDownPids = result[1]
   }
@@ -457,7 +455,7 @@ export struct ThreadPanel {
     if (entry.subject.length === 0) {
       return
     }
-    browseHistoryStore.add(appStore.auth.uid, entry)
+    appStore.addBrowseHistory(appStore.auth.uid, entry)
   }
 
   private async handleReplySend(text: string, isAnony: boolean): Promise<void> {
@@ -546,7 +544,7 @@ export struct ThreadPanel {
       }
       this.votedUpPids = upPids
       this.votedDownPids = downPids
-      voteRecordStore.save(appStore.auth.uid, this.threadTid, upPids, downPids)
+      appStore.saveVoteRecord(appStore.auth.uid, this.threadTid, upPids, downPids)
       const isUp: boolean = upPids.has(pidKey)
       const isDown: boolean = downPids.has(pidKey)
       const scoreDelta: number = (isUp ? 1 : 0) - (wasUp ? 1 : 0)

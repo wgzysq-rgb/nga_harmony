@@ -8,7 +8,6 @@ import { routerStore, Screen } from '../store/RouterStore'
 import { AppColors, IconColors, THEME_OPTIONS, ThemeOption } from '../common/Constants'
 import { ConfirmDialog, ActionSheetDialog, ActionOption } from '../common/Dialogs'
 import { PanelNavBar } from '../common/PanelNavBar'
-import { sessionStore } from '../service/SessionStore'
 import { picker, fileIo, storageStatistics } from '@kit.CoreFileKit'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { common, contextConstant } from '@kit.AbilityKit'
@@ -143,7 +142,7 @@ export struct SettingsPanel {
   private async handleExport(): Promise<void> {
     try {
       const token = appStore.auth.token
-      const session = sessionStore.get(token)
+      const session = appStore.getSession(token)
       if (!session) {
         appStore.showToast('未找到登录会话')
         return

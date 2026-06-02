@@ -1,6 +1,4 @@
-import { fileIo } from '@kit.CoreFileKit'
 import { hilog } from '@kit.PerformanceAnalysisKit'
-import { util } from '@kit.ArkTS'
 import { ConfigurationConstant, Context } from '@kit.AbilityKit'
 import { fetchForumFavorites, getForumCategories, getUserProfile, getNotifications } from '../service/NgaApi'
 import type { Category } from '../model/Forum'
@@ -71,6 +69,46 @@ class PersistedAuth {
   avatarUrl: string = ''
 }
 
+// ============== Session ==============
+
+export interface Session {
+  uid: string
+  cid: string
+  nickName: string
+  avatarUrl: string
+  createdAt: number
+}
+
+const SESSION_MAX_AGE: number = 7 * 24 * 3600 * 1000
+const SESSION_KEY: string = 'sessions'
+
+// ============== Vote Record ==============
+
+class VoteRecord {
+  upPids: string[] = []
+  downPids: string[] = []
+  ts: number = 0
+}
+
+const VOTE_MAX_ENTRIES: number = 200
+
+// ============== Browse History ==============
+
+export class BrowseHistoryEntry {
+  tid: string = ''
+  subject: string = ''
+  author: string = ''
+  authorid: string = ''
+  replies: number = 0
+  postDate: number = 0
+  board: string = ''
+  ts: number = 0
+}
+
+const HISTORY_MAX_COUNT: number = 500
+
+// ============== AppStore ==============
+
 class AppStoreClass {
   private store: PreferencesStore = new PreferencesStore()
   private writeQueue: SerialQueue = new SerialQueue()
@@ -97,85 +135,32 @@ class AppStoreClass {
 
   unreadNotiCount: number = 0
 
-  /** 缓存的通知列表（轮询时保存，防止 NGA 消费后 UI 查询不到） */
-  cachedNotifications: NgaNotification[] = []
-
+  private cachedNotifications: NgaNotification[] = []
   private lastNotiQueryTime: number = 0
-
   private static readonly NOTI_QUERY_DELAY: number = 30 * 1000
 
-  private notificationsKey(): string {
-    return `cached_notifications_${this.auth.uid}`
-  }
+  // Session state
+  private sessions: Map<string, Session> = new Map()
+  private sessionsDirty: boolean = false
 
-  async refreshUnreadCount(): Promise<void> {
-    if (!this.auth.isAuthenticated) return
-    const now: number = Date.now()
-    if (now - this.lastNotiQueryTime < AppStoreClass.NOTI_QUERY_DELAY) return
-    this.lastNotiQueryTime = now
-    try {
-      const result = await getNotifications(this.auth.token)
-      if (result.ok && result.data && result.data.length > 0) {
-        let unreadCount: number = 0
-        for (let i: number = 0; i < result.data.length; i++) {
-          if (result.data[i].unread) {
-            unreadCount++
-          }
-        }
-        this.unreadNotiCount = unreadCount
-        AppStorage.setOrCreate('unreadNotiCount', this.unreadNotiCount)
+  // Vote state
+  private voteCache: Record<string, VoteRecord> = {}
+  private voteLoadedUid: string = ''
 
-        // 缓存完整通知数据，防止 NGA 消费后 UI 再次查询为空
-        this.cachedNotifications = result.data
-        this.persistCachedNotifications()
-      }
-    } catch (e) {}
-  }
-
-  /** 从本地存储加载缓存的通知数据 */
-  async loadCachedNotifications(): Promise<void> {
-    if (!this.auth.uid) return
-    const saved = await this.store.getJSON<NgaNotification[]>(this.notificationsKey())
-    if (saved && saved.length > 0) {
-      this.cachedNotifications = saved
-    }
-  }
-
-  /** 将缓存的通知数据持久化到本地存储 */
-  persistCachedNotifications(): void {
-    if (!this.auth.uid) return
-    this.writeQueue.enqueue(async (): Promise<void> => {
-      await this.store.putJSON(this.notificationsKey(), this.cachedNotifications)
-    })
-  }
-
-  /** 获取缓存的通知列表 */
-  getCachedNotifications(): NgaNotification[] {
-    return this.cachedNotifications
-  }
-
-  /** 更新缓存的通知数据（来自 NotificationPanel 的 API 结果） */
-  updateCachedNotifications(data: NgaNotification[]): void {
-    this.cachedNotifications = data
-    this.persistCachedNotifications()
-  }
-
-  /** 清空缓存的通信数据 */
-  clearCachedNotifications(): void {
-    this.cachedNotifications = []
-    if (this.auth.uid) {
-      this.writeQueue.enqueue(async (): Promise<void> => {
-        await this.store.putJSON(this.notificationsKey(), [])
-      })
-    }
-  }
+  // Browse history state
+  private historyItems: BrowseHistoryEntry[] = []
+  private historyLoadedUid: string = ''
+  private historyVersion: number = 0
 
   private static readonly REFRESH_DELAY: number = 10000
+
+  // ============== Init ==============
 
   async init(context: Context): Promise<void> {
     try {
       this.context = context
       await this.store.init(context, 'nga_app_store')
+      await this.loadSessions()
       await this.migrateAuthIfNeeded()
       await this.loadAuth()
       await this.loadCachedCategories()
@@ -189,25 +174,6 @@ class AppStoreClass {
     } catch (e) {
       hilog.error(DOMAIN, TAG, 'AppStore init failed: %{public}s', JSON.stringify(e))
     }
-  }
-
-  private settingsKey(): string {
-    return `settings_${this.auth.uid}`
-  }
-
-  private profilesKey(): string {
-    return `cached_profiles_${this.auth.uid}`
-  }
-
-  private resetUserState(): void {
-    this.settings = new SettingsState()
-    this.blacklistManager = new FilterListManager<BlacklistEntry>()
-    this.notesManager = new FilterListManager<UserNoteEntry>()
-    this.filterKeywordsManager = new FilterListManager<FilterKeyword>()
-    this.profileCache.clear()
-    this.cachedNotifications = []
-    this.favoritesLoaded = false
-    this.refreshingUids = new Set()
   }
 
   // ============== Auth ==============
@@ -248,7 +214,8 @@ class AppStoreClass {
     data.nickName = this.auth.nickName
     data.avatarUrl = this.auth.avatarUrl
     this.writeQueue.enqueue(async (): Promise<void> => {
-      await this.store.putJSON('auth', data)
+      await this.store.putJSON('auth', data, false)
+      this.store.scheduleFlush()
     })
   }
 
@@ -436,13 +403,12 @@ class AppStoreClass {
         this.showToast('自动签到成功')
       }
     } catch (e) {
-      // 自动签到失败静默，不干扰用户
+      // 自动签到失败静默
     }
   }
 
   private applyCurrentTheme(): void {
     let theme: string = this.settings.theme
-    // 兼容旧数据：original/white 统一映射到 light
     if (theme === 'original' || theme === 'white') {
       theme = 'light'
     }
@@ -471,27 +437,18 @@ class AppStoreClass {
     } catch (err) {
       hilog.error(DOMAIN, TAG, 'updateStatusBarStyle failed: %{public}s', JSON.stringify(err))
     }
-
-    // 缓存主题到文件，供下次冷启动时 EntryAbility 同步读取
-    try {
-      const cacheDir = this.context?.getApplicationContext().cacheDir
-      if (cacheDir) {
-        const encoder = new util.TextEncoder()
-        const bytes = encoder.encodeInto(theme)
-        const file = fileIo.openSync(cacheDir + '/theme_cache.txt', fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC | fileIo.OpenMode.WRITE_ONLY)
-        fileIo.writeSync(file.fd, bytes.buffer)
-        fileIo.closeSync(file)
-      }
-    } catch (err) {
-      hilog.error(DOMAIN, TAG, 'Failed to cache theme. Cause: %{public}s', JSON.stringify(err))
-    }
   }
 
   persistSettings(): void {
     if (!this.auth.uid) return
     this.writeQueue.enqueue(async (): Promise<void> => {
-      await this.store.putJSON(this.settingsKey(), this.settings)
+      await this.store.putJSON(this.settingsKey(), this.settings, false)
+      this.store.scheduleFlush()
     })
+  }
+
+  private settingsKey(): string {
+    return `settings_${this.auth.uid}`
   }
 
   private async loadUserSettings(): Promise<void> {
@@ -529,6 +486,22 @@ class AppStoreClass {
     AppStorage.setOrCreate('imageLoadStrategy', this.settings.imageLoadStrategy)
   }
 
+  private resetUserState(): void {
+    this.settings = new SettingsState()
+    this.blacklistManager = new FilterListManager<BlacklistEntry>()
+    this.notesManager = new FilterListManager<UserNoteEntry>()
+    this.filterKeywordsManager = new FilterListManager<FilterKeyword>()
+    this.profileCache.clear()
+    this.cachedNotifications = []
+    this.favoritesLoaded = false
+    this.refreshingUids = new Set()
+    this.voteCache = {}
+    this.voteLoadedUid = ''
+    this.historyItems = []
+    this.historyLoadedUid = ''
+    this.historyVersion = 0
+  }
+
   // ============== Categories Cache ==============
 
   private async loadCachedCategories(): Promise<void> {
@@ -543,7 +516,8 @@ class AppStoreClass {
 
   private persistCategories(): void {
     this.writeQueue.enqueue(async (): Promise<void> => {
-      await this.store.putJSON('cached_categories', this.cachedCategories)
+      await this.store.putJSON('cached_categories', this.cachedCategories, false)
+      this.store.scheduleFlush()
     })
   }
 
@@ -581,6 +555,10 @@ class AppStoreClass {
 
   // ============== Profile Cache ==============
 
+  private profilesKey(): string {
+    return `cached_profiles_${this.auth.uid}`
+  }
+
   private async loadCachedProfiles(): Promise<void> {
     if (!this.auth.uid) return
     const saved = await this.store.getJSON<Record<string, ProfileData>>(this.profilesKey())
@@ -607,7 +585,8 @@ class AppStoreClass {
       }
     }
     this.writeQueue.enqueue(async (): Promise<void> => {
-      await this.store.putJSON(this.profilesKey(), snapshot)
+      await this.store.putJSON(this.profilesKey(), snapshot, false)
+      this.store.scheduleFlush()
     })
   }
 
@@ -654,6 +633,69 @@ class AppStoreClass {
     return null
   }
 
+  // ============== Notifications ==============
+
+  private notificationsKey(): string {
+    return `cached_notifications_${this.auth.uid}`
+  }
+
+  async refreshUnreadCount(): Promise<void> {
+    if (!this.auth.isAuthenticated) return
+    const now: number = Date.now()
+    if (now - this.lastNotiQueryTime < AppStoreClass.NOTI_QUERY_DELAY) return
+    this.lastNotiQueryTime = now
+    try {
+      const result = await getNotifications(this.auth.token)
+      if (result.ok && result.data && result.data.length > 0) {
+        let unreadCount: number = 0
+        for (let i: number = 0; i < result.data.length; i++) {
+          if (result.data[i].unread) {
+            unreadCount++
+          }
+        }
+        this.unreadNotiCount = unreadCount
+        AppStorage.setOrCreate('unreadNotiCount', this.unreadNotiCount)
+        this.cachedNotifications = result.data
+        this.persistCachedNotifications()
+      }
+    } catch (e) {}
+  }
+
+  async loadCachedNotifications(): Promise<void> {
+    if (!this.auth.uid) return
+    const saved = await this.store.getJSON<NgaNotification[]>(this.notificationsKey())
+    if (saved && saved.length > 0) {
+      this.cachedNotifications = saved
+    }
+  }
+
+  private persistCachedNotifications(): void {
+    if (!this.auth.uid) return
+    this.writeQueue.enqueue(async (): Promise<void> => {
+      await this.store.putJSON(this.notificationsKey(), this.cachedNotifications, false)
+      this.store.scheduleFlush()
+    })
+  }
+
+  getCachedNotifications(): NgaNotification[] {
+    return this.cachedNotifications
+  }
+
+  updateCachedNotifications(data: NgaNotification[]): void {
+    this.cachedNotifications = data
+    this.persistCachedNotifications()
+  }
+
+  clearCachedNotifications(): void {
+    this.cachedNotifications = []
+    if (this.auth.uid) {
+      this.writeQueue.enqueue(async (): Promise<void> => {
+        await this.store.putJSON(this.notificationsKey(), [], false)
+        this.store.scheduleFlush()
+      })
+    }
+  }
+
   // ============== Toast ==============
 
   showToast(msg: string): void {
@@ -666,7 +708,7 @@ class AppStoreClass {
     }, 2500)
   }
 
-  // ============== Blacklist helper string ==============
+  // ============== Blacklist helper ==============
 
   getBlacklistHeaderString(): string {
     return this.settings.blacklist.map(u => u.userId).join(',')
@@ -750,6 +792,282 @@ class AppStoreClass {
       }
     }
     return result
+  }
+
+  // ============== Session (原 SessionStore) ==============
+
+  private async loadSessions(): Promise<void> {
+    const saved = await this.store.getJSON<Array<Array<Object>>>(SESSION_KEY)
+    if (!saved) return
+    for (let i = 0; i < saved.length; i++) {
+      const entry = saved[i]
+      const token = String(entry[0])
+      const sessionObj = entry[1] as Record<string, Object>
+      const session: Session = {
+        uid: String(sessionObj['uid'] ?? ''),
+        cid: String(sessionObj['cid'] ?? ''),
+        nickName: String(sessionObj['nickName'] ?? ''),
+        avatarUrl: String(sessionObj['avatarUrl'] ?? ''),
+        createdAt: Number(sessionObj['createdAt'] ?? 0),
+      }
+      this.sessions.set(token, session)
+    }
+    this.cleanupSessions()
+    hilog.info(DOMAIN, TAG, 'Sessions loaded: %{public}d', this.sessions.size)
+  }
+
+  private persistSessions(immediate: boolean = false): void {
+    if (!this.sessionsDirty) return
+    this.sessionsDirty = false
+    const entries: Array<Array<Object>> = []
+    const keys = Array.from(this.sessions.keys())
+    for (const key of keys) {
+      const session = this.sessions.get(key)
+      if (session) {
+        entries.push([key, session])
+      }
+    }
+    this.writeQueue.enqueue(async (): Promise<void> => {
+      await this.store.putJSON(SESSION_KEY, entries, immediate)
+    })
+  }
+
+  async createSession(uid: string, cid: string, nickName: string, avatarUrl: string): Promise<string> {
+    const token = this.generateToken()
+    this.sessions.set(token, { uid, cid, nickName, avatarUrl, createdAt: Date.now() })
+    this.sessionsDirty = true
+    this.persistSessions(true) // 登录会话立即刷盘，防止丢失
+    return token
+  }
+
+  getSession(token: string): Session | null {
+    return this.sessions.get(token) ?? null
+  }
+
+  async updateSession(token: string, nickName?: string, avatarUrl?: string): Promise<void> {
+    const session = this.sessions.get(token)
+    if (!session) return
+    if (nickName !== undefined) session.nickName = nickName
+    if (avatarUrl !== undefined) session.avatarUrl = avatarUrl
+    this.sessionsDirty = true
+    this.persistSessions()
+  }
+
+  async destroySession(token: string): Promise<void> {
+    if (this.sessions.delete(token)) {
+      this.sessionsDirty = true
+      this.persistSessions(true) // 销毁会话立即刷盘
+    }
+  }
+
+  cleanupSessions(): void {
+    const now = Date.now()
+    let changed = false
+    const keys = Array.from(this.sessions.keys())
+    for (const token of keys) {
+      const session = this.sessions.get(token)!
+      if (now - session.createdAt > SESSION_MAX_AGE) {
+        this.sessions.delete(token)
+        changed = true
+      }
+    }
+    if (changed) {
+      this.sessionsDirty = true
+    }
+  }
+
+  private generateToken(): string {
+    const chars = '0123456789abcdef'
+    let result = ''
+    for (let i = 0; i < 64; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    return result
+  }
+
+  // ============== Vote Record (原 VoteRecordStore) ==============
+
+  private voteKey(uid: string): string {
+    return `votes_${uid}`
+  }
+
+  async loadVoteRecord(uid: string, tid: string): Promise<Set<string>[]> {
+    if (uid.length === 0) {
+      return [new Set<string>(), new Set<string>()]
+    }
+    if (this.voteLoadedUid !== uid) {
+      const saved = await this.store.getJSON<Record<string, VoteRecord>>(this.voteKey(uid))
+      this.voteCache = saved ?? {}
+      this.voteLoadedUid = uid
+    }
+    const upSet = new Set<string>()
+    const downSet = new Set<string>()
+    const record = this.voteCache[tid]
+    if (record) {
+      for (let i = 0; i < record.upPids.length; i++) {
+        upSet.add(record.upPids[i])
+      }
+      for (let i = 0; i < record.downPids.length; i++) {
+        downSet.add(record.downPids[i])
+      }
+    }
+    return [upSet, downSet]
+  }
+
+  async saveVoteRecord(uid: string, tid: string, upPids: Set<string>, downPids: Set<string>): Promise<void> {
+    if (uid.length === 0 || tid.length === 0) return
+    if (this.voteLoadedUid !== uid) {
+      const saved = await this.store.getJSON<Record<string, VoteRecord>>(this.voteKey(uid))
+      this.voteCache = saved ?? {}
+      this.voteLoadedUid = uid
+    }
+    const record = new VoteRecord()
+    const upArr: string[] = []
+    upPids.forEach((pid: string) => { upArr.push(pid) })
+    const downArr: string[] = []
+    downPids.forEach((pid: string) => { downArr.push(pid) })
+    record.upPids = upArr
+    record.downPids = downArr
+    record.ts = Date.now()
+    this.voteCache[tid] = record
+    this.evictVotesIfNeeded()
+    this.writeQueue.enqueue(async (): Promise<void> => {
+      await this.store.putJSON(this.voteKey(uid), this.voteCache, false)
+      this.store.scheduleFlush()
+    })
+  }
+
+  async removeVoteRecord(uid: string, tid: string): Promise<void> {
+    if (uid.length === 0) return
+    if (this.voteLoadedUid !== uid) {
+      const saved = await this.store.getJSON<Record<string, VoteRecord>>(this.voteKey(uid))
+      this.voteCache = saved ?? {}
+      this.voteLoadedUid = uid
+    }
+    const newCache: Record<string, VoteRecord> = {}
+    const cacheKeys = Object.keys(this.voteCache)
+    for (let i = 0; i < cacheKeys.length; i++) {
+      if (cacheKeys[i] !== tid) {
+        newCache[cacheKeys[i]] = this.voteCache[cacheKeys[i]]
+      }
+    }
+    this.voteCache = newCache
+    this.writeQueue.enqueue(async (): Promise<void> => {
+      await this.store.putJSON(this.voteKey(uid), this.voteCache, false)
+      this.store.scheduleFlush()
+    })
+  }
+
+  async clearVoteRecords(uid: string): Promise<void> {
+    this.voteCache = {}
+    this.voteLoadedUid = uid
+    this.writeQueue.enqueue(async (): Promise<void> => {
+      await this.store.putJSON(this.voteKey(uid), this.voteCache, false)
+      this.store.scheduleFlush()
+    })
+  }
+
+  private evictVotesIfNeeded(): void {
+    const keys = Object.keys(this.voteCache)
+    if (keys.length <= VOTE_MAX_ENTRIES) return
+    const entries: string[][] = []
+    for (let i = 0; i < keys.length; i++) {
+      const record = this.voteCache[keys[i]]
+      if (record) {
+        entries.push([keys[i], String(record.ts)])
+      }
+    }
+    entries.sort((a: string[], b: string[]): number => {
+      return Number(a[1]) - Number(b[1])
+    })
+    const removeCount = entries.length - VOTE_MAX_ENTRIES
+    const evictSet = new Set<string>()
+    for (let i = 0; i < removeCount; i++) {
+      evictSet.add(entries[i][0])
+    }
+    const newCache: Record<string, VoteRecord> = {}
+    for (let i = 0; i < keys.length; i++) {
+      if (!evictSet.has(keys[i])) {
+        newCache[keys[i]] = this.voteCache[keys[i]]
+      }
+    }
+    this.voteCache = newCache
+  }
+
+  // ============== Browse History (原 BrowseHistoryStore) ==============
+
+  private historyKey(uid: string): string {
+    return `history_${uid}`
+  }
+
+  async getBrowseHistory(uid: string): Promise<BrowseHistoryEntry[]> {
+    if (this.historyLoadedUid !== uid) {
+      const saved = await this.store.getJSON<BrowseHistoryEntry[]>(this.historyKey(uid))
+      this.historyItems = saved ?? []
+      this.historyLoadedUid = uid
+    }
+    const result: BrowseHistoryEntry[] = []
+    for (let i = 0; i < this.historyItems.length; i++) {
+      result.push(this.historyItems[i])
+    }
+    return result
+  }
+
+  async addBrowseHistory(uid: string, entry: BrowseHistoryEntry): Promise<void> {
+    if (uid.length === 0) return
+    if (this.historyLoadedUid !== uid) {
+      await this.getBrowseHistory(uid)
+    }
+    const filtered: BrowseHistoryEntry[] = []
+    for (let i = 0; i < this.historyItems.length; i++) {
+      if (this.historyItems[i].tid !== entry.tid) {
+        filtered.push(this.historyItems[i])
+      }
+    }
+    entry.ts = Date.now()
+    const newList: BrowseHistoryEntry[] = [entry, ...filtered]
+    if (newList.length > HISTORY_MAX_COUNT) {
+      this.historyItems = newList.slice(0, HISTORY_MAX_COUNT)
+    } else {
+      this.historyItems = newList
+    }
+    this.persistBrowseHistory(uid)
+  }
+
+  async removeBrowseHistory(uid: string, tid: string): Promise<void> {
+    if (this.historyLoadedUid !== uid) {
+      await this.getBrowseHistory(uid)
+    }
+    const filtered: BrowseHistoryEntry[] = []
+    for (let i = 0; i < this.historyItems.length; i++) {
+      if (this.historyItems[i].tid !== tid) {
+        filtered.push(this.historyItems[i])
+      }
+    }
+    this.historyItems = filtered
+    this.persistBrowseHistory(uid)
+  }
+
+  async clearBrowseHistory(uid: string): Promise<void> {
+    this.historyItems = []
+    this.persistBrowseHistory(uid)
+  }
+
+  private persistBrowseHistory(uid: string): void {
+    this.writeQueue.enqueue(async (): Promise<void> => {
+      await this.store.putJSON(this.historyKey(uid), this.historyItems, false)
+      this.historyVersion++
+      AppStorage.setOrCreate('browseHistoryVersion', this.historyVersion)
+      this.store.scheduleFlush()
+    })
+  }
+
+  // ============== Flush All (for onBackground) ==============
+
+  async flushAll(): Promise<void> {
+    // 先排空写队列，确保所有挂起的 put 操作完成，再刷盘
+    await this.writeQueue.enqueue(async (): Promise<void> => {})
+    await this.store.flush()
   }
 }
 

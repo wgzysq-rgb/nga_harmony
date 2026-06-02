@@ -5,7 +5,7 @@
 
 import { ngaClient } from './NgaClient';
 import { ngaUploadFile, type Cookies } from './NgaClient';
-import { sessionStore, type Session } from './SessionStore';
+import { appStore, type Session } from '../store/AppStore';
 import { parseForumCategories } from '../parser/ForumParser';
 import { parseTopicList } from '../parser/TopicParser';
 import { parseThreadData } from '../parser/ThreadParser';
@@ -17,7 +17,6 @@ import { parseNgaError } from '../parser/ErrorParser';
 import { parseFromClient } from '../parser/ClientParser';
 import { resolveAttachUrl } from './ContentParser';
 import { fetchImageSize } from '../common/ImageSizeUtil';
-import { appStore } from '../store/AppStore';
 import { isWifiConnected } from '../common/NetworkUtil';
 import type { Category } from '../model/Forum';
 import type { ThreadData, ThreadRowInfo, Attachment, ThreadInfo } from '../model/Thread';
@@ -275,7 +274,7 @@ export async function loginStep2(loginToken: string, captchaId: string, captcha:
       // 忽略
     }
 
-    const token = await sessionStore.create(loginResult.uid, loginResult.cid, nickName, avatarUrl);
+    const token = await appStore.createSession(loginResult.uid, loginResult.cid, nickName, avatarUrl);
     result.ok = true;
     result.token = token;
     const user = new UserInfo();
@@ -347,7 +346,7 @@ function generateLoginToken(): string {
 // ============== 获取当前用户 ==============
 
 export async function verifyToken(token: string): Promise<boolean> {
-  const session = sessionStore.get(token);
+  const session = appStore.getSession(token);
   if (!session) {
     return false;
   }
@@ -369,7 +368,7 @@ export async function verifyToken(token: string): Promise<boolean> {
 
 export async function getCurrentUser(token: string): Promise<CurrentUserResult> {
   const result = new CurrentUserResult();
-  const session = sessionStore.get(token);
+  const session = appStore.getSession(token);
   if (!session) {
     result.error = '会话不存在';
     return result;
@@ -386,7 +385,7 @@ export async function getCurrentUser(token: string): Promise<CurrentUserResult> 
     const nickName = String(d?.['username'] ?? session.nickName);
     const avatarUrl = String(d?.['avatar'] ?? session.avatarUrl);
 
-    await sessionStore.update(token, nickName, avatarUrl);
+    await appStore.updateSession(token, nickName, avatarUrl);
 
     const user = new UserInfo();
     user.uid = session.uid;
@@ -406,7 +405,7 @@ export async function getCurrentUser(token: string): Promise<CurrentUserResult> 
 }
 
 export async function logout(token: string): Promise<void> {
-  await sessionStore.destroy(token);
+  await appStore.destroySession(token);
 }
 
 export async function injectCredentials(uid: string, cid: string): Promise<InjectResult> {
@@ -426,7 +425,7 @@ export async function injectCredentials(uid: string, cid: string): Promise<Injec
       nickName = fetched.nickName || nickName;
     }
 
-    const token = await sessionStore.create(uid, cid, nickName, avatarUrl);
+    const token = await appStore.createSession(uid, cid, nickName, avatarUrl);
     result.ok = true;
     result.token = token;
     const user = new UserInfo();
@@ -441,14 +440,14 @@ export async function injectCredentials(uid: string, cid: string): Promise<Injec
 }
 
 export function getSession(token: string): Session | null {
-  return sessionStore.get(token);
+  return appStore.getSession(token);
 }
 
 // ============== 版块 ==============
 
 export async function getForumCategories(token: string): Promise<CategoriesResult> {
   const result = new CategoriesResult();
-  const session = sessionStore.get(token);
+  const session = appStore.getSession(token);
   if (!session) {
     result.error = '未登录';
     return result;
@@ -467,7 +466,7 @@ export async function getForumCategories(token: string): Promise<CategoriesResul
 
 export async function searchForum(token: string, key: string): Promise<SearchForumResult> {
   const result = new SearchForumResult();
-  const session = sessionStore.get(token);
+  const session = appStore.getSession(token);
   if (!session) {
     result.error = '未登录';
     return result;
@@ -526,7 +525,7 @@ export async function getTopicList(token: string, params: TopicListParams,
   blacklist: Set<string> = new Set(),
   keywords: string[] = []): Promise<TopicListResult> {
   const result = new TopicListResult();
-  const session = sessionStore.get(token);
+  const session = appStore.getSession(token);
   if (!session) {
     result.error = '未登录';
     return result;
@@ -598,7 +597,7 @@ export async function getThread(token: string, tid: string, pid: string,
   keywords: string[] = [],
   noteMap: Record<string, string> = {}): Promise<ThreadResult> {
   const result = new ThreadResult();
-  const session = sessionStore.get(token);
+  const session = appStore.getSession(token);
   if (!session) {
     result.error = '未登录';
     return result;
@@ -834,7 +833,7 @@ export async function getThreadHtml(token: string, tid: string, page: string,
   keywords: string[] = [],
   noteMap: Record<string, string> = {}): Promise<ThreadResult> {
   const result: ThreadResult = new ThreadResult();
-  const session = sessionStore.get(token);
+  const session = appStore.getSession(token);
   if (!session) {
     result.error = '未登录';
     return result;
@@ -866,7 +865,7 @@ export async function getThreadHtml(token: string, tid: string, page: string,
 export async function getPostAuth(token: string, fid: number, action: string,
   tid: number, pid: number, comment: number): Promise<PostAuthResult> {
   const result = new PostAuthResult();
-  const session = sessionStore.get(token);
+  const session = appStore.getSession(token);
   if (!session) {
     result.error = '未登录';
     return result;
@@ -898,7 +897,7 @@ export async function postReply(token: string, tid: number, fid: number,
   content: string, anony: number, attachments: string, attachmentsCheck: string,
   stid: number, action: string, pid: number, postSubject: string): Promise<PostReplyResult> {
   const result = new PostReplyResult();
-  const session = sessionStore.get(token);
+  const session = appStore.getSession(token);
   if (!session) {
     result.error = '未登录';
     return result;
@@ -940,7 +939,7 @@ export async function postReply(token: string, tid: number, fid: number,
 export async function postComment(token: string, tid: number, pid: number,
   fid: number, content: string, anony: number): Promise<PostReplyResult> {
   const result = new PostReplyResult();
-  const session = sessionStore.get(token);
+  const session = appStore.getSession(token);
   if (!session) {
     result.error = '未登录';
     return result;
@@ -986,7 +985,7 @@ export class UploadAttachmentResult extends ApiResult {
 export async function uploadAttachment(token: string, auth: string,
   fid: number, imageData: ArrayBuffer, fileName: string): Promise<UploadAttachmentResult> {
   const result = new UploadAttachmentResult()
-  const session = sessionStore.get(token)
+  const session = appStore.getSession(token)
   if (!session) {
     result.error = '未登录'
     return result
@@ -1048,7 +1047,7 @@ export class ForumFavoritesResult extends ApiResult {
 
 export async function fetchForumFavorites(token: string): Promise<ForumFavoritesResult> {
   const result = new ForumFavoritesResult()
-  const session = sessionStore.get(token)
+  const session = appStore.getSession(token)
   if (!session) {
     result.error = '未登录'
     return result
@@ -1085,7 +1084,7 @@ export async function fetchForumFavorites(token: string): Promise<ForumFavorites
 
 export async function votePost(token: string, tid: number, pid: number, value: number): Promise<VoteResult> {
   const result = new VoteResult();
-  const session = sessionStore.get(token);
+  const session = appStore.getSession(token);
   if (!session) {
     result.error = '未登录';
     return result;
@@ -1120,7 +1119,7 @@ export async function votePost(token: string, tid: number, pid: number, value: n
 
 export async function addFavorite(token: string, tid: number, pid: number): Promise<ApiResult> {
   const result = new ApiResult();
-  const session = sessionStore.get(token);
+  const session = appStore.getSession(token);
   if (!session) {
     result.error = '未登录';
     return result;
@@ -1144,7 +1143,7 @@ export async function addFavorite(token: string, tid: number, pid: number): Prom
 
 export async function removeFavorite(token: string, tid: number, pid: number, page: number): Promise<ApiResult> {
   const result = new ApiResult();
-  const session = sessionStore.get(token);
+  const session = appStore.getSession(token);
   if (!session) {
     result.error = '未登录';
     return result;
@@ -1170,7 +1169,7 @@ export async function removeFavorite(token: string, tid: number, pid: number, pa
 
 export async function checkin(token: string): Promise<CheckinResult> {
   const result = new CheckinResult();
-  const session = sessionStore.get(token);
+  const session = appStore.getSession(token);
   if (!session) {
     result.error = '未登录';
     return result;
@@ -1195,7 +1194,7 @@ export async function checkin(token: string): Promise<CheckinResult> {
 
 export async function getNotifications(token: string): Promise<NotificationsResult> {
   const result = new NotificationsResult();
-  const session = sessionStore.get(token);
+  const session = appStore.getSession(token);
   if (!session) {
     result.error = '未登录';
     return result;
@@ -1215,7 +1214,7 @@ export async function getNotifications(token: string): Promise<NotificationsResu
 
 export async function clearNotifications(token: string): Promise<ApiResult> {
   const result = new ApiResult();
-  const session = sessionStore.get(token);
+  const session = appStore.getSession(token);
   if (!session) {
     result.error = '未登录';
     return result;
@@ -1234,7 +1233,7 @@ export async function clearNotifications(token: string): Promise<ApiResult> {
 
 export async function getMessageList(token: string, page: string): Promise<MessageListResult> {
   const result = new MessageListResult();
-  const session = sessionStore.get(token);
+  const session = appStore.getSession(token);
   if (!session) {
     result.error = '未登录';
     return result;
@@ -1254,7 +1253,7 @@ export async function getMessageList(token: string, page: string): Promise<Messa
 
 export async function getMessageDetail(token: string, mid: string, page: string): Promise<MessageDetailResult> {
   const result = new MessageDetailResult();
-  const session = sessionStore.get(token);
+  const session = appStore.getSession(token);
   if (!session) {
     result.error = '未登录';
     return result;
@@ -1275,7 +1274,7 @@ export async function getMessageDetail(token: string, mid: string, page: string)
 export async function sendMessage(token: string, to: string, mid: string,
   subject: string, content: string): Promise<MessageSendResult> {
   const result = new MessageSendResult();
-  const session = sessionStore.get(token);
+  const session = appStore.getSession(token);
   if (!session) {
     result.error = '未登录';
     return result;
@@ -1371,7 +1370,7 @@ export async function getUserActivityAnalysis(token: string, uid: string): Promi
     return '';
   };
 
-  const session = sessionStore.get(token);
+  const session = appStore.getSession(token);
   if (!session) return null;
 
   try {
@@ -1449,7 +1448,7 @@ export async function getUserActivityAnalysis(token: string, uid: string): Promi
 
 export async function getUserProfile(token: string, uid: string): Promise<UserProfileResult> {
   const result = new UserProfileResult();
-  const session = sessionStore.get(token);
+  const session = appStore.getSession(token);
   if (!session) {
     result.error = '未登录';
     return result;
