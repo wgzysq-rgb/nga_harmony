@@ -5,6 +5,9 @@ import { LruCache } from './LruCache'
 const cache: LruCache<ImageSize> = new LruCache<ImageSize>(100)
 const pending: Map<string, Promise<ImageSize | null>> = new Map()
 
+/** 视频元数据获取超时(毫秒) */
+const FETCH_TIMEOUT: number = 15000
+
 function applyOrientation(size: ImageSize, orientation: number): ImageSize {
   if (orientation === 90 || orientation === 270) {
     const w: number = size.width
@@ -43,7 +46,20 @@ async function doFetch(url: string): Promise<ImageSize | null> {
   try {
     extractor = await media.createAVMetadataExtractor()
     extractor.setUrlSource(url)
-    const metadata: media.AVMetadata = await extractor.fetchMetadata()
+    const metadata: media.AVMetadata = await new Promise<media.AVMetadata>(
+      (resolve: (value: media.AVMetadata) => void, reject: (reason?: Object) => void) => {
+        const timer: number = setTimeout(() => {
+          reject(new Error('获取视频元数据超时'))
+        }, FETCH_TIMEOUT)
+        extractor!.fetchMetadata().then((m: media.AVMetadata) => {
+          clearTimeout(timer)
+          resolve(m)
+        }, (err: Object) => {
+          clearTimeout(timer)
+          reject(err)
+        })
+      }
+    )
     const w: number = Number(metadata.videoWidth) || 0
     const h: number = Number(metadata.videoHeight) || 0
     if (w > 0 && h > 0) {
