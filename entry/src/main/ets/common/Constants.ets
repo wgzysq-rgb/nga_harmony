@@ -121,6 +121,15 @@ export class ImageLoadStrategy {
   static readonly WIFI_ONLY: string = '2'
 }
 
+// ============== 帖子楼层导航模式 ==============
+
+export class ThreadNavMode {
+  /** 无缝加载（滚动到底自动加载下一页） */
+  static readonly SEAMLESS: string = '0'
+  /** 传统翻页（通过页面跳转器切换） */
+  static readonly PAGE: string = '1'
+}
+
 // 排序模式
 export interface SortMode {
   key: string

@@ -12,7 +12,7 @@ import type { UserNoteEntry } from '../model/NoteInfo'
 import type { NgaNotification } from '../model/Notification'
 import { FilterKeyword } from '../model/FilterKeyword'
 import { FilterListManager } from './FilterListManager'
-import { ImageLoadStrategy } from '../common/Constants'
+import { ImageLoadStrategy, ThreadNavMode } from '../common/Constants'
 
 const TAG = 'AppStore'
 const DOMAIN = 0x0000
@@ -57,6 +57,7 @@ export class SettingsState {
   ttsPitch: number = 1.0
   imageLoadStrategy: string = ImageLoadStrategy.ALWAYS
   enableImageSizePrefetch: boolean = true
+  threadNavMode: string = ThreadNavMode.SEAMLESS
 }
 
 export class ToastState {
@@ -394,6 +395,11 @@ class AppStoreClass {
     this.persistSettings()
   }
 
+  setThreadNavMode(v: string): void {
+    this.settings.threadNavMode = v
+    this.persistSettings()
+  }
+
   async autoCheckinIfNeeded(): Promise<void> {
     if (!this.auth.isAuthenticated || !this.settings.autoCheckin) {
       return
@@ -490,6 +496,7 @@ class AppStoreClass {
       if (saved.ttsPitch !== undefined) this.settings.ttsPitch = saved.ttsPitch
       if (saved.imageLoadStrategy !== undefined) this.settings.imageLoadStrategy = saved.imageLoadStrategy
       if (saved.enableImageSizePrefetch !== undefined) this.settings.enableImageSizePrefetch = saved.enableImageSizePrefetch
+      if (saved.threadNavMode !== undefined) this.settings.threadNavMode = saved.threadNavMode
     }
     AppStorage.setOrCreate('showSignature', this.settings.showSignature)
     AppStorage.setOrCreate('imageLoadStrategy', this.settings.imageLoadStrategy)

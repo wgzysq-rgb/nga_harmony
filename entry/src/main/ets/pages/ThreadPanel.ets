@@ -9,7 +9,7 @@ import { routerStore, Screen } from '../store/RouterStore'
 import { ngaClient } from '../service/NgaClient'
 import { getThread, addFavorite, removeFavorite, votePost, ThreadResult, PostInfo, PostReplyResult, VoteResult } from '../service/NgaApi'
 import { preWarmBatchAwait, getCachedBBNodes } from '../service/BBCodeCache'
-import { AppColors } from '../common/Constants'
+import { AppColors, ThreadNavMode } from '../common/Constants'
 import { PanelNavBar } from '../common/PanelNavBar'
 import { PostItem } from '../common/PostItem'
 import { PostInfoDataSource } from '../common/LazyDataSource'
@@ -332,6 +332,7 @@ export struct ThreadPanel {
 
 
   private triggerPrefetches(): void {
+    if (appStore.settings.threadNavMode === ThreadNavMode.PAGE) return
     this.prefetchNext()
     this.prefetchPrev()
   }
@@ -701,6 +702,7 @@ export struct ThreadPanel {
           this.displayPage = this.mgr.getDisplayPage(center - 1)
         })
         .onReachEnd(() => {
+          if (appStore.settings.threadNavMode === ThreadNavMode.PAGE) return
           if (this.isLoadingMore || !this.mgr.hasMore) return
           const nextPage: number = this.mgr.currentPage + 1
           if (this.mgr.hasPrefetchedPage(nextPage)) {
@@ -714,6 +716,7 @@ export struct ThreadPanel {
           }
         })
         .onReachStart(() => {
+          if (appStore.settings.threadNavMode === ThreadNavMode.PAGE) return
           if (this.isLoadingPrevious || this.pageSwitchPending) return
           if (this.mgr.loadedPageStart <= 1) return
           if (this.mgr.isPrefetchedPrevReady()) {

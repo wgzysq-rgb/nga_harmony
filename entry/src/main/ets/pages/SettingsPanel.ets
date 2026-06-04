@@ -5,7 +5,7 @@
 
 import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
-import { AppColors, IconColors, ImageLoadStrategy, THEME_OPTIONS, ThemeOption } from '../common/Constants'
+import { AppColors, IconColors, ImageLoadStrategy, ThreadNavMode, THEME_OPTIONS, ThemeOption } from '../common/Constants'
 import { ConfirmDialog, ActionSheetDialog, ActionOption } from '../common/Dialogs'
 import { PanelNavBar } from '../common/PanelNavBar'
 import { picker, fileIo, storageStatistics } from '@kit.CoreFileKit'
@@ -19,6 +19,7 @@ export struct SettingsPanel {
   @State cacheSizeText: string = ''
   @State clearingCache: boolean = false
   @State imageStrategyBadge: string = '始终加载'
+  @State threadNavBadge: string = '无缝加载'
 
   clearCacheDialogController?: CustomDialogController = new CustomDialogController({
     builder: ConfirmDialog({
@@ -37,6 +38,7 @@ export struct SettingsPanel {
   })
 
   imageStrategyDialogController?: CustomDialogController
+  threadNavDialogController?: CustomDialogController
   logoutDialogController?: CustomDialogController = new CustomDialogController({
     builder: ConfirmDialog({
       title: '退出登录',
@@ -57,12 +59,14 @@ export struct SettingsPanel {
   aboutToAppear(): void {
     this.refreshCacheSize()
     this.imageStrategyBadge = this.imageStrategyLabel(appStore.settings.imageLoadStrategy)
+    this.threadNavBadge = this.threadNavLabel(appStore.settings.threadNavMode)
   }
 
   aboutToDisappear() {
     this.clearCacheDialogController = undefined
     this.logoutDialogController = undefined
     this.imageStrategyDialogController = undefined
+    this.threadNavDialogController = undefined
   }
 
   private formatSize(bytes: number): string {
@@ -187,6 +191,37 @@ export struct SettingsPanel {
       { label: '手动加载（被动式）', value: 1 },
       { label: '只在WiFi下加载', value: 2 },
     ]
+  }
+
+  private threadNavLabel(mode: string): string {
+    if (mode === ThreadNavMode.PAGE) {
+      return '传统翻页'
+    }
+    return '无缝加载'
+  }
+
+  private threadNavOptions(): ActionOption[] {
+    return [
+      { label: '无缝加载（连续滚动）', value: parseInt(ThreadNavMode.SEAMLESS) },
+      { label: '传统翻页（跳转器换页）', value: parseInt(ThreadNavMode.PAGE) },
+    ]
+  }
+
+  private showThreadNavPicker(): void {
+    this.threadNavDialogController = new CustomDialogController({
+      builder: ActionSheetDialog({
+        title: '帖子楼层导航',
+        options: this.threadNavOptions(),
+        selected: parseInt(appStore.settings.threadNavMode),
+        onSelect: (v: number): void => {
+          appStore.setThreadNavMode(String(v))
+          this.threadNavBadge = this.threadNavLabel(String(v))
+        }
+      }),
+      autoCancel: true,
+      customStyle: true
+    })
+    this.threadNavDialogController?.open()
   }
 
   private showImageStrategyPicker(): void {
@@ -357,6 +392,25 @@ export struct SettingsPanel {
                   })
               }
               .width('100%').height(52).padding({ left: 16, right: 16 }).alignItems(VerticalAlign.Center)
+
+              Divider().margin({ left: 60 }).color(AppColors.separator)
+
+              Row() {
+                Stack() {
+                  Image($r('app.media.icon_settings')).width(17).height(17).fillColor(AppColors.white)
+                }
+                .width(29).height(29).borderRadius(6).backgroundColor(IconColors.settings).margin({ right: 12 })
+
+                Text('帖子楼层导航').fontSize(17).layoutWeight(1)
+
+                Text(this.threadNavBadge).fontSize(15).fontColor(AppColors.textSecondary).margin({ right: 8 })
+
+                Text('>').fontSize(16).fontColor(AppColors.chevron)
+              }
+              .width('100%').height(44).padding({ left: 16, right: 16 }).alignItems(VerticalAlign.Center)
+              .onClick(() => {
+                this.showThreadNavPicker()
+              })
             }
             .width('92%')
             .backgroundColor(AppColors.bgTertiary)
