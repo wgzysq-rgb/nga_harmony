@@ -35,7 +35,6 @@ const LOAD_REPLACE: string = 'replace'
 const LOAD_APPEND: string = 'append'
 const LOAD_PREPEND: string = 'prepend'
 const NAV_BAR_H: number = 44
-const PAGE_SCROLL_DELAY: number = 80
 
 class FetchPageResult {
   page: number = 0
@@ -242,7 +241,6 @@ export struct ThreadPanel {
       if (targetPage > 1) {
         this.pageSwitchPending = true
       }
-      this.scroller.scrollToIndex(1)
     } else if (mode === LOAD_APPEND) {
       this.isLoadingMore = true
     } else {
@@ -276,11 +274,18 @@ export struct ThreadPanel {
         if (mode === LOAD_REPLACE) {
           this.mgr.replaceWith(result.posts, targetPage, this.mgr.totalPages)
           this.postsDataSource.replaceAll(result.posts)
+          this.pageSwitchPending = false
           if (appStore.auth.isAuthenticated) {
             this.recordBrowseHistory(result)
           }
           if (this.threadPid.length > 0) {
-            this.onScrollToPid()
+            // 延迟一帧确保 LazyForEach 布局完成，目标 item 已创建
+            setTimeout((): void => {
+              this.onScrollToPid()
+            }, 0)
+          } else {
+            // 数据替换后单次跳转到顶部，此时 LazyForEach 已收到通知开始布局
+            this.scroller.scrollToIndex(1)
           }
         } else if (mode === LOAD_APPEND) {
           const added: PostInfo[] = this.mgr.appendPosts(result.posts, targetPage, this.mgr.totalPages)
@@ -300,6 +305,7 @@ export struct ThreadPanel {
         this.errorMsg = result.error || '加载失败'
         this.mgr.posts = []
         this.postsDataSource.clear()
+        this.pageSwitchPending = false
       }
     } catch (e) {
       if (gen !== this.mgr.getGeneration()) return
@@ -308,6 +314,7 @@ export struct ThreadPanel {
         this.errorMsg = (e as Error).message || '加载失败'
         this.mgr.posts = []
         this.postsDataSource.clear()
+        this.pageSwitchPending = false
       } else {
         console.error('loadPosts failed: ' + (e as Error).message)
       }
@@ -320,14 +327,6 @@ export struct ThreadPanel {
     this.isLoadingMore = false
     this.isLoadingPrevious = false
 
-    if (this.pageSwitchPending) {
-      setTimeout((): void => {
-        if (this.mgr.posts.length > 0) {
-          this.scroller.scrollToIndex(1)
-        }
-        this.pageSwitchPending = false
-      }, PAGE_SCROLL_DELAY)
-    }
   }
 
 
@@ -696,7 +695,7 @@ export struct ThreadPanel {
         .scrollBar(BarState.Off)
         .divider({ strokeWidth: 0.5, color: AppColors.separator })
         .edgeEffect(EdgeEffect.Spring)
-        .cachedCount(3)
+        .cachedCount(6)
         .maintainVisibleContentPosition(true)
         .onScrollIndex((start: number, end: number, center: number): void => {
           this.displayPage = this.mgr.getDisplayPage(center - 1)
