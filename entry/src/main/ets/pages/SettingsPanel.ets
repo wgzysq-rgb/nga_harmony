@@ -337,6 +337,28 @@ export struct SettingsPanel {
 
               Divider().margin({ left: 60 }).color(AppColors.separator)
 
+              Row() {
+                Stack() {
+                  Image($r('app.media.icon_image')).width(17).height(17).fillColor(AppColors.white)
+                }
+                .width(29).height(29).borderRadius(6).backgroundColor(IconColors.moon).margin({ right: 12 })
+
+                Column() {
+                  Text('预热图片尺寸').fontSize(17).width('100%')
+                  Text('关闭后不再提前获取图片尺寸信息').fontSize(12).fontColor(AppColors.textSecondary).width('100%')
+                }
+                .layoutWeight(1)
+                .alignItems(HorizontalAlign.Start)
+
+                Toggle({ type: ToggleType.Switch, isOn: appStore.settings.enableImageSizePrefetch })
+                  .onChange((v: boolean) => {
+                    appStore.setEnableImageSizePrefetch(v)
+                  })
+              }
+              .width('100%').height(52).padding({ left: 16, right: 16 }).alignItems(VerticalAlign.Center)
+
+              Divider().margin({ left: 60 }).color(AppColors.separator)
+
               this.SettingRow($r('app.media.icon_export'), IconColors.checkin, '导出账号凭证', '', () => {
                 this.handleExport()
               })

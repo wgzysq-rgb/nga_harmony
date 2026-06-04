@@ -87,6 +87,7 @@ export struct BBCodeContentView {
   @StorageProp('effectiveColorMode') effectiveColorMode: string = 'light'
   @StorageProp('networkChangeVersion') networkChangeVersion: number = 0
   @StorageProp('imageLoadStrategy') imageLoadStrategy: string = '0'
+  @StorageProp('enableImageSizePrefetch') enableImageSizePrefetch: boolean = true
   hideFailedImages: boolean = false
   onImageClick: (urls: string[], index: number) => void = (_urls: string[], _index: number) => {}
   onLinkClick: (href: string) => void = (_href: string) => {}
@@ -99,7 +100,7 @@ export struct BBCodeContentView {
     this.allImageUrls = this.getImageUrls()
     const urls: string[] = this.allImageUrls
     const strategy: string = this.imageLoadStrategy
-    const skipSizePrefetch: boolean = strategy === '1' || (strategy === '2' && !isWifiConnected())
+    const skipSizePrefetch: boolean = !this.enableImageSizePrefetch || strategy === '1' || (strategy === '2' && !isWifiConnected())
     if (!skipSizePrefetch) {
       for (let i = 0; i < urls.length; i++) {
         const url: string = urls[i]

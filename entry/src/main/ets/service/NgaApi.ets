@@ -673,6 +673,9 @@ export async function getThread(token: string, tid: string, pid: string,
  * 在帖子数据就绪后，提前预热所有图片的尺寸头
  */
 function prefetchPostImages(posts: PostInfo[]): void {
+  if (!appStore.settings.enableImageSizePrefetch) {
+    return
+  }
   let strategy: string = appStore.settings.imageLoadStrategy
   if (strategy === '1') {
     return

@@ -55,6 +55,7 @@ export class SettingsState {
   ttsVolume: number = 1.0
   ttsPitch: number = 1.0
   imageLoadStrategy: string = '0' // "0"=始终加载 "1"=始终关闭 "2"=只在WIFI下
+  enableImageSizePrefetch: boolean = true
 }
 
 export class ToastState {
@@ -386,6 +387,12 @@ class AppStoreClass {
     this.persistSettings()
   }
 
+  setEnableImageSizePrefetch(enabled: boolean): void {
+    this.settings.enableImageSizePrefetch = enabled
+    AppStorage.setOrCreate('enableImageSizePrefetch', enabled)
+    this.persistSettings()
+  }
+
   async autoCheckinIfNeeded(): Promise<void> {
     if (!this.auth.isAuthenticated || !this.settings.autoCheckin) {
       return
@@ -481,9 +488,11 @@ class AppStoreClass {
       if (saved.ttsVolume !== undefined) this.settings.ttsVolume = saved.ttsVolume
       if (saved.ttsPitch !== undefined) this.settings.ttsPitch = saved.ttsPitch
       if (saved.imageLoadStrategy !== undefined) this.settings.imageLoadStrategy = saved.imageLoadStrategy
+      if (saved.enableImageSizePrefetch !== undefined) this.settings.enableImageSizePrefetch = saved.enableImageSizePrefetch
     }
     AppStorage.setOrCreate('showSignature', this.settings.showSignature)
     AppStorage.setOrCreate('imageLoadStrategy', this.settings.imageLoadStrategy)
+    AppStorage.setOrCreate('enableImageSizePrefetch', this.settings.enableImageSizePrefetch)
   }
 
   private resetUserState(): void {
