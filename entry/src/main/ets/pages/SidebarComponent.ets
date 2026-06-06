@@ -1,4 +1,5 @@
-import { appStore, AuthState } from '../store/AppStore'
+import { appStore } from '../store/AppStore'
+import type { AuthState } from '../store/AuthStore'
 import { routerStore, Screen } from '../store/RouterStore'
 import { AppColors } from '../common/Constants'
 import { Avatar } from '../common/Avatar'

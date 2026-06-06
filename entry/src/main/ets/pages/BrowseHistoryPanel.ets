@@ -1,6 +1,7 @@
 import { AppColors } from '../common/Constants'
 import { formatTime, unescapeHtml } from '../common/Utils'
-import { appStore, BrowseHistoryEntry } from '../store/AppStore'
+import { appStore } from '../store/AppStore'
+import { BrowseHistoryEntry } from '../store/HistoryStore'
 import { routerStore, Screen } from '../store/RouterStore'
 import { floatingLayerStore } from '../store/FloatingLayerStore'
 import { PanelNavBar } from '../common/PanelNavBar'

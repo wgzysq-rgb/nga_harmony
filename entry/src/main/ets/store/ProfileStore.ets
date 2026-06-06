@@ -1,0 +1,119 @@
+import { hilog } from '@kit.PerformanceAnalysisKit'
+import { getUserProfile } from '../service/NgaApi'
+import { LruCache } from '../common/LruCache'
+import { PreferencesStore } from './PreferencesStore'
+import { SerialQueue } from './SerialQueue'
+import type { ProfileData } from '../model/User'
+import type { AuthState } from './AuthStore'
+
+const TAG = 'ProfileStore'
+const DOMAIN = 0x0000
+
+/**
+ * 用户资料 LRU 缓存管理
+ */
+export class ProfileStore {
+  private store!: PreferencesStore
+  private writeQueue!: SerialQueue
+  private auth!: AuthState
+  private cache: LruCache<ProfileData> = new LruCache<ProfileData>(200, 5 * 60 * 1000)
+  private profileVersion: number = 0
+  private refreshingUids: Set<string> = new Set()
+  private static readonly REFRESH_DELAY: number = 10000
+
+  async init(store: PreferencesStore, queue: SerialQueue, auth: AuthState): Promise<void> {
+    this.store = store
+    this.writeQueue = queue
+    this.auth = auth
+    if (auth.uid) {
+      await this.loadCachedProfiles()
+    }
+  }
+
+  /** 重置缓存（登出时调用） */
+  reset(): void {
+    this.cache.clear()
+    this.profileVersion = 0
+    this.refreshingUids = new Set()
+  }
+
+  // ============== Cache ==============
+
+  private profilesKey(): string {
+    return `cached_profiles_${this.auth.uid}`
+  }
+
+  private async loadCachedProfiles(): Promise<void> {
+    if (!this.auth.uid) return
+    const saved = await this.store.getJSON<Record<string, ProfileData>>(this.profilesKey())
+    if (saved) {
+      const keys = Object.keys(saved)
+      for (let i = 0; i < keys.length; i++) {
+        const val = saved[keys[i]]
+        if (val) {
+          this.cache.set(keys[i], val)
+        }
+      }
+      hilog.info(DOMAIN, TAG, 'Loaded cached profiles: %{public}d', keys.length)
+    }
+  }
+
+  private persistProfiles(): void {
+    if (!this.auth.uid) return
+    const snapshot: Record<string, ProfileData> = {}
+    const keys: string[] = this.cache.keys()
+    for (let i = 0; i < keys.length; i++) {
+      const val = this.cache.get(keys[i])
+      if (val) {
+        snapshot[keys[i]] = val
+      }
+    }
+    this.writeQueue.enqueue(async (): Promise<void> => {
+      await this.store.putJSON(this.profilesKey(), snapshot, false)
+      this.store.scheduleFlush()
+    })
+  }
+
+  getCachedProfile(uid: string): ProfileData | null {
+    const result = this.cache.getWithStale(uid)
+    if (result.value) {
+      if (result.stale) {
+        this.ensureProfile(uid)
+      }
+      return result.value
+    }
+    return null
+  }
+
+  ensureProfile(uid: string): void {
+    if (this.refreshingUids.has(uid)) return
+    this.refreshingUids.add(uid)
+    const hasCache = this.cache.isFresh(uid)
+    setTimeout(async () => {
+      await this.doRefreshProfile(uid)
+      this.refreshingUids.delete(uid)
+    }, hasCache ? ProfileStore.REFRESH_DELAY : 0)
+  }
+
+  private async doRefreshProfile(uid: string): Promise<ProfileData | null> {
+    if (!this.auth.isAuthenticated) return null
+    try {
+      const result = await getUserProfile(this.auth.token, uid)
+      if (result.ok && result.data) {
+        const newJson = JSON.stringify(result.data)
+        const cachedResult = this.cache.getWithStale(uid)
+        const oldJson = cachedResult.value ? JSON.stringify(cachedResult.value) : ''
+        this.cache.set(uid, result.data)
+        if (newJson !== oldJson) {
+          this.profileVersion++
+          AppStorage.setOrCreate('profileVersion', this.profileVersion)
+          this.persistProfiles()
+        }
+        return result.data
+      }
+    } catch (e) {
+      hilog.error(DOMAIN, TAG, 'refreshProfile failed for uid=%{public}s', uid)
+    }
+    return null
+  }
+}

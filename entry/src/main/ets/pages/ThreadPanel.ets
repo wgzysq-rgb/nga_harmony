@@ -4,7 +4,8 @@ import { motion } from '@kit.MultimodalAwarenessKit'
 import { BusinessError, deviceInfo } from '@kit.BasicServicesKit'
 import { taskpool } from '@kit.ArkTS'
 
-import { appStore, BrowseHistoryEntry } from '../store/AppStore'
+import { appStore } from '../store/AppStore'
+import { BrowseHistoryEntry } from '../store/HistoryStore'
 import { routerStore, Screen } from '../store/RouterStore'
 import { ngaClient } from '../service/NgaClient'
 import { getThread, addFavorite, removeFavorite, votePost, ThreadResult, PostInfo, PostReplyResult, VoteResult } from '../service/NgaApi'
@@ -88,8 +89,7 @@ export struct ThreadPanel {
       this.holdingDetected = true
     }
     if (appStore.settings.holdingHand !== data) {
-      appStore.settings.holdingHand = data
-      appStore.persistSettings()
+      appStore.settingsStore.setHoldingHand(data)
     }
   }
 

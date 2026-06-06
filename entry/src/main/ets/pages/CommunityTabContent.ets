@@ -1,4 +1,6 @@
-import { appStore, AuthState, FavBoard } from '../store/AppStore'
+import { appStore } from '../store/AppStore'
+import type { AuthState } from '../store/AuthStore'
+import { FavBoard } from '../store/SettingsStore'
 import { routerStore, RouterStoreClass, Screen } from '../store/RouterStore'
 import { AppColors } from '../common/Constants'
 import { CategoryDataSource, SidebarDataSource, SidebarSection, SidebarBoardItem } from '../common/LazyDataSource'

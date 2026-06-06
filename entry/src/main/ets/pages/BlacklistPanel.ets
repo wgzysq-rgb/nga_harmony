@@ -3,7 +3,7 @@
  */
 
 import { appStore } from '../store/AppStore'
-import type { BlacklistEntry } from '../store/AppStore'
+import type { BlacklistEntry } from '../store/SettingsStore'
 import { display } from '@kit.ArkUI'
 import { AppColors } from '../common/Constants'
 import { escHtml, unescapeHtml } from '../common/Utils'

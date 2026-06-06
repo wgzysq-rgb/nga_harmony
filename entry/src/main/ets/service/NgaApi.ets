@@ -5,7 +5,8 @@
 
 import { ngaClient } from './NgaClient';
 import { ngaUploadFile, type Cookies } from './NgaClient';
-import { appStore, type Session } from '../store/AppStore';
+import { appStore } from '../store/AppStore';
+import type { Session } from '../store/AuthStore';
 import { parseForumCategories } from '../parser/ForumParser';
 import { parseTopicList } from '../parser/TopicParser';
 import { parseThreadData } from '../parser/ThreadParser';

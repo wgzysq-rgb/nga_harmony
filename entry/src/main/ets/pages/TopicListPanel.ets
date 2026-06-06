@@ -69,8 +69,7 @@ export struct TopicListPanel {
       this.holdingDetected = true
     }
     if (appStore.settings.holdingHand !== data) {
-      appStore.settings.holdingHand = data
-      appStore.persistSettings()
+      appStore.settingsStore.setHoldingHand(data)
     }
   }
 
