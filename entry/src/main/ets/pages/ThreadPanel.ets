@@ -432,7 +432,39 @@ export struct ThreadPanel {
     }
 
     if (ok) {
-      // pipeline 由 onReachStart 提交后触发，无需在此串联
+      // pipeline 由 tryLoadPrev 提交后触发，无需在此串联
+    }
+  }
+
+  private tryLoadNext(): void {
+    if (appStore.settings.threadNavMode === ThreadNavMode.PAGE) return
+    if (this.isLoadingMore || !this.mgr.hasMore) return
+    const nextPage: number = this.mgr.currentPage + 1
+    if (this.mgr.hasPrefetchedPage(nextPage)) {
+      const added: PostInfo[] = this.mgr.commitPrefetchedPage(nextPage)
+      if (added.length > 0) {
+        this.postsDataSource.appendAll(added)
+      }
+      this.prefetchNext()
+    } else {
+      this.loadPosts(nextPage, LOAD_APPEND)
+    }
+  }
+
+  private tryLoadPrev(): void {
+    if (appStore.settings.threadNavMode === ThreadNavMode.PAGE) return
+    if (this.isLoadingPrevious || this.pageSwitchPending) return
+    if (this.mgr.loadedPageStart <= 1) return
+    const prevPage: number = this.mgr.loadedPageStart - 1
+    if (this.mgr.isPrefetchedPrevReady()) {
+      const added: PostInfo[] = this.mgr.commitPrefetchedPrev()
+      if (added.length > 0) {
+        this.postsDataSource.prependAll(added)
+        this.scroller.scrollToIndex(added.length + 1)
+      }
+      this.prefetchPrev()
+    } else {
+      this.loadPosts(prevPage, LOAD_PREPEND)
     }
   }
 
@@ -699,34 +731,12 @@ export struct ThreadPanel {
         .maintainVisibleContentPosition(true)
         .onScrollIndex((start: number, end: number, center: number): void => {
           this.displayPage = this.mgr.getDisplayPage(center - 1)
-        })
-        .onReachEnd(() => {
-          if (appStore.settings.threadNavMode === ThreadNavMode.PAGE) return
-          if (this.isLoadingMore || !this.mgr.hasMore) return
-          const nextPage: number = this.mgr.currentPage + 1
-          if (this.mgr.hasPrefetchedPage(nextPage)) {
-            const added: PostInfo[] = this.mgr.commitPrefetchedPage(nextPage)
-            if (added.length > 0) {
-              this.postsDataSource.appendAll(added)
-            }
-            this.prefetchNext()
-          } else {
-            this.loadPosts(nextPage, LOAD_APPEND)
+          const total: number = this.postsDataSource.totalCount()
+          if (end >= total - 3 && total > 0) {
+            this.tryLoadNext()
           }
-        })
-        .onReachStart(() => {
-          if (appStore.settings.threadNavMode === ThreadNavMode.PAGE) return
-          if (this.isLoadingPrevious || this.pageSwitchPending) return
-          if (this.mgr.loadedPageStart <= 1) return
-          if (this.mgr.isPrefetchedPrevReady()) {
-            const added: PostInfo[] = this.mgr.commitPrefetchedPrev()
-            if (added.length > 0) {
-              this.postsDataSource.prependAll(added)
-              this.scroller.scrollToIndex(added.length + 1)
-            }
-            this.prefetchPrev()
-          } else {
-            this.loadPosts(this.mgr.loadedPageStart - 1, LOAD_PREPEND)
+          if (start <= 3 && total > 0) {
+            this.tryLoadPrev()
           }
         })
         .transition(TransitionEffect.OPACITY.animation({ duration: 200 }))

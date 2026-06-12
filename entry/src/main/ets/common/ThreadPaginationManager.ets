@@ -106,6 +106,7 @@ export class ThreadPaginationManager {
       this.loadedLouSet.add(rawPosts[i].lou)
     }
     if (deduped.length === 0) {
+      this.currentPage = page
       this.totalPages = totalPages
       this.hasMore = page < totalPages
       return []
@@ -143,6 +144,7 @@ export class ThreadPaginationManager {
       this.loadedLouSet.add(rawPosts[i].lou)
     }
     if (deduped.length === 0) {
+      this.loadedPageStart = page
       return []
     }
     const combined: PostInfo[] = []
