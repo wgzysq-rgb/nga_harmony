@@ -1,7 +1,7 @@
 import { hilog } from '@kit.PerformanceAnalysisKit'
 import { getForumCategories } from '../service/NgaApi'
-import { PreferencesStore } from './PreferencesStore'
-import { SerialQueue } from './SerialQueue'
+import { PreferencesStore } from '../common/infra/PreferencesStore'
+import { SerialQueue } from '../common/infra/SerialQueue'
 import type { Category } from '../model/Forum'
 import type { AuthState } from './AuthStore'
 

@@ -1,6 +1,6 @@
 import { Context } from '@kit.AbilityKit'
-import { PreferencesStore } from './PreferencesStore'
-import { SerialQueue } from './SerialQueue'
+import { PreferencesStore } from '../common/infra/PreferencesStore'
+import { SerialQueue } from '../common/infra/SerialQueue'
 import { SettingsState, FavBoard } from './settings/SettingsState'
 import type { BlacklistEntry } from './settings/SettingsState'
 import { SettingsContext } from './settings/SettingsContext'

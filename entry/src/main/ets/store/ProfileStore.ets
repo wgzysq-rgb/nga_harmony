@@ -1,8 +1,8 @@
 import { hilog } from '@kit.PerformanceAnalysisKit'
 import { getUserProfile } from '../service/NgaApi'
 import { LruCache } from '../common/cache/LruCache'
-import { PreferencesStore } from './PreferencesStore'
-import { SerialQueue } from './SerialQueue'
+import { PreferencesStore } from '../common/infra/PreferencesStore'
+import { SerialQueue } from '../common/infra/SerialQueue'
 import type { ProfileData } from '../model/User'
 import type { AuthState } from './AuthStore'
 

@@ -1,7 +1,7 @@
 import { hilog } from '@kit.PerformanceAnalysisKit'
 import { getNotifications } from '../service/NgaApi'
-import { PreferencesStore } from './PreferencesStore'
-import { SerialQueue } from './SerialQueue'
+import { PreferencesStore } from '../common/infra/PreferencesStore'
+import { SerialQueue } from '../common/infra/SerialQueue'
 import type { NgaNotification } from '../model/Notification'
 import type { AuthState } from './AuthStore'
 

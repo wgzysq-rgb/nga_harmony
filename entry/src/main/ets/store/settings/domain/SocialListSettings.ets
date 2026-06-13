@@ -1,6 +1,6 @@
 import { hilog } from '@kit.PerformanceAnalysisKit'
 import { fetchForumFavorites } from '../../../service/NgaApi'
-import { FilterListManager } from '../../FilterListManager'
+import { FilterListManager } from '../../../common/utils/FilterListManager'
 import { SettingsContext } from '../SettingsContext'
 import { FavBoard, SettingsState } from '../SettingsState'
 import type { BlacklistEntry } from '../SettingsState'

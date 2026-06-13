@@ -1,4 +1,4 @@
-import { FilterListManager } from '../../FilterListManager'
+import { FilterListManager } from '../../../common/utils/FilterListManager'
 import { SettingsContext } from '../SettingsContext'
 import { SettingsState } from '../SettingsState'
 import type { UserNoteEntry } from '../../../model/NoteInfo'

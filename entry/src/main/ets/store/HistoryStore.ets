@@ -1,5 +1,5 @@
-import { PreferencesStore } from './PreferencesStore'
-import { SerialQueue } from './SerialQueue'
+import { PreferencesStore } from '../common/infra/PreferencesStore'
+import { SerialQueue } from '../common/infra/SerialQueue'
 
 /** 浏览历史条目 */
 export class BrowseHistoryEntry {
