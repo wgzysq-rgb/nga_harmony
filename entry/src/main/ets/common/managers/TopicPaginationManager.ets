@@ -1,45 +1,47 @@
-class TopicPrefetchData {
-  threads: object[] = []
-  totalPages: number = 0
-}
+import { PaginationManager } from './PaginationManager'
 
+/**
+ * 主题列表（Topic）分页管理器。继承共性基类 PaginationManager，额外维护：
+ * - threads：当前已加载的主题列表（object[]，按 tid 去重）
+ * - prefetchInProgress：预取进行中标志
+ *
+ * @Observed 装饰器在本子类上，确保 ArkUI 能观测到本类实例的字段变化。
+ */
 @Observed
-export class TopicPaginationManager {
+export class TopicPaginationManager extends PaginationManager {
+  /** 当前已加载的主题列表，按 tid 去重。 */
   threads: object[] = []
-  currentPage: number = 1
-  totalPages: number = 0
-  hasMore: boolean = true
 
+  /** 是否有预取正在进行，用于防止重复发起。 */
   prefetchInProgress: boolean = false
-  private prefetchedPages: Map<number, TopicPrefetchData> = new Map()
-
-  private generation: number = 0
-
-  nextGeneration(): number {
-    this.generation++
-    return this.generation
-  }
-
-  getGeneration(): number {
-    return this.generation
-  }
 
   reset(): void {
     this.threads = []
     this.currentPage = 1
     this.totalPages = 0
     this.hasMore = true
-    this.prefetchedPages.clear()
-    this.generation = 0
+    this.clearPrefetchedPages()
+    this.resetGeneration()
   }
 
+  /**
+   * 用新的一页主题整体替换当前内容（跳页/首次加载场景）。
+   * @param list - 该页主题
+   * @param page - 页码
+   * @param totalPages - 总页数
+   */
   replaceWith(list: object[], page: number, totalPages: number): void {
     this.threads = list
-    this.currentPage = page
-    this.totalPages = totalPages
-    this.hasMore = page < totalPages
+    this.applyState(page, totalPages)
   }
 
+  /**
+   * 向后追加一页主题，按 tid 去重。
+   * @param list - 待追加的主题
+   * @param page - 页码
+   * @param totalPages - 总页数
+   * @returns 实际新增（去重后）的主题
+   */
   appendWith(list: object[], page: number, totalPages: number): object[] {
     const existingTids: Set<number> = new Set()
     for (let i: number = 0; i < this.threads.length; i++) {
@@ -60,34 +62,33 @@ export class TopicPaginationManager {
       for (let i: number = 0; i < deduped.length; i++) arr.push(deduped[i])
       this.threads = arr
     }
-    this.currentPage = page
-    this.totalPages = totalPages
-    this.hasMore = page < totalPages
+    this.applyState(page, totalPages)
     return deduped
   }
 
-  hasPrefetchedPage(page: number): boolean {
-    return this.prefetchedPages.has(page)
-  }
-
+  /**
+   * 缓存一页预取主题。
+   * @param page - 页码
+   * @param threads - 该页主题
+   * @param totalPages - 总页数
+   */
   setPrefetchedPage(page: number, threads: object[], totalPages: number): void {
-    const data: TopicPrefetchData = new TopicPrefetchData()
-    for (let i = 0; i < threads.length; i++) {
-      data.threads.push(threads[i])
-    }
-    data.totalPages = totalPages
-    this.prefetchedPages.set(page, data)
+    this.setPrefetchedRaw(page, threads, totalPages)
   }
 
+  /**
+   * 提交某页预取缓存，合并进 threads（按 tid 去重）。
+   * @param page - 页码
+   * @returns 实际新增的主题（空数组表示无缓存或全部去重）
+   */
   commitPrefetchedPage(page: number): object[] {
-    const data: TopicPrefetchData | undefined = this.prefetchedPages.get(page)
-    if (data === undefined || data.threads.length === 0) return []
-    const added: object[] = this.appendWith(data.threads, page, data.totalPages)
-    this.prefetchedPages.delete(page)
+    const holder = this.getPrefetchedRaw(page)
+    if (holder === undefined || holder.items.length === 0) {
+      this.deletePrefetched(page)
+      return []
+    }
+    const added: object[] = this.appendWith(holder.items, page, holder.totalPages)
+    this.deletePrefetched(page)
     return added
-  }
-
-  clearPrefetchedPages(): void {
-    this.prefetchedPages.clear()
   }
 }
