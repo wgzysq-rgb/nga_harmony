@@ -9,6 +9,7 @@ import { AnonymousName } from '../common/AnonymousName'
 import { MakeNoteDialog } from '../common/Dialogs'
 import { PanelNavBar } from '../common/PanelNavBar'
 import { LoadingStateView, ErrorStateView } from '../common/components/PageStateView'
+import { SettingRow } from '../common/components/SettingRow'
 import { getCachedBBNodes, preWarmBatch } from '../service/BBCodeCache'
 import { BBCodeContentView } from '../common/BBCodeContentView'
 import { openImageViewer, handleForumLink } from '../common/LinkUtils'
@@ -169,46 +170,6 @@ export struct ProfilePanel {
       default:
         break
     }
-  }
-
-  @Builder
-  ActionRow(iconRes: Resource, iconColor: string, label: string, badge: string, actionType: number) {
-    Row() {
-      Stack() {
-      Image(iconRes)
-        .width(17).height(17)
-        .fillColor(AppColors.white)
-      }
-      .width(29)
-      .height(29)
-      .borderRadius(6)
-      .backgroundColor(iconColor)
-      .margin({ right: 12 })
-
-      Text(label)
-        .fontSize(17)
-        .layoutWeight(1)
-
-      if (badge) {
-        Text(badge)
-          .fontSize(12)
-          .fontColor(AppColors.white)
-          .backgroundColor(AppColors.destructive)
-          .borderRadius(10)
-          .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-          .fontWeight(FontWeight.Bold)
-          .margin({ right: 8 })
-      }
-
-      Text('>')
-        .fontSize(16)
-        .fontColor(AppColors.chevron)
-    }
-    .width('100%')
-    .height(44)
-    .padding({ left: 16, right: 16 })
-    .alignItems(VerticalAlign.Center)
-    .onClick(() => this.dispatchAction(actionType))
   }
 
   build() {
@@ -512,13 +473,35 @@ export struct ProfilePanel {
 
             if (this.isOwnProfile) {
               Column() {
-                this.ActionRow($r('app.media.icon_mail'), IconColors.mail, '私信', this.formatBadge(this.unreadMessages), 0)
+                SettingRow({
+                  iconRes: $r('app.media.icon_mail'), iconColor: IconColors.mail, label: '私信',
+                  badge: this.formatBadge(this.unreadMessages),
+                  onAction: () => {
+                    routerStore.navigateActivity(Screen.messages())
+                  }
+                })
                 Divider().margin({ left: 60 }).color(AppColors.separator)
-                this.ActionRow($r('app.media.icon_bell'), IconColors.bell, '通知', this.formatBadge(this.unreadNotifications), 1)
+                SettingRow({
+                  iconRes: $r('app.media.icon_bell'), iconColor: IconColors.bell, label: '通知',
+                  badge: this.formatBadge(this.unreadNotifications),
+                  onAction: () => {
+                    routerStore.navigateActivity(Screen.notifications())
+                  }
+                })
                 Divider().margin({ left: 60 }).color(AppColors.separator)
-                this.ActionRow($r('app.media.icon_star'), IconColors.star, '收藏主题', '', 2)
+                SettingRow({
+                  iconRes: $r('app.media.icon_star'), iconColor: IconColors.star, label: '收藏主题',
+                  onAction: () => {
+                    routerStore.navigateActivity(Screen.topicList('我的收藏', 0, '', '1'))
+                  }
+                })
                 Divider().margin({ left: 60 }).color(AppColors.separator)
-                this.ActionRow($r('app.media.icon_clock'), IconColors.clock, '浏览历史', '', 3)
+                SettingRow({
+                  iconRes: $r('app.media.icon_clock'), iconColor: IconColors.clock, label: '浏览历史',
+                  onAction: () => {
+                    routerStore.navigateActivity(Screen.browseHistory())
+                  }
+                })
                 Divider().margin({ left: 60 }).color(AppColors.separator)
 
                 // 签到行 - 内联，不使用 @Builder
@@ -565,7 +548,12 @@ export struct ProfilePanel {
                 })
 
                 Divider().margin({ left: 60 }).color(AppColors.separator)
-                this.ActionRow($r('app.media.icon_settings'), IconColors.settings, '设置', '', 5)
+                SettingRow({
+                  iconRes: $r('app.media.icon_settings'), iconColor: IconColors.settings, label: '设置',
+                  onAction: () => {
+                    routerStore.navigateActivity(Screen.settings())
+                  }
+                })
               }
               .width('92%')
               .backgroundColor(AppColors.bgTertiary)

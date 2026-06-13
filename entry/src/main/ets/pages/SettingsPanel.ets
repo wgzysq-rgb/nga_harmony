@@ -8,6 +8,7 @@ import { routerStore, Screen } from '../store/RouterStore'
 import { AppColors, IconColors, ImageLoadStrategy, ThreadNavMode, THEME_OPTIONS, ThemeOption } from '../common/Constants'
 import { ConfirmDialog, ActionSheetDialog, ActionOption } from '../common/Dialogs'
 import { PanelNavBar } from '../common/PanelNavBar'
+import { SettingRow, SettingToggleRow, SettingPickerRow } from '../common/components/SettingRow'
 import { picker, fileIo, storageStatistics } from '@kit.CoreFileKit'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { common, contextConstant } from '@kit.AbilityKit'
@@ -307,38 +308,40 @@ export struct SettingsPanel {
 
             // ---- Block 1: 黑名单管理 / 用户备注 / 关键词屏蔽 / 自动签到 ----
             Column() {
-              this.SettingRow($r('app.media.icon_block'), IconColors.block, '黑名单管理', '', () => {
-                routerStore.navigateActivity(Screen.blacklist())
-              })
-
-              Divider().margin({ left: 60 }).color(AppColors.separator)
-
-              this.SettingRow($r('app.media.icon_person'), IconColors.textFields, '用户备注', '', () => {
-                routerStore.navigateActivity(Screen.notes())
-              })
-
-              Divider().margin({ left: 60 }).color(AppColors.separator)
-
-              this.SettingRow($r('app.media.icon_text_fields'), IconColors.textFields, '关键词屏蔽', '', () => {
-                routerStore.navigateActivity(Screen.filterKeywords())
-              })
-
-              Divider().margin({ left: 60 }).color(AppColors.separator)
-
-              Row() {
-                Stack() {
-                  Image($r('app.media.icon_calendar_check')).width(17).height(17).fillColor(AppColors.white)
+              SettingRow({
+                iconRes: $r('app.media.icon_block'), iconColor: IconColors.block, label: '黑名单管理',
+                onAction: () => {
+                  routerStore.navigateActivity(Screen.blacklist())
                 }
-                .width(29).height(29).borderRadius(6).backgroundColor(IconColors.checkin).margin({ right: 12 })
+              })
 
-                Text('自动签到').fontSize(17).layoutWeight(1)
+              Divider().margin({ left: 60 }).color(AppColors.separator)
 
-                Toggle({ type: ToggleType.Switch, isOn: appStore.settings.autoCheckin })
-                  .onChange((v: boolean) => {
-                    appStore.setAutoCheckin(v)
-                  })
-              }
-              .width('100%').height(44).padding({ left: 16, right: 16 }).alignItems(VerticalAlign.Center)
+              SettingRow({
+                iconRes: $r('app.media.icon_person'), iconColor: IconColors.textFields, label: '用户备注',
+                onAction: () => {
+                  routerStore.navigateActivity(Screen.notes())
+                }
+              })
+
+              Divider().margin({ left: 60 }).color(AppColors.separator)
+
+              SettingRow({
+                iconRes: $r('app.media.icon_text_fields'), iconColor: IconColors.textFields, label: '关键词屏蔽',
+                onAction: () => {
+                  routerStore.navigateActivity(Screen.filterKeywords())
+                }
+              })
+
+              Divider().margin({ left: 60 }).color(AppColors.separator)
+
+              SettingToggleRow({
+                iconRes: $r('app.media.icon_calendar_check'), iconColor: IconColors.checkin, label: '自动签到',
+                isOn: appStore.settings.autoCheckin,
+                onChange: (v: boolean) => {
+                  appStore.setAutoCheckin(v)
+                }
+              })
 
             }
             .width('92%')
@@ -348,25 +351,21 @@ export struct SettingsPanel {
 
             // ---- Block 2: 智感握姿 / 语音朗读 ----
             Column() {
-              Row() {
-                Stack() {
-                  Image($r('app.media.icon_hand')).width(17).height(17).fillColor(AppColors.white)
+              SettingToggleRow({
+                iconRes: $r('app.media.icon_hand'), iconColor: IconColors.hand, label: '智感握姿',
+                isOn: appStore.settings.smartGrip,
+                onChange: (v: boolean) => {
+                  appStore.setSmartGrip(v)
                 }
-                .width(29).height(29).borderRadius(6).backgroundColor(IconColors.hand).margin({ right: 12 })
-
-                Text('智感握姿').fontSize(17).layoutWeight(1)
-
-                Toggle({ type: ToggleType.Switch, isOn: appStore.settings.smartGrip })
-                  .onChange((v: boolean) => {
-                    appStore.setSmartGrip(v)
-                  })
-              }
-              .width('100%').height(44).padding({ left: 16, right: 16 }).alignItems(VerticalAlign.Center)
+              })
 
               Divider().margin({ left: 60 }).color(AppColors.separator)
 
-              this.SettingRow($r('app.media.icon_volume_up'), '#5AC8FA', '语音朗读', '', () => {
-                routerStore.navigateActivity(Screen.ttsSettings())
+              SettingRow({
+                iconRes: $r('app.media.icon_volume_up'), iconColor: '#5AC8FA', label: '语音朗读',
+                onAction: () => {
+                  routerStore.navigateActivity(Screen.ttsSettings())
+                }
               })
             }
             .width('92%')
@@ -376,38 +375,22 @@ export struct SettingsPanel {
 
             // ---- Block 3A: 显示签名 / 图片加载模式 / 预热图片尺寸 ----
             Column() {
-              Row() {
-                Stack() {
-                  Image($r('app.media.icon_clipboard')).width(17).height(17).fillColor(AppColors.white)
+              SettingToggleRow({
+                iconRes: $r('app.media.icon_clipboard'), iconColor: IconColors.signature, label: '显示签名',
+                isOn: appStore.settings.showSignature,
+                onChange: (v: boolean) => {
+                  appStore.setShowSignature(v)
                 }
-                .width(29).height(29).borderRadius(6).backgroundColor(IconColors.signature).margin({ right: 12 })
-
-                Text('显示签名').fontSize(17).layoutWeight(1)
-
-                Toggle({ type: ToggleType.Switch, isOn: appStore.settings.showSignature })
-                  .onChange((v: boolean) => {
-                    appStore.setShowSignature(v)
-                  })
-              }
-              .width('100%').height(44).padding({ left: 16, right: 16 }).alignItems(VerticalAlign.Center)
+              })
 
               Divider().margin({ left: 60 }).color(AppColors.separator)
 
-              Row() {
-                Stack() {
-                  Image($r('app.media.icon_image')).width(17).height(17).fillColor(AppColors.white)
+              SettingPickerRow({
+                iconRes: $r('app.media.icon_image'), iconColor: IconColors.globe, label: '图片加载模式',
+                badgeText: this.imageStrategyBadge,
+                onAction: () => {
+                  this.showImageStrategyPicker()
                 }
-                .width(29).height(29).borderRadius(6).backgroundColor(IconColors.globe).margin({ right: 12 })
-
-                Text('图片加载模式').fontSize(17).layoutWeight(1)
-
-                Text(this.imageStrategyBadge).fontSize(15).fontColor(AppColors.textSecondary).margin({ right: 8 })
-
-                Text('>').fontSize(16).fontColor(AppColors.chevron)
-              }
-              .width('100%').height(44).padding({ left: 16, right: 16 }).alignItems(VerticalAlign.Center)
-              .onClick(() => {
-                this.showImageStrategyPicker()
               })
 
               Divider().margin({ left: 60 }).color(AppColors.separator)
@@ -434,40 +417,22 @@ export struct SettingsPanel {
 
               Divider().margin({ left: 60 }).color(AppColors.separator)
 
-              Row() {
-                Stack() {
-                  Image($r('app.media.icon_settings')).width(17).height(17).fillColor(AppColors.white)
+              SettingPickerRow({
+                iconRes: $r('app.media.icon_settings'), iconColor: IconColors.settings, label: '帖子楼层导航',
+                badgeText: this.threadNavBadge,
+                onAction: () => {
+                  this.showThreadNavPicker()
                 }
-                .width(29).height(29).borderRadius(6).backgroundColor(IconColors.settings).margin({ right: 12 })
-
-                Text('帖子楼层导航').fontSize(17).layoutWeight(1)
-
-                Text(this.threadNavBadge).fontSize(15).fontColor(AppColors.textSecondary).margin({ right: 8 })
-
-                Text('>').fontSize(16).fontColor(AppColors.chevron)
-              }
-              .width('100%').height(44).padding({ left: 16, right: 16 }).alignItems(VerticalAlign.Center)
-              .onClick(() => {
-                this.showThreadNavPicker()
               })
 
               Divider().margin({ left: 60 }).color(AppColors.separator)
 
-              Row() {
-                Stack() {
-                  Image($r('app.media.icon_image')).width(17).height(17).fillColor(AppColors.white)
+              SettingPickerRow({
+                iconRes: $r('app.media.icon_image'), iconColor: IconColors.globe, label: '预加载页数',
+                badgeText: this.prefetchPageBadge,
+                onAction: () => {
+                  this.showPrefetchPagePicker()
                 }
-                .width(29).height(29).borderRadius(6).backgroundColor(IconColors.globe).margin({ right: 12 })
-
-                Text('预加载页数').fontSize(17).layoutWeight(1)
-
-                Text(this.prefetchPageBadge).fontSize(15).fontColor(AppColors.textSecondary).margin({ right: 8 })
-
-                Text('>').fontSize(16).fontColor(AppColors.chevron)
-              }
-              .width('100%').height(44).padding({ left: 16, right: 16 }).alignItems(VerticalAlign.Center)
-              .onClick(() => {
-                this.showPrefetchPagePicker()
               })
             }
             .width('92%')
@@ -477,27 +442,21 @@ export struct SettingsPanel {
 
             // ---- Block 3B: 导出账号凭证 / 清除缓存 / 退出登录 ----
             Column() {
-              this.SettingRow($r('app.media.icon_export'), IconColors.checkin, '导出账号凭证', '', () => {
-                this.handleExport()
+              SettingRow({
+                iconRes: $r('app.media.icon_export'), iconColor: IconColors.checkin, label: '导出账号凭证',
+                onAction: () => {
+                  this.handleExport()
+                }
               })
 
               Divider().margin({ left: 60 }).color(AppColors.separator)
 
-              Row() {
-                Stack() {
-                  Image($r('app.media.icon_delete')).width(17).height(17).fillColor(AppColors.white)
+              SettingPickerRow({
+                iconRes: $r('app.media.icon_delete'), iconColor: IconColors.hand, label: '清除缓存',
+                badgeText: this.cacheSizeText,
+                onAction: () => {
+                  this.clearCacheDialogController?.open()
                 }
-                .width(29).height(29).borderRadius(6).backgroundColor(IconColors.hand).margin({ right: 12 })
-
-                Text('清除缓存').fontSize(17).layoutWeight(1)
-
-                Text(this.cacheSizeText).fontSize(15).fontColor(AppColors.textSecondary).margin({ right: 8 })
-
-                Text('>').fontSize(16).fontColor(AppColors.chevron)
-              }
-              .width('100%').height(44).padding({ left: 16, right: 16 }).alignItems(VerticalAlign.Center)
-              .onClick(() => {
-                this.clearCacheDialogController?.open()
               })
 
               Divider().margin({ left: 60 }).color(AppColors.separator)
@@ -601,25 +560,5 @@ export struct SettingsPanel {
         appStore.setTheme(theme.name)
       }
     })
-  }
-
-  @Builder
-  SettingRow(iconRes: Resource, iconColor: string, label: string, badge: string, action: () => void) {
-    Row() {
-      Stack() {
-        Image(iconRes).width(17).height(17).fillColor(AppColors.white)
-      }
-      .width(29).height(29).borderRadius(6).backgroundColor(iconColor).margin({ right: 12 })
-
-      Text(label).fontSize(17).layoutWeight(1)
-
-      if (badge) {
-        Text(badge).fontSize(15).fontColor(AppColors.textSecondary).margin({ right: 8 })
-      }
-
-      Text('>').fontSize(16).fontColor(AppColors.chevron)
-    }
-    .width('100%').height(44).padding({ left: 16, right: 16 }).alignItems(VerticalAlign.Center)
-    .onClick(action)
   }
 }
