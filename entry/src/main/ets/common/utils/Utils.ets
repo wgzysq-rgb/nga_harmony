@@ -1,4 +1,4 @@
-import { BBNode, BBNodeType } from '../model/BBCodeNode'
+import { BBNode, BBNodeType } from '../../model/BBCodeNode'
 
 /**
  * 通用工具函数 - 从 React lib/utils.ts 迁移

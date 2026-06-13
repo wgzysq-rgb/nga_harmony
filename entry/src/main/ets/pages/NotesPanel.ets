@@ -1,11 +1,11 @@
 import { appStore } from '../store/AppStore'
 import type { UserNoteEntry } from '../model/NoteInfo'
 import { display } from '@kit.ArkUI'
-import { AppColors } from '../common/Constants'
-import { escHtml, unescapeHtml } from '../common/Utils'
-import { NotesDataSource } from '../common/LazyDataSource'
-import { PanelNavBar } from '../common/PanelNavBar'
-import { ConfirmDialog, MakeNoteDialog, AddNoteDialog } from '../common/Dialogs'
+import { AppColors } from '../common/constants/Constants'
+import { escHtml, unescapeHtml } from '../common/utils/Utils'
+import { NotesDataSource } from '../common/datasource/LazyDataSource'
+import { PanelNavBar } from '../common/components/PanelNavBar'
+import { ConfirmDialog, MakeNoteDialog, AddNoteDialog } from '../common/dialogs/Dialogs'
 import { floatingLayerStore, FloatingPage } from '../store/FloatingLayerStore'
 
 @Component

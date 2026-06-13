@@ -5,10 +5,10 @@
 import { appStore } from '../store/AppStore'
 import { getMessageDetail, sendMessage } from '../service/NgaApi'
 import type { MessageArticle } from '../model/Message'
-import { AppColors } from '../common/Constants'
-import { formatTime, unescapeHtml } from '../common/Utils'
-import { Avatar } from '../common/Avatar'
-import { MessageArticleDataSource } from '../common/LazyDataSource'
+import { AppColors } from '../common/constants/Constants'
+import { formatTime, unescapeHtml } from '../common/utils/Utils'
+import { Avatar } from '../common/components/Avatar'
+import { MessageArticleDataSource } from '../common/datasource/LazyDataSource'
 import { LoadingStateView, ErrorStateView, EmptyStateView } from '../common/components/PageStateView'
 
 @Component

@@ -2,9 +2,9 @@
 import { FunctionComponent, FunctionController } from '@kit.AgentFrameworkKit'
 import { pasteboard, BusinessError } from '@kit.BasicServicesKit'
 import { appStore } from '../store/AppStore'
-import { AppColors } from '../common/Constants'
+import { AppColors } from '../common/constants/Constants'
 import { UserActivityAnalysis, ForumStat } from '../model/NgaApiResults'
-import { ToastComponent } from '../common/Toast'
+import { ToastComponent } from '../common/components/Toast'
 
 const AGENT_ID: string = 'agent1f869c42e32d4b6688b5f6d582fb2053'
 

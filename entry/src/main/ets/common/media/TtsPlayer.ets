@@ -1,6 +1,6 @@
 import { textToSpeech } from '@kit.CoreSpeechKit'
 import { BusinessError } from '@kit.BasicServicesKit'
-import { appStore } from '../store/AppStore'
+import { appStore } from '../../store/AppStore'
 
 const MAX_CHUNK_LEN: number = 10000
 

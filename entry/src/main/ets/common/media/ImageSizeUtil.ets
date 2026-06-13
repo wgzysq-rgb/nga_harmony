@@ -1,5 +1,5 @@
 import { http } from '@kit.NetworkKit';
-import { LruCache } from './LruCache';
+import { LruCache } from '../cache/LruCache';
 
 export class ImageSize {
   width: number = 0;

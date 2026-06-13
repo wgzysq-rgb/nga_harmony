@@ -18,14 +18,14 @@ import { routerStore, RouterStoreClass } from '../store/RouterStore'
 import { verifyToken } from '../service/NgaApi'
 
 import { floatingLayerStore, FloatingLayerStoreClass, FloatingPage } from '../store/FloatingLayerStore'
-import { AppColors } from '../common/Constants'
+import { AppColors } from '../common/constants/Constants'
 import { ActivityPanelComponent } from './ActivityPanelComponent'
 import { BoardPanelComponent } from './BoardPanelComponent'
 import { SidebarComponent } from './SidebarComponent'
 import { CommunityTabContent } from './CommunityTabContent'
 import { FloatingLayerComponent } from './FloatingLayerComponent'
-import { EmptyHint } from '../common/EmptyHint'
-import { ToastComponent } from '../common/Toast'
+import { EmptyHint } from '../common/components/EmptyHint'
+import { ToastComponent } from '../common/components/Toast'
 
 @Entry
 @Component

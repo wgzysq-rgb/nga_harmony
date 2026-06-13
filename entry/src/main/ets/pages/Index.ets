@@ -4,7 +4,7 @@
  */
 
 import { appStore } from '../store/AppStore'
-import { AppColors } from '../common/Constants'
+import { AppColors } from '../common/constants/Constants'
 import { verifyToken } from '../service/NgaApi'
 
 

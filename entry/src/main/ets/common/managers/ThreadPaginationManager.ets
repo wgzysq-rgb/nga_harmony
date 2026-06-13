@@ -1,4 +1,4 @@
-import type { PostInfo } from '../model/PostInfo'
+import type { PostInfo } from '../../model/PostInfo'
 
 class PrefetchedPageData {
   posts: PostInfo[] = []

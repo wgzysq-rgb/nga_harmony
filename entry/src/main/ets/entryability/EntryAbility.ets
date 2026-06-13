@@ -2,8 +2,8 @@ import { AbilityConstant, Configuration, ConfigurationConstant, UIAbility, Want 
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { display, window } from '@kit.ArkUI';
 import { appStore } from '../store/AppStore';
-import { initStatusBarManager, updateStatusBarStyle } from '../common/StatusBarManager';
-import { startNetworkMonitor } from '../common/NetworkMonitor';
+import { initStatusBarManager, updateStatusBarStyle } from '../common/managers/StatusBarManager';
+import { startNetworkMonitor } from '../common/managers/NetworkMonitor';
 
 const DOMAIN = 0x0000;
 const TAG = 'EntryAbility';

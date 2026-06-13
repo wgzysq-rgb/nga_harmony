@@ -3,8 +3,8 @@
  * 通过 AppStorage 驱动显示
  */
 
-import { appStore } from '../store/AppStore'
-import { AppColors } from './Constants'
+import { appStore } from '../../store/AppStore'
+import { AppColors } from '../constants/Constants'
 
 @CustomDialog
 export struct ToastOverlay {

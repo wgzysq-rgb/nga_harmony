@@ -1,8 +1,8 @@
-import { AppColors } from './Constants'
-import { floatingLayerStore } from '../store/FloatingLayerStore'
-import { replyManager, ReplyManagerClass, ReplyType } from './ReplyManager'
-import { appStore } from '../store/AppStore'
-import { getEmotionResource, CATEGORY_KEYS, getCategoryLabel, getCategoryNames, isEmotionCategoryNeedDarkBg } from './EmotionResources'
+import { AppColors } from '../constants/Constants'
+import { floatingLayerStore } from '../../store/FloatingLayerStore'
+import { replyManager, ReplyManagerClass, ReplyType } from '../managers/ReplyManager'
+import { appStore } from '../../store/AppStore'
+import { getEmotionResource, CATEGORY_KEYS, getCategoryLabel, getCategoryNames, isEmotionCategoryNeedDarkBg } from '../media/EmotionResources'
 import fileIo from '@ohos.file.fs'
 import { photoAccessHelper } from '@kit.MediaLibraryKit'
 

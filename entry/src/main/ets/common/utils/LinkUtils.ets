@@ -1,6 +1,6 @@
 import { common, Context } from '@kit.AbilityKit'
-import { routerStore, Screen } from '../store/RouterStore'
-import { floatingLayerStore, FloatingPage } from '../store/FloatingLayerStore'
+import { routerStore, Screen } from '../../store/RouterStore'
+import { floatingLayerStore, FloatingPage } from '../../store/FloatingLayerStore'
 
 export function openImageViewer(urls: string[], index: number): void {
   floatingLayerStore.imageViewerUrls = urls

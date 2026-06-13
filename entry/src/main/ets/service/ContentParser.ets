@@ -3,7 +3,7 @@
  * 使用 string.replace 的回调在 ArkTS 中需要显式参数类型
  */
 
-import { stripImageSuffix } from '../common/Utils'
+import { stripImageSuffix } from '../common/utils/Utils'
 
 const NGA_CDN_HOSTS: string[] = ['img.nga.178.com', 'img2.nga.178.com', 'img4.nga.178.com', 'img8.nga.cn'];
 

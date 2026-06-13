@@ -1,5 +1,5 @@
-import { appStore } from '../store/AppStore'
-import { AppColors } from './Constants'
+import { appStore } from '../../store/AppStore'
+import { AppColors } from '../constants/Constants'
 
 /**
  * 视频播放组件（带全局静音切换）。

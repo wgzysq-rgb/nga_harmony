@@ -1,14 +1,14 @@
-import { appStore } from '../store/AppStore'
-import { routerStore, Screen } from '../store/RouterStore'
-import { ProfileData, AdminForumsData } from '../model/User'
-import { AppColors } from '../common/Constants'
-import { formatTime, fmtNum, escHtml, unescapeHtml } from '../common/Utils'
-import { Avatar } from '../common/Avatar'
-import { MakeNoteDialog } from '../common/Dialogs'
+import { appStore } from '../../store/AppStore'
+import { routerStore, Screen } from '../../store/RouterStore'
+import { ProfileData, AdminForumsData } from '../../model/User'
+import { AppColors } from '../constants/Constants'
+import { formatTime, fmtNum, escHtml, unescapeHtml } from '../utils/Utils'
+import { Avatar } from './Avatar'
+import { MakeNoteDialog } from '../dialogs/Dialogs'
 import { deviceInfo } from '@kit.BasicServicesKit'
 
-import { getUserActivityAnalysis } from '../service/NgaApi'
-import type { UserActivityAnalysis } from '../model/NgaApiResults'
+import { getUserActivityAnalysis } from '../../service/NgaApi'
+import type { UserActivityAnalysis } from '../../model/NgaApiResults'
 
 @Component
 export struct ProfileCardPopup {

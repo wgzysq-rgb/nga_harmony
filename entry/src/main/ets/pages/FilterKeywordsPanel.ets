@@ -1,9 +1,9 @@
 import { appStore } from '../store/AppStore'
 import { FilterKeyword } from '../model/FilterKeyword'
-import { AppColors } from '../common/Constants'
-import { FilterKeywordDataSource } from '../common/LazyDataSource'
-import { PanelNavBar } from '../common/PanelNavBar'
-import { ConfirmDialog, AddKeywordDialog } from '../common/Dialogs'
+import { AppColors } from '../common/constants/Constants'
+import { FilterKeywordDataSource } from '../common/datasource/LazyDataSource'
+import { PanelNavBar } from '../common/components/PanelNavBar'
+import { ConfirmDialog, AddKeywordDialog } from '../common/dialogs/Dialogs'
 
 @Component
 export struct FilterKeywordsPanel {

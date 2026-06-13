@@ -1,9 +1,9 @@
 import { textToSpeech } from '@kit.CoreSpeechKit'
 import { BusinessError, Callback, ErrorCallback } from '@kit.BasicServicesKit'
 import { appStore } from '../store/AppStore'
-import { AppColors } from '../common/Constants'
-import { PanelNavBar } from '../common/PanelNavBar'
-import { TtsPlayer } from '../common/TtsPlayer'
+import { AppColors } from '../common/constants/Constants'
+import { PanelNavBar } from '../common/components/PanelNavBar'
+import { TtsPlayer } from '../common/media/TtsPlayer'
 
 const VOICE_OPTIONS: VoiceOption[] = [
   { person: 13, label: '聆小珊', lang: '中文' },

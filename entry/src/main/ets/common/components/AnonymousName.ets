@@ -1,6 +1,6 @@
-import { AppColors } from './Constants'
-import { unescapeHtml } from './Utils'
-import { decodeAnonymousName } from '../parser/AnonymousParser'
+import { AppColors } from '../constants/Constants'
+import { unescapeHtml } from '../utils/Utils'
+import { decodeAnonymousName } from '../../parser/AnonymousParser'
 
 @Component
 export struct AnonymousName {

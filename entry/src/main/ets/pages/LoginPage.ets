@@ -6,7 +6,7 @@
 import { loginStep1, loginStep2, injectCredentials } from '../service/NgaApi'
 import { appStore } from '../store/AppStore'
 import { ngaClient } from '../service/NgaClient'
-import { AppColors } from '../common/Constants'
+import { AppColors } from '../common/constants/Constants'
 import { picker, fileIo } from '@kit.CoreFileKit'
 import { common } from '@kit.AbilityKit'
 import { BusinessError } from '@kit.BasicServicesKit'

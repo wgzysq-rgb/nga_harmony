@@ -5,9 +5,9 @@
 
 import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
-import { AppColors, IconColors, ImageLoadStrategy, ThreadNavMode, THEME_OPTIONS, ThemeOption } from '../common/Constants'
-import { ConfirmDialog, ActionSheetDialog, ActionOption } from '../common/Dialogs'
-import { PanelNavBar } from '../common/PanelNavBar'
+import { AppColors, IconColors, ImageLoadStrategy, ThreadNavMode, THEME_OPTIONS, ThemeOption } from '../common/constants/Constants'
+import { ConfirmDialog, ActionSheetDialog, ActionOption } from '../common/dialogs/Dialogs'
+import { PanelNavBar } from '../common/components/PanelNavBar'
 import { SettingRow, SettingToggleRow, SettingPickerRow } from '../common/components/SettingRow'
 import { picker, fileIo, storageStatistics } from '@kit.CoreFileKit'
 import { BusinessError } from '@kit.BasicServicesKit'

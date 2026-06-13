@@ -3,8 +3,8 @@
  * 支持图片加载失败时显示首字母
  */
 
-import { AppColors } from './Constants'
-import { getAvatarUrl, nameToHue, hslToHex, getInitial } from './Utils'
+import { AppColors } from '../constants/Constants'
+import { getAvatarUrl, nameToHue, hslToHex, getInitial } from '../utils/Utils'
 
 @Component
 export struct Avatar {

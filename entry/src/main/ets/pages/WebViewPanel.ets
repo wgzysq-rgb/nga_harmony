@@ -1,5 +1,5 @@
 import { webview } from '@kit.ArkWeb'
-import { PanelNavBar } from '../common/PanelNavBar'
+import { PanelNavBar } from '../common/components/PanelNavBar'
 import { routerStore } from '../store/RouterStore'
 import { getSession } from '../service/NgaApi'
 import { appStore } from '../store/AppStore'

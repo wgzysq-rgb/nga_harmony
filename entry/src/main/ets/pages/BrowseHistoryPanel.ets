@@ -1,12 +1,12 @@
-import { AppColors } from '../common/Constants'
-import { formatTime, unescapeHtml } from '../common/Utils'
+import { AppColors } from '../common/constants/Constants'
+import { formatTime, unescapeHtml } from '../common/utils/Utils'
 import { appStore } from '../store/AppStore'
 import { BrowseHistoryEntry } from '../store/HistoryStore'
 import { routerStore, Screen } from '../store/RouterStore'
 import { floatingLayerStore } from '../store/FloatingLayerStore'
-import { PanelNavBar } from '../common/PanelNavBar'
-import { HistoryItemDataSource } from '../common/LazyDataSource'
-import { AnonymousName } from '../common/AnonymousName'
+import { PanelNavBar } from '../common/components/PanelNavBar'
+import { HistoryItemDataSource } from '../common/datasource/LazyDataSource'
+import { AnonymousName } from '../common/components/AnonymousName'
 
 @Component
 export struct BrowseHistoryPanel {

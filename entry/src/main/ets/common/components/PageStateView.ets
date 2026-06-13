@@ -1,4 +1,4 @@
-import { AppColors } from '../Constants'
+import { AppColors } from '../constants/Constants'
 
 /**
  * 加载中页面态组件。

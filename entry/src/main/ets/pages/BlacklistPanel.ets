@@ -5,11 +5,11 @@
 import { appStore } from '../store/AppStore'
 import type { BlacklistEntry } from '../store/SettingsStore'
 import { display } from '@kit.ArkUI'
-import { AppColors } from '../common/Constants'
-import { escHtml, unescapeHtml } from '../common/Utils'
-import { BlacklistDataSource } from '../common/LazyDataSource'
-import { PanelNavBar } from '../common/PanelNavBar'
-import { ConfirmDialog, AddBlacklistDialog } from '../common/Dialogs'
+import { AppColors } from '../common/constants/Constants'
+import { escHtml, unescapeHtml } from '../common/utils/Utils'
+import { BlacklistDataSource } from '../common/datasource/LazyDataSource'
+import { PanelNavBar } from '../common/components/PanelNavBar'
+import { ConfirmDialog, AddBlacklistDialog } from '../common/dialogs/Dialogs'
 import { floatingLayerStore, FloatingPage } from '../store/FloatingLayerStore'
 
 @Component

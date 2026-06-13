@@ -1,5 +1,5 @@
-import { routerStore } from '../store/RouterStore'
-import { AppColors } from './Constants'
+import { routerStore } from '../../store/RouterStore'
+import { AppColors } from '../constants/Constants'
 
 @Component
 export struct PanelNavBar {

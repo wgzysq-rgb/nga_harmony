@@ -1,4 +1,4 @@
-import { AppColors } from './Constants'
+import { AppColors } from '../constants/Constants'
 
 @Component
 export struct EmptyHint {

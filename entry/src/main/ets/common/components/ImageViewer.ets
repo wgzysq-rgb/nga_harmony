@@ -4,8 +4,8 @@ import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { systemShare } from '@kit.ShareKit';
 import { uniformTypeDescriptor as utd } from '@kit.ArkData';
 import { common } from '@kit.AbilityKit';
-import { appStore } from '../store/AppStore';
-import { AppColors } from './Constants';
+import { appStore } from '../../store/AppStore';
+import { AppColors } from '../constants/Constants';
 
 @Component
 export struct ImageViewer {

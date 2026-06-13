@@ -1,7 +1,7 @@
 /**
  * 确认对话框 + ActionSheet 组件 + 备注编辑对话框
  */
-import { AppColors } from '../common/Constants'
+import { AppColors } from '../constants/Constants'
 
 // 确认对话框
 @CustomDialog

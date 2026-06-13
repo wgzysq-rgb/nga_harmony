@@ -1,5 +1,5 @@
 import { BBNode, BBNodeType } from '../model/BBCodeNode'
-import { stripImageSuffix } from '../common/Utils'
+import { stripImageSuffix } from '../common/utils/Utils'
 
 let bbNodeIdCounter: number = 0
 

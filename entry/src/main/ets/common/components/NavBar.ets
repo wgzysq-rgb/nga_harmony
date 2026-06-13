@@ -1,7 +1,7 @@
 /**
  * 通用导航栏组件 - 从 React NavBar.tsx 迁移
  */
-import { AppColors } from '../common/Constants'
+import { AppColors } from '../constants/Constants'
 
 @Component
 export struct NavBar {

@@ -1,6 +1,6 @@
 import { type NavEntry } from '../store/RouterStore'
-import { AppColors } from '../common/Constants'
-import { PanelNavBar } from '../common/PanelNavBar'
+import { AppColors } from '../common/constants/Constants'
+import { PanelNavBar } from '../common/components/PanelNavBar'
 import { ThreadPanel } from './ThreadPanel'
 import { ProfilePanel } from './ProfilePanel'
 import { NotificationPanel } from './NotificationPanel'

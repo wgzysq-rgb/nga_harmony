@@ -1,6 +1,6 @@
 import media from '@ohos.multimedia.media'
 import { ImageSize } from './ImageSizeUtil'
-import { LruCache } from './LruCache'
+import { LruCache } from '../cache/LruCache'
 
 const cache: LruCache<ImageSize> = new LruCache<ImageSize>(100)
 const pending: Map<string, Promise<ImageSize | null>> = new Map()

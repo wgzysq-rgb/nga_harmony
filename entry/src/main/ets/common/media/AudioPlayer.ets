@@ -1,5 +1,5 @@
 import media from '@ohos.multimedia.media'
-import { AppColors } from './Constants'
+import { AppColors } from '../constants/Constants'
 
 function fmtTime(totalSeconds: number): string {
   const m: number = Math.floor(totalSeconds / 60)
