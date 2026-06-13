@@ -17,6 +17,7 @@ import { AppColors, ThreadNavMode } from '../common/Constants'
 import { PanelNavBar } from '../common/PanelNavBar'
 import { PostItem } from '../common/PostItem'
 import { PostInfoDataSource } from '../common/LazyDataSource'
+import { LoadingStateView, ErrorStateView } from '../common/components/PageStateView'
 import { floatingLayerStore, FloatingPage } from '../store/FloatingLayerStore'
 import { replyManager, ReplyType } from '../common/ReplyManager'
 import { withTimeout } from '../common/TimeoutUtils'
@@ -619,17 +620,14 @@ export struct ThreadPanel {
       if (this.isLoading) {
         Column() {
           Column() {
-            LoadingProgress().width(28).height(28).color(AppColors.textTertiary)
-            Text('加载中...').fontSize(14).fontColor(AppColors.textTertiary).margin({ top: 8 })
+            LoadingStateView()
           }.opacity(this.loadingContentOpacity)
         }.width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
           .padding({ top: NAV_BAR_H + this.statusBarHeight })
         .transition(TransitionEffect.OPACITY.animation({ duration: 200 }))
       } else if (this.hasError) {
         Column() {
-          Text(this.errorMsg).fontSize(14).fontColor(AppColors.textTertiary).margin({ bottom: 12 })
-          Button('重试').fontSize(14).fontColor(AppColors.primary).backgroundColor(AppColors.bgSecondary).borderRadius(10)
-            .onClick(() => this.loadPosts(1, LOAD_REPLACE))
+          ErrorStateView({ msg: this.errorMsg, onRetry: () => this.loadPosts(1, LOAD_REPLACE) })
         }.width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
           .padding({ top: NAV_BAR_H + this.statusBarHeight })
         .transition(TransitionEffect.OPACITY.animation({ duration: 200 }))

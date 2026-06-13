@@ -16,6 +16,7 @@ import { AppColors, FONT_COLORS, SORT_MODES, SortMode, BreakpointType } from '..
 import { formatTime, unescapeHtml } from '../common/Utils'
 import { PanelNavBar } from '../common/PanelNavBar'
 import { ThreadDataSource } from '../common/LazyDataSource'
+import { LoadingStateView, ErrorStateView, EmptyStateView } from '../common/components/PageStateView'
 import { AnonymousName } from '../common/AnonymousName'
 import { TopicPaginationManager } from '../common/TopicPaginationManager'
 
@@ -414,23 +415,19 @@ export struct TopicListPanel {
         if (this.isLoading) {
           Row().width('100%').height(44 + this.statusBarHeight)
           Column() {
-            LoadingProgress().width(28).height(28).color(AppColors.textTertiary)
-            Text('加载中...').fontSize(14).fontColor(AppColors.textTertiary).margin({ top: 8 })
+            LoadingStateView()
           }.opacity(this.loadingContentOpacity).width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
           .transition(TransitionEffect.OPACITY.animation({ duration: 200 }))
         } else if (this.hasError) {
           Row().width('100%').height(44 + this.statusBarHeight)
           Column() {
-            Text(this.errorMsg || '加载失败').fontSize(14).fontColor(AppColors.textTertiary).margin({ bottom: 12 })
-            Button('重试').fontSize(14).fontColor(AppColors.primary).backgroundColor(AppColors.bgSecondary).borderRadius(10)
-              .onClick(() => this.loadTopics(1))
+            ErrorStateView({ msg: this.errorMsg || '加载失败', onRetry: () => this.loadTopics(1) })
           }.width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
           .transition(TransitionEffect.OPACITY.animation({ duration: 200 }))
         } else if (this.mgr.threads.length === 0) {
           Row().width('100%').height(44 + this.statusBarHeight)
           Column() {
-            Image($r('app.media.icon_chat_bubble')).width(40).height(40).fillColor(AppColors.textTertiary).opacity(0.4).margin({ bottom: 8 })
-            Text('暂无主题').fontSize(15).fontColor(AppColors.textTertiary)
+            EmptyStateView({ msg: '暂无主题', icon: $r('app.media.icon_chat_bubble') })
           }.width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
           .transition(TransitionEffect.OPACITY.animation({ duration: 200 }))
         } else {

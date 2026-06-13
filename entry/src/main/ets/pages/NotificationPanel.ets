@@ -12,6 +12,7 @@ import { BreakpointType } from '../common/Constants'
 import { PanelNavBar } from '../common/PanelNavBar'
 import { Avatar } from '../common/Avatar'
 import { NotificationDataSource } from '../common/LazyDataSource'
+import { LoadingStateView, ErrorStateView, EmptyStateView } from '../common/components/PageStateView'
 
 interface FilterMode {
   key: number
@@ -162,21 +163,17 @@ export struct NotificationPanel {
 
         if (this.isLoading) {
           Column() {
-            LoadingProgress().width(28).height(28).color(AppColors.textTertiary)
-            Text('加载中...').fontSize(14).fontColor(AppColors.textTertiary).margin({ top: 8 })
+            LoadingStateView()
           }
           .width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
         } else if (this.hasError) {
           Column() {
-            Text(this.errorMsg).fontSize(14).fontColor(AppColors.textTertiary).margin({ bottom: 12 })
-            Button('重试').fontSize(14).fontColor(AppColors.primary).backgroundColor(AppColors.bgSecondary).borderRadius(10)
-              .onClick(() => this.loadNotifications())
+            ErrorStateView({ msg: this.errorMsg, onRetry: () => this.loadNotifications() })
           }
           .width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
         } else if (this.getFilteredNotifications().length === 0) {
           Column() {
-            Image($r('app.media.icon_bell')).width(40).height(40).fillColor(AppColors.textTertiary).opacity(0.4)
-            Text(this.getEmptyText()).fontSize(15).fontColor(AppColors.textTertiary).margin({ top: 8 })
+            EmptyStateView({ msg: this.getEmptyText(), icon: $r('app.media.icon_bell') })
           }
           .width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
         } else {

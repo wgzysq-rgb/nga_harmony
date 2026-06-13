@@ -8,6 +8,7 @@ import { Avatar } from '../common/Avatar'
 import { AnonymousName } from '../common/AnonymousName'
 import { MakeNoteDialog } from '../common/Dialogs'
 import { PanelNavBar } from '../common/PanelNavBar'
+import { LoadingStateView, ErrorStateView } from '../common/components/PageStateView'
 import { getCachedBBNodes, preWarmBatch } from '../service/BBCodeCache'
 import { BBCodeContentView } from '../common/BBCodeContentView'
 import { openImageViewer, handleForumLink } from '../common/LinkUtils'
@@ -215,11 +216,7 @@ export struct ProfilePanel {
       Column() {
         if (this.isLoading) {
           Column() {
-            LoadingProgress().width(28).height(28).color(AppColors.textTertiary)
-            Text('加载中...')
-              .fontSize(14)
-              .fontColor(AppColors.textTertiary)
-              .margin({ top: 8 })
+            LoadingStateView()
           }
           .width('100%')
           .layoutWeight(1)
@@ -228,16 +225,10 @@ export struct ProfilePanel {
           .padding({ top: 44 + this.statusBarHeight })
         } else if (this.hasError) {
           Column() {
-            Text(this.errorMsg)
-              .fontSize(14)
-              .fontColor(AppColors.textTertiary)
-              .margin({ bottom: 12 })
-            Button('重试')
-              .fontSize(14)
-              .fontColor(AppColors.primary)
-              .backgroundColor(AppColors.bgSecondary)
-              .borderRadius(10)
-              .onClick(() => { this.isLoading = true; this.hasError = false; appStore.ensureProfile(this.uid) })
+            ErrorStateView({
+              msg: this.errorMsg,
+              onRetry: () => { this.isLoading = true; this.hasError = false; appStore.ensureProfile(this.uid) }
+            })
           }
           .width('100%')
           .layoutWeight(1)

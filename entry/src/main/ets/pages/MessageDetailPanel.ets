@@ -9,6 +9,7 @@ import { AppColors } from '../common/Constants'
 import { formatTime, unescapeHtml } from '../common/Utils'
 import { Avatar } from '../common/Avatar'
 import { MessageArticleDataSource } from '../common/LazyDataSource'
+import { LoadingStateView, ErrorStateView, EmptyStateView } from '../common/components/PageStateView'
 
 @Component
 export struct MessageDetailPanel {
@@ -81,21 +82,17 @@ export struct MessageDetailPanel {
     Column() {
       if (this.isLoading) {
         Column() {
-          LoadingProgress().width(28).height(28).color(AppColors.textTertiary)
-          Text('加载中...').fontSize(14).fontColor(AppColors.textTertiary).margin({ top: 8 })
+          LoadingStateView()
         }
         .width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
       } else if (this.hasError) {
         Column() {
-          Text('加载失败').fontSize(14).fontColor(AppColors.textTertiary).margin({ bottom: 12 })
-          Button('重试').fontSize(14).fontColor(AppColors.primary).backgroundColor(AppColors.bgSecondary).borderRadius(10)
-            .onClick(() => this.loadMessages())
+          ErrorStateView({ msg: '加载失败', onRetry: () => this.loadMessages() })
         }
         .width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
       } else if (this.messages.length === 0) {
         Column() {
-          Image($r('app.media.icon_chat_bubble')).width(40).height(40).fillColor(AppColors.textTertiary).opacity(0.4)
-          Text('暂无消息').fontSize(15).fontColor(AppColors.textTertiary).margin({ top: 8 })
+          EmptyStateView({ msg: '暂无消息', icon: $r('app.media.icon_chat_bubble') })
         }
         .width('100%').layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
       } else {
