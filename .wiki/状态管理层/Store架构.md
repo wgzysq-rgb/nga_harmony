@@ -5,12 +5,12 @@
 状态管理层采用 Facade 模式：`AppStore` 作为统一门面，将各领域职责委派给独立子 Store。所有 Store 文件位于 `store/` 目录下，共 14 个源文件。
 
 ```mermaid
-graph TB
-    subgraph "Facade"
+graph LR
+    subgraph Facade["门面"]
         AStore["AppStoreClass<br/>编排 + 委托"]
     end
 
-    subgraph "子 Store"
+    subgraph Children["领域子 Store"]
         Auth["AuthStore<br/>认证 + 会话"]
         Settings["SettingsStore<br/>用户设置"]
         Cat["CategoryStore<br/>论坛分类"]
@@ -21,58 +21,35 @@ graph TB
         Toast["ToastManager<br/>消息提示"]
     end
 
-    subgraph "其他 Store"
-        RStore["RouterStoreClass<br/>导航路由"]
-        FLStore["FloatingLayerStoreClass<br/>浮层管理"]
-        FLM["FilterListManager<br/>过滤列表"]
+    subgraph Infra["基础设施"]
         PStore["PreferencesStore<br/>本地 KV 持久化"]
         SQ["SerialQueue<br/>串行写队列"]
-    end
-
-    subgraph "存储后端"
         PS["ohos.data.preferences<br/>Preferences"]
     end
 
-    AStore --> Auth
-    AStore --> Settings
-    AStore --> Cat
-    AStore --> Profile
-    AStore --> Noti
-    AStore --> Vote
-    AStore --> History
-    AStore --> Toast
+    subgraph Other["独立 Store"]
+        RStore["RouterStoreClass<br/>导航路由"]
+        FLStore["FloatingLayerStoreClass<br/>浮层管理"]
+        FLM["FilterListManager<br/>过滤列表"]
+    end
 
-    Auth --> PStore
-    Auth --> SQ
-    Settings --> PStore
-    Settings --> SQ
-    Cat --> PStore
-    Cat --> SQ
-    Profile --> PStore
-    Profile --> SQ
-    Noti --> PStore
-    Noti --> SQ
-    Vote --> PStore
-    Vote --> SQ
-    History --> PStore
-    History --> SQ
-
-    AStore --> PStore
-    AStore --> SQ
-    SQ --> PS
-
-    RStore -.->|读取| AStore
-
-    subgraph "消费方 (pages/)"
+    subgraph Consumer["消费方 (pages/)"]
         MPage["MainPage"]
         Others["其他 Panel 页面"]
     end
 
+    AStore --> Children
+    AStore --> PStore
+    AStore --> SQ
+    SQ --> PS
+    RStore -.->|"读取"| AStore
     MPage --> RStore
     MPage --> AStore
     MPage --> FLStore
     Others --> AStore
 ```
+
+> 所有领域子 Store 均遵循统一持久化模式：经各自的 `PreferencesStore` 写入、`SerialQueue` 串行排队，最终落盘到 `ohos.data.preferences`。为保持图清晰，上图省略了各子 Store 到 `PStore`/`SQ` 的逐条边。
 
 ### 初始化时序
 
@@ -161,11 +138,24 @@ sequenceDiagram
 - 多账户会话（Session）以 token 为 key 持久化，7 天自动过期清理
 - 旧版扁平 Key 格式自动迁移至 JSON 格式
 
-### SettingsStore（`SettingsStore.ets:56`）
+### SettingsStore（`SettingsStore.ets:60`）
 
-所有用户设置的集中管理，包括黑名单、收藏版块、主题模式、字号、TTS 参数、图片加载策略、关键词过滤、用户便签、握持手势等。
+所有用户设置的集中管理，集中在 `SettingsState`（`SettingsStore.ets:30-55`）中，主要维度：
 
-当认证 uid 变更时通过 `reset()` 清空旧用户数据。设置变更通过 `persistSettings()` 异步写入 Preferences，写入内容为整个 `SettingsState` 对象的 JSON 序列化。
+| 维度 | 字段 | 说明 |
+|------|------|------|
+| 主题/字号 | `theme`、`fontSize`、`domainIndex` | 主题模式、字号、域名索引 |
+| 列表过滤 | `blacklist`、`filterKeywords` | 黑名单、关键词过滤 |
+| 内容收藏 | `favorites`、`notes` | 收藏版块、用户便签 |
+| TTS 语音 | `ttsPerson`、`ttsSpeed`、`ttsVolume`、`ttsPitch` | TTS 播报参数 |
+| 图片 | `imageLoadStrategy`、`enableImageSizePrefetch` | 加载策略、尺寸预热开关 |
+| 阅读 | `threadNavMode`、`prefetchPageCount`、`showSignature` | 楼层导航模式、预加载页数(0~5)、签名显示 |
+| 视频 | `videoMuted` | 视频全局静音开关（默认有声） |
+| 手势/签到 | `holdingHand`、`smartGrip`、`autoCheckin` | 握持手势、智能握持、自动签到 |
+
+当认证 uid 变更时通过 `reset()` 清空旧用户数据。设置变更通过 `persistSettings()` 异步写入 Preferences，写入内容为整个 `SettingsState` 对象的 JSON 序列化。`videoMuted`、`imageLoadStrategy`、`enableImageSizePrefetch` 等部分字段额外同步至 `AppStorage`，供组件通过 `@StorageProp` 响应式读取（如 `MutedVideo` 读取 `videoMuted`）。
+
+新增阅读相关设置时，AppStore 对应提供 Facade 代理：`setThreadNavMode`、`setPrefetchPageCount`、`setVideoMuted` 等。
 
 ### ProfileStore（`ProfileStore.ets:15`）
 

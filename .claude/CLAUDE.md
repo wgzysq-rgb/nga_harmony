@@ -34,9 +34,9 @@ export DEVECO_SDK_HOME="C:/Program Files/Huawei/DevEco Studio/sdk"
 | 目录 | 文件数 | 职责 |
 |------|--------|------|
 | `pages/` | 24 | 页面级组件 |
-| `common/` | 30 | 可复用 UI 组件、工具类、常量 |
-| `store/` | 8 | 全局状态管理 |
-| `service/` | 9 | 网络请求、外部服务调用 |
+| `common/` | 31 | 可复用 UI 组件、工具类、常量 |
+| `store/` | 14 | 全局状态管理 |
+| `service/` | 8 | 网络请求、外部服务调用 |
 | `model/` | 11 | 数据模型定义 |
 | `parser/` | 10 | BBCode 等富文本解析 |
 | `entryability/` | 1 | 应用生命周期入口 |
