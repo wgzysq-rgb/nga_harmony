@@ -6,328 +6,30 @@ import { FavBoard } from '../store/SettingsStore'
 import type { FilterKeyword } from '../model/FilterKeyword'
 import type { UserNoteEntry } from '../model/NoteInfo'
 import type { Category, BoardContent } from '../model/Forum'
+import { BaseLazyDataSource } from './datasource/BaseLazyDataSource'
 
-class PostInfoDataSource implements IDataSource {
-  private dataList: PostInfo[] = []
-  private listeners: DataChangeListener[] = []
-
-  totalCount(): number {
-    return this.dataList.length
-  }
-
-  getData(index: number): PostInfo {
-    return this.dataList[index]
-  }
-
-  registerDataChangeListener(listener: DataChangeListener): void {
-    if (this.listeners.indexOf(listener) < 0) {
-      this.listeners.push(listener)
-    }
-  }
-
-  unregisterDataChangeListener(listener: DataChangeListener): void {
-    const pos: number = this.listeners.indexOf(listener)
-    if (pos >= 0) {
-      this.listeners.splice(pos, 1)
-    }
-  }
-
-  replaceAll(list: PostInfo[]): void {
-    this.dataList = []
-    for (let i = 0; i < list.length; i++) {
-      this.dataList.push(list[i])
-    }
-    this.notifyReload()
-  }
-
-  appendAll(list: PostInfo[]): void {
-    const start: number = this.dataList.length
-    for (let i = 0; i < list.length; i++) {
-      this.dataList.push(list[i])
-      this.notifyAdd(start + i)
-    }
-  }
-
-  prependAll(list: PostInfo[]): void {
-    this.dataList = list.concat(this.dataList)
-    for (let i = 0; i < list.length; i++) {
-      this.notifyAdd(i)
-    }
-  }
-
-  clear(): void {
-    this.dataList = []
-    this.notifyReload()
-  }
-
-  updateAt(index: number, item: PostInfo): void {
-    if (index < 0 || index >= this.dataList.length) {
-      return
-    }
-    this.dataList[index] = item
-    for (let i = 0; i < this.listeners.length; i++) {
-      this.listeners[i].onDataChange(index)
-    }
-  }
-
-  length(): number {
-    return this.dataList.length
-  }
-
-  private notifyReload(): void {
-    for (let i = 0; i < this.listeners.length; i++) {
-      this.listeners[i].onDataReloaded()
-    }
-  }
-
-  private notifyAdd(index: number): void {
-    for (let i = 0; i < this.listeners.length; i++) {
-      this.listeners[i].onDataAdd(index)
-    }
-  }
+/** 主题帖子列表数据源，复用基类全部共性逻辑。 */
+class PostInfoDataSource extends BaseLazyDataSource<PostInfo> {
 }
 
-class ThreadDataSource implements IDataSource {
-  private dataList: object[] = []
-  private listeners: DataChangeListener[] = []
-
-  totalCount(): number {
-    return this.dataList.length
-  }
-
-  getData(index: number): object {
-    return this.dataList[index]
-  }
-
-  registerDataChangeListener(listener: DataChangeListener): void {
-    if (this.listeners.indexOf(listener) < 0) {
-      this.listeners.push(listener)
-    }
-  }
-
-  unregisterDataChangeListener(listener: DataChangeListener): void {
-    const pos = this.listeners.indexOf(listener)
-    if (pos >= 0) {
-      this.listeners.splice(pos, 1)
-    }
-  }
-
-  replaceAll(list: object[]): void {
-    this.dataList = []
-    for (let i = 0; i < list.length; i++) {
-      this.dataList.push(list[i])
-    }
-    this.notifyReload()
-  }
-
-  appendAll(list: object[]): void {
-    const start: number = this.dataList.length
-    for (let i = 0; i < list.length; i++) {
-      this.dataList.push(list[i])
-      this.notifyAdd(start + i)
-    }
-  }
-
-  clear(): void {
-    this.dataList = []
-    this.notifyReload()
-  }
-
-  length(): number {
-    return this.dataList.length
-  }
-
-  private notifyReload(): void {
-    for (let i = 0; i < this.listeners.length; i++) {
-      this.listeners[i].onDataReloaded()
-    }
-  }
-
-  private notifyAdd(index: number): void {
-    for (let i = 0; i < this.listeners.length; i++) {
-      this.listeners[i].onDataAdd(index)
-    }
-  }
+/** 主题列表数据源。 */
+class ThreadDataSource extends BaseLazyDataSource<object> {
 }
 
-class MessageThreadDataSource implements IDataSource {
-  private dataList: MessageThreadInfo[] = []
-  private listeners: DataChangeListener[] = []
-
-  totalCount(): number {
-    return this.dataList.length
-  }
-
-  getData(index: number): MessageThreadInfo {
-    return this.dataList[index]
-  }
-
-  registerDataChangeListener(listener: DataChangeListener): void {
-    if (this.listeners.indexOf(listener) < 0) {
-      this.listeners.push(listener)
-    }
-  }
-
-  unregisterDataChangeListener(listener: DataChangeListener): void {
-    const pos = this.listeners.indexOf(listener)
-    if (pos >= 0) {
-      this.listeners.splice(pos, 1)
-    }
-  }
-
-  replaceAll(list: MessageThreadInfo[]): void {
-    this.dataList = []
-    for (let i = 0; i < list.length; i++) {
-      this.dataList.push(list[i])
-    }
-    this.notifyReload()
-  }
-
-  clear(): void {
-    this.dataList = []
-    this.notifyReload()
-  }
-
-  private notifyReload(): void {
-    for (let i = 0; i < this.listeners.length; i++) {
-      this.listeners[i].onDataReloaded()
-    }
-  }
+/** 私信会话列表数据源。 */
+class MessageThreadDataSource extends BaseLazyDataSource<MessageThreadInfo> {
 }
 
-class MessageArticleDataSource implements IDataSource {
-  private dataList: MessageArticle[] = []
-  private listeners: DataChangeListener[] = []
-
-  totalCount(): number {
-    return this.dataList.length
-  }
-
-  getData(index: number): MessageArticle {
-    return this.dataList[index]
-  }
-
-  registerDataChangeListener(listener: DataChangeListener): void {
-    if (this.listeners.indexOf(listener) < 0) {
-      this.listeners.push(listener)
-    }
-  }
-
-  unregisterDataChangeListener(listener: DataChangeListener): void {
-    const pos = this.listeners.indexOf(listener)
-    if (pos >= 0) {
-      this.listeners.splice(pos, 1)
-    }
-  }
-
-  replaceAll(list: MessageArticle[]): void {
-    this.dataList = []
-    for (let i = 0; i < list.length; i++) {
-      this.dataList.push(list[i])
-    }
-    this.notifyReload()
-  }
-
-  clear(): void {
-    this.dataList = []
-    this.notifyReload()
-  }
-
-  private notifyReload(): void {
-    for (let i = 0; i < this.listeners.length; i++) {
-      this.listeners[i].onDataReloaded()
-    }
-  }
+/** 私信内容列表数据源。 */
+class MessageArticleDataSource extends BaseLazyDataSource<MessageArticle> {
 }
 
-class NotificationDataSource implements IDataSource {
-  private dataList: NotificationInfo[] = []
-  private listeners: DataChangeListener[] = []
-
-  totalCount(): number {
-    return this.dataList.length
-  }
-
-  getData(index: number): NotificationInfo {
-    return this.dataList[index]
-  }
-
-  registerDataChangeListener(listener: DataChangeListener): void {
-    if (this.listeners.indexOf(listener) < 0) {
-      this.listeners.push(listener)
-    }
-  }
-
-  unregisterDataChangeListener(listener: DataChangeListener): void {
-    const pos = this.listeners.indexOf(listener)
-    if (pos >= 0) {
-      this.listeners.splice(pos, 1)
-    }
-  }
-
-  replaceAll(list: NotificationInfo[]): void {
-    this.dataList = []
-    for (let i = 0; i < list.length; i++) {
-      this.dataList.push(list[i])
-    }
-    this.notifyReload()
-  }
-
-  clear(): void {
-    this.dataList = []
-    this.notifyReload()
-  }
-
-  private notifyReload(): void {
-    for (let i = 0; i < this.listeners.length; i++) {
-      this.listeners[i].onDataReloaded()
-    }
-  }
+/** 通知列表数据源。 */
+class NotificationDataSource extends BaseLazyDataSource<NotificationInfo> {
 }
 
-class BlacklistDataSource implements IDataSource {
-  private dataList: BlacklistEntry[] = []
-  private listeners: DataChangeListener[] = []
-
-  totalCount(): number {
-    return this.dataList.length
-  }
-
-  getData(index: number): BlacklistEntry {
-    return this.dataList[index]
-  }
-
-  registerDataChangeListener(listener: DataChangeListener): void {
-    if (this.listeners.indexOf(listener) < 0) {
-      this.listeners.push(listener)
-    }
-  }
-
-  unregisterDataChangeListener(listener: DataChangeListener): void {
-    const pos = this.listeners.indexOf(listener)
-    if (pos >= 0) {
-      this.listeners.splice(pos, 1)
-    }
-  }
-
-  replaceAll(list: BlacklistEntry[]): void {
-    this.dataList = []
-    for (let i = 0; i < list.length; i++) {
-      this.dataList.push(list[i])
-    }
-    this.notifyReload()
-  }
-
-  clear(): void {
-    this.dataList = []
-    this.notifyReload()
-  }
-
-  private notifyReload(): void {
-    for (let i = 0; i < this.listeners.length; i++) {
-      this.listeners[i].onDataReloaded()
-    }
-  }
+/** 黑名单列表数据源。 */
+class BlacklistDataSource extends BaseLazyDataSource<BlacklistEntry> {
 }
 
 interface SidebarBoardItem {
@@ -344,46 +46,29 @@ interface SidebarSection {
   collapsible: boolean;
 }
 
-class SidebarDataSource implements IDataSource {
-  private dataList: SidebarSection[] = []
-  private listeners: DataChangeListener[] = []
-
-  totalCount(): number {
-    return this.dataList.length
-  }
-
-  getData(index: number): SidebarSection {
-    return this.dataList[index]
-  }
-
-  registerDataChangeListener(listener: DataChangeListener): void {
-    if (this.listeners.indexOf(listener) < 0) {
-      this.listeners.push(listener)
-    }
-  }
-
-  unregisterDataChangeListener(listener: DataChangeListener): void {
-    const pos = this.listeners.indexOf(listener)
-    if (pos >= 0) {
-      this.listeners.splice(pos, 1)
-    }
-  }
-
-  replaceAll(list: SidebarSection[]): void {
-    this.dataList = []
-    for (let i = 0; i < list.length; i++) {
-      this.dataList.push(list[i])
-    }
-    this.notifyReload()
-  }
-
+/**
+ * 侧边栏分区数据源。
+ * 在基类共性逻辑之外，额外提供按 section id 查询下标、
+ * 覆写单个分区并触发数据变更通知。
+ */
+class SidebarDataSource extends BaseLazyDataSource<SidebarSection> {
+  /**
+   * 覆写指定下标的分区并触发该位置的数据变更通知。
+   *
+   * @param index - 目标下标
+   * @param section - 新分区
+   */
   updateSection(index: number, section: SidebarSection): void {
     this.dataList[index] = section
-    for (let i = 0; i < this.listeners.length; i++) {
-      this.listeners[i].onDataChange(index)
-    }
+    this.notifyDataChange(index)
   }
 
+  /**
+   * 按 section id 查找下标，未命中返回 -1。
+   *
+   * @param sectionId - 分区 id
+   * @returns 分区下标，未找到为 -1
+   */
   indexOf(sectionId: string): number {
     for (let i = 0; i < this.dataList.length; i++) {
       if (this.dataList[i].id === sectionId) {
@@ -392,197 +77,22 @@ class SidebarDataSource implements IDataSource {
     }
     return -1
   }
-
-  clear(): void {
-    this.dataList = []
-    this.notifyReload()
-  }
-
-  private notifyReload(): void {
-    for (let i = 0; i < this.listeners.length; i++) {
-      this.listeners[i].onDataReloaded()
-    }
-  }
 }
 
-class CategoryDataSource implements IDataSource {
-  private dataList: Category[] = []
-  private listeners: DataChangeListener[] = []
-
-  totalCount(): number {
-    return this.dataList.length
-  }
-
-  getData(index: number): Category {
-    return this.dataList[index]
-  }
-
-  registerDataChangeListener(listener: DataChangeListener): void {
-    if (this.listeners.indexOf(listener) < 0) {
-      this.listeners.push(listener)
-    }
-  }
-
-  unregisterDataChangeListener(listener: DataChangeListener): void {
-    const pos = this.listeners.indexOf(listener)
-    if (pos >= 0) {
-      this.listeners.splice(pos, 1)
-    }
-  }
-
-  replaceAll(list: Category[]): void {
-    this.dataList = []
-    for (let i = 0; i < list.length; i++) {
-      this.dataList.push(list[i])
-    }
-    this.notifyReload()
-  }
-
-  clear(): void {
-    this.dataList = []
-    this.notifyReload()
-  }
-
-  private notifyReload(): void {
-    for (let i = 0; i < this.listeners.length; i++) {
-      this.listeners[i].onDataReloaded()
-    }
-  }
+/** 论坛分类列表数据源。 */
+class CategoryDataSource extends BaseLazyDataSource<Category> {
 }
 
-class HistoryItemDataSource implements IDataSource {
-  private dataList: object[] = []
-  private listeners: DataChangeListener[] = []
-
-  totalCount(): number {
-    return this.dataList.length
-  }
-
-  getData(index: number): object {
-    return this.dataList[index]
-  }
-
-  registerDataChangeListener(listener: DataChangeListener): void {
-    if (this.listeners.indexOf(listener) < 0) {
-      this.listeners.push(listener)
-    }
-  }
-
-  unregisterDataChangeListener(listener: DataChangeListener): void {
-    const pos = this.listeners.indexOf(listener)
-    if (pos >= 0) {
-      this.listeners.splice(pos, 1)
-    }
-  }
-
-  replaceAll(list: object[]): void {
-    this.dataList = []
-    for (let i = 0; i < list.length; i++) {
-      this.dataList.push(list[i])
-    }
-    this.notifyReload()
-  }
-
-  clear(): void {
-    this.dataList = []
-    this.notifyReload()
-  }
-
-  private notifyReload(): void {
-    for (let i = 0; i < this.listeners.length; i++) {
-      this.listeners[i].onDataReloaded()
-    }
-  }
+/** 浏览历史列表数据源。 */
+class HistoryItemDataSource extends BaseLazyDataSource<object> {
 }
 
-class NotesDataSource implements IDataSource {
-  private dataList: UserNoteEntry[] = []
-  private listeners: DataChangeListener[] = []
-
-  totalCount(): number {
-    return this.dataList.length
-  }
-
-  getData(index: number): UserNoteEntry {
-    return this.dataList[index]
-  }
-
-  registerDataChangeListener(listener: DataChangeListener): void {
-    if (this.listeners.indexOf(listener) < 0) {
-      this.listeners.push(listener)
-    }
-  }
-
-  unregisterDataChangeListener(listener: DataChangeListener): void {
-    const pos = this.listeners.indexOf(listener)
-    if (pos >= 0) {
-      this.listeners.splice(pos, 1)
-    }
-  }
-
-  replaceAll(list: UserNoteEntry[]): void {
-    this.dataList = []
-    for (let i = 0; i < list.length; i++) {
-      this.dataList.push(list[i])
-    }
-    this.notifyReload()
-  }
-
-  clear(): void {
-    this.dataList = []
-    this.notifyReload()
-  }
-
-  private notifyReload(): void {
-    for (let i = 0; i < this.listeners.length; i++) {
-      this.listeners[i].onDataReloaded()
-    }
-  }
+/** 用户备注列表数据源。 */
+class NotesDataSource extends BaseLazyDataSource<UserNoteEntry> {
 }
 
-class FilterKeywordDataSource implements IDataSource {
-  private dataList: FilterKeyword[] = []
-  private listeners: DataChangeListener[] = []
-
-  totalCount(): number {
-    return this.dataList.length
-  }
-
-  getData(index: number): FilterKeyword {
-    return this.dataList[index]
-  }
-
-  registerDataChangeListener(listener: DataChangeListener): void {
-    if (this.listeners.indexOf(listener) < 0) {
-      this.listeners.push(listener)
-    }
-  }
-
-  unregisterDataChangeListener(listener: DataChangeListener): void {
-    const pos = this.listeners.indexOf(listener)
-    if (pos >= 0) {
-      this.listeners.splice(pos, 1)
-    }
-  }
-
-  replaceAll(list: FilterKeyword[]): void {
-    this.dataList = []
-    for (let i = 0; i < list.length; i++) {
-      this.dataList.push(list[i])
-    }
-    this.notifyReload()
-  }
-
-  clear(): void {
-    this.dataList = []
-    this.notifyReload()
-  }
-
-  private notifyReload(): void {
-    for (let i = 0; i < this.listeners.length; i++) {
-      this.listeners[i].onDataReloaded()
-    }
-  }
+/** 过滤关键词列表数据源。 */
+class FilterKeywordDataSource extends BaseLazyDataSource<FilterKeyword> {
 }
 
 export {
