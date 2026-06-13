@@ -1,0 +1,71 @@
+import { SettingsContext } from '../SettingsContext'
+import { SettingsState } from '../SettingsState'
+
+/**
+ * 媒体设置域子 store。
+ *
+ * 承载图片加载策略 / 图片尺寸预取 / 视频静音 / TTS（人声语速音量音调）字段及其 setter。
+ */
+export class MediaSettings {
+  private ctx: SettingsContext
+
+  constructor(ctx: SettingsContext) {
+    this.ctx = ctx
+  }
+
+  setImageLoadStrategy(v: string): void {
+    this.ctx.state.imageLoadStrategy = v
+    AppStorage.setOrCreate('imageLoadStrategy', v)
+    const version: number = AppStorage.get<number>('networkChangeVersion') ?? 0
+    AppStorage.setOrCreate('networkChangeVersion', version + 1)
+    this.ctx.persist()
+  }
+
+  setEnableImageSizePrefetch(enabled: boolean): void {
+    this.ctx.state.enableImageSizePrefetch = enabled
+    AppStorage.setOrCreate('enableImageSizePrefetch', enabled)
+    this.ctx.persist()
+  }
+
+  /** 设置视频全局静音开关（同步 AppStorage 供 UI 响应式读取，并持久化） */
+  setVideoMuted(enabled: boolean): void {
+    this.ctx.state.videoMuted = enabled
+    AppStorage.setOrCreate('videoMuted', enabled)
+    this.ctx.persist()
+  }
+
+  setTtsPerson(v: number): void {
+    this.ctx.state.ttsPerson = v
+    this.ctx.persist()
+  }
+
+  setTtsSpeed(v: number): void {
+    this.ctx.state.ttsSpeed = v
+    this.ctx.persist()
+  }
+
+  setTtsVolume(v: number): void {
+    this.ctx.state.ttsVolume = v
+    this.ctx.persist()
+  }
+
+  setTtsPitch(v: number): void {
+    this.ctx.state.ttsPitch = v
+    this.ctx.persist()
+  }
+
+  /** 从持久化对象加载媒体字段 */
+  load(saved: SettingsState): void {
+    if (saved.imageLoadStrategy !== undefined) {
+      this.ctx.state.imageLoadStrategy = saved.imageLoadStrategy
+    }
+    if (saved.enableImageSizePrefetch !== undefined) {
+      this.ctx.state.enableImageSizePrefetch = saved.enableImageSizePrefetch
+    }
+    if (saved.videoMuted !== undefined) this.ctx.state.videoMuted = saved.videoMuted
+    if (saved.ttsPerson !== undefined) this.ctx.state.ttsPerson = saved.ttsPerson
+    if (saved.ttsSpeed !== undefined) this.ctx.state.ttsSpeed = saved.ttsSpeed
+    if (saved.ttsVolume !== undefined) this.ctx.state.ttsVolume = saved.ttsVolume
+    if (saved.ttsPitch !== undefined) this.ctx.state.ttsPitch = saved.ttsPitch
+  }
+}
