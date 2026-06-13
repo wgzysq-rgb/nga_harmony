@@ -2,7 +2,7 @@ import { http } from '@kit.NetworkKit';
 import { cryptoFramework } from '@kit.CryptoArchitectureKit';
 import { util } from '@kit.ArkTS';
 import { preprocessJson } from '../parser/NgaJsonSanitizer';
-import { ngaThrottler } from './Throttle';
+import { ngaThrottler } from '../common/concurrency/Throttler';
 
 // ============== 类型定义 ==============
 

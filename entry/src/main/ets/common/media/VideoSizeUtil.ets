@@ -1,12 +1,17 @@
 import media from '@ohos.multimedia.media'
 import { ImageSize } from './ImageSizeUtil'
 import { LruCache } from '../cache/LruCache'
+import { RequestQueue } from '../concurrency/RequestQueue'
 
 const cache: LruCache<ImageSize> = new LruCache<ImageSize>(100)
 const pending: Map<string, Promise<ImageSize | null>> = new Map()
 
 /** 视频元数据获取超时(毫秒) */
 const FETCH_TIMEOUT: number = 15000
+
+/** 视频尺寸预取并发上限 */
+const MAX_CONCURRENT: number = 4
+const queue: RequestQueue = new RequestQueue(MAX_CONCURRENT)
 
 function applyOrientation(size: ImageSize, orientation: number): ImageSize {
   if (orientation === 90 || orientation === 270) {
@@ -15,30 +20,6 @@ function applyOrientation(size: ImageSize, orientation: number): ImageSize {
     size.height = w
   }
   return size
-}
-
-const MAX_CONCURRENT: number = 4
-let activeCount: number = 0
-const requestQueue: (() => void)[] = []
-
-function scheduleRequest(run: () => void): void {
-  if (activeCount < MAX_CONCURRENT) {
-    activeCount++
-    run()
-  } else {
-    requestQueue.push(run)
-  }
-}
-
-function onRequestDone(): void {
-  activeCount--
-  while (requestQueue.length > 0 && activeCount < MAX_CONCURRENT) {
-    const next: (() => void) | undefined = requestQueue.shift()
-    if (next) {
-      activeCount++
-      next()
-    }
-  }
 }
 
 async function doFetch(url: string): Promise<ImageSize | null> {
@@ -81,13 +62,13 @@ async function doFetch(url: string): Promise<ImageSize | null> {
       } catch (e) {
       }
     }
-    onRequestDone()
+    queue.done()
   }
 }
 
 function startFetch(url: string): Promise<ImageSize | null> {
   return new Promise<ImageSize | null>((resolve: (value: ImageSize | null) => void) => {
-    scheduleRequest(() => {
+    queue.schedule(() => {
       doFetch(url).then((result: ImageSize | null) => {
         resolve(result)
       }, () => {

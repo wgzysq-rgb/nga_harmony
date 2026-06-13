@@ -1,5 +1,6 @@
 import { http } from '@kit.NetworkKit';
 import { LruCache } from '../cache/LruCache';
+import { RequestQueue } from '../concurrency/RequestQueue';
 
 export class ImageSize {
   width: number = 0;
@@ -9,29 +10,9 @@ export class ImageSize {
 const cache: LruCache<ImageSize> = new LruCache<ImageSize>(500);
 const pending: Map<string, Promise<ImageSize | null>> = new Map();
 
+/** 图片尺寸预取并发上限 */
 const MAX_CONCURRENT: number = 6;
-let activeCount: number = 0;
-const requestQueue: (() => void)[] = [];
-
-function scheduleRequest(run: () => void): void {
-  if (activeCount < MAX_CONCURRENT) {
-    activeCount++;
-    run();
-  } else {
-    requestQueue.push(run);
-  }
-}
-
-function onRequestDone(): void {
-  activeCount--;
-  while (requestQueue.length > 0 && activeCount < MAX_CONCURRENT) {
-    const next: (() => void) | undefined = requestQueue.shift();
-    if (next) {
-      activeCount++;
-      next();
-    }
-  }
-}
+const queue: RequestQueue = new RequestQueue(MAX_CONCURRENT);
 
 function getJpegSize(buf: ArrayBuffer): ImageSize | null {
   const dv: DataView = new DataView(buf);
@@ -192,13 +173,13 @@ async function doFetchRequest(url: string): Promise<ImageSize | null> {
 
 function doFetch(url: string): Promise<ImageSize | null> {
   return new Promise<ImageSize | null>((resolve: (value: ImageSize | null) => void) => {
-    scheduleRequest(() => {
+    queue.schedule(() => {
       doFetchRequest(url).then((result: ImageSize | null) => {
         resolve(result);
-        onRequestDone();
+        queue.done();
       }, () => {
         resolve(null);
-        onRequestDone();
+        queue.done();
       });
     });
   });
