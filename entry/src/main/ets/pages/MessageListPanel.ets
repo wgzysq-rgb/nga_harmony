@@ -4,7 +4,8 @@
 
 import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
-import { getMessageList, sendMessage, MessageListResult, MessageSendResult } from '../service/NgaApi'
+import { getMessageList, sendMessage } from '../service/NgaApi'
+import type { MessageListResult, MessageSendResult } from '../model/MessageResult'
 import type { MessageThreadInfo } from '../model/Message'
 import { AppColors, BreakpointType } from '../common/Constants'
 import { formatTime, unescapeHtml } from '../common/Utils'

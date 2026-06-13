@@ -1,4 +1,4 @@
-import { PostInfo } from '../service/NgaApi'
+import type { PostInfo } from '../model/PostInfo'
 
 class PrefetchedPageData {
   posts: PostInfo[] = []

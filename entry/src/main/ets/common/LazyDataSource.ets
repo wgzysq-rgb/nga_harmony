@@ -1,4 +1,4 @@
-import { PostInfo } from '../service/NgaApi'
+import type { PostInfo } from '../model/PostInfo'
 import type { MessageThreadInfo, MessageArticle } from '../model/Message'
 import type { NotificationInfo } from '../model/Notification'
 import { BlacklistEntry } from '../store/SettingsStore'

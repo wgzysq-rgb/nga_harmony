@@ -4,7 +4,9 @@
 
 import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
-import { getTopicList, createTopicListParams, searchForum, TopicListParams, TopicListResult, SearchForumResult } from '../service/NgaApi'
+import { getTopicList, createTopicListParams, searchForum } from '../service/NgaApi'
+import type { TopicListParams } from '../service/NgaApi'
+import type { TopicListResult, SearchForumResult } from '../model/NgaApiResults'
 import { AppColors, FONT_COLORS, BreakpointType } from '../common/Constants'
 import { formatTime, escHtml, unescapeHtml } from '../common/Utils'
 import { ThreadDataSource } from '../common/LazyDataSource'

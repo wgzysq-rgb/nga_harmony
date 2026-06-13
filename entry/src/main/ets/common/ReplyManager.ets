@@ -1,6 +1,8 @@
-import { PostInfo, PostAuthResult, PostReplyResult } from '../service/NgaApi'
+import type { PostInfo } from '../model/PostInfo'
+import { PostAuthResult, PostReplyResult } from '../model/ThreadResult'
 import { getPostAuth, postReply, postComment } from '../service/NgaApi'
-import { uploadAttachment, UploadAttachmentResult } from '../service/NgaApi'
+import { uploadAttachment } from '../service/NgaApi'
+import type { UploadAttachmentResult } from '../model/NgaApiResults'
 import { appStore } from '../store/AppStore'
 
 export enum ReplyType {

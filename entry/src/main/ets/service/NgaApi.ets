@@ -27,160 +27,30 @@ import type { NgaNotification } from '../model/Notification';
 import type { MessageListInfo, MessageDetailInfo } from '../model/Message';
 import { ProfileData, ReputationData, AdminForumsData } from '../model/User';
 
-// ============== 返回类型定义 ==============
+// ============== 返回类型（已迁出至 model/） ==============
+// 领域数据类迁出至 model/ 层，此处值 import 供业务逻辑 `new` 使用，
+// 同时 re-export 维持现有 `from '../service/NgaApi'` 的类型/构造导入兼容。
+import {
+  ApiResult, VoteResult, CaptchaResult, LoginStep1Result, LoginStep2Result,
+  CategoriesResult, TopicListResult, NotificationsResult, UserProfileResult, DomainResult,
+  CurrentUserResult, CheckinResult, SearchForumResult, InjectResult, UploadAttachmentResult,
+  FavBoardItem, ForumFavoritesResult, ForumStat, UserActivityAnalysis,
+} from '../model/NgaApiResults';
+import { UserInfo } from '../model/UserInfo';
+import { PostInfo, PostAttachInfo } from '../model/PostInfo';
+import { ThreadPagination, ThreadResult, PostAuthResult, PostReplyResult } from '../model/ThreadResult';
+import { MessageListResult, MessageDetailResult, MessageSendResult } from '../model/MessageResult';
 
-export class ApiResult {
-  ok: boolean = false;
-  error: string = '';
-}
-
-export class VoteResult extends ApiResult {
-  message: string = '';
-}
-
-export class CaptchaResult extends ApiResult {
-  image: string = '';
-}
-
-export class LoginStep1Result extends ApiResult {
-  needCaptcha: boolean = false;
-  loginToken: string = '';
-  captchaId: string = '';
-  captchaImage: string = '';
-}
-
-export class LoginStep2Result extends ApiResult {
-  needCaptcha: boolean = false;
-  loginToken: string = '';
-  captchaId: string = '';
-  captchaImage: string = '';
-  token: string = '';
-  user: UserInfo | null = null;
-}
-
-export class UserInfo {
-  uid: string = '';
-  nickName: string = '';
-  avatarUrl: string = '';
-}
-
-export class CategoriesResult extends ApiResult {
-  data: Category[] = [];
-}
-
-export class TopicListResult extends ApiResult {
-  data: TopicListInfo | null = null;
-}
-
-export class PostInfo {
-  tid: number = 0;
-  pid: number = 0;
-  lou: number = 0;
-  authorid: number = 0;
-  author: string = '';
-  subject: string = '';
-  content: string = '';
-  postdate: string = '';
-  level: string = '';
-  yz: string = '';
-  avatar: string = '';
-  signature: string = '';
-  attachs: PostAttachInfo[] = [];
-  comments: PostInfo[] = [];
-  hotReplies: string[] = [];
-  fromClient: string = '';
-  from_client_model: string = '';
-  isanonymous: boolean = false;
-  alterinfo: string = '';
-  score: number = 0;
-  score_2: number = 0;
-  isInBlackList: boolean = false;
-  userNote: string = '';
-  isMuted: boolean = false;
-  reputation: number = 0;
-  memberGroup: string = '';
-  postCount: string = '';
-  muteTime: string = '';
-}
-
-export class PostAttachInfo {
-  aid: string = '';
-  attachurl: string = '';
-  url_utf8_org_name: string = '';
-  name: string = '';
-  ext: string = '';
-  type: string = '';
-  size: number = 0;
-  thumb: number = 0;
-  thumbUrl: string = '';
-  dscp: string = '';
-  subid: number = 0;
-}
-
-export class ThreadPagination {
-  page: number = 1;
-  totalPages: number = 0;
-  totalRows: number = 0;
-}
-
-export class ThreadResult extends ApiResult {
-  threadInfo: ThreadInfo | null = null;
-  forumName: string = '';
-  pagination: ThreadPagination = new ThreadPagination();
-  posts: PostInfo[] = [];
-}
-
-export class PostAuthResult extends ApiResult {
-  auth: string = '';
-  attachUrl: string = '';
-  if_moderator: number = 0;
-}
-
-export class PostReplyResult extends ApiResult {
-  tid: number = 0;
-  pid: string = '';
-}
-
-export class NotificationsResult extends ApiResult {
-  data: NgaNotification[] = [];
-}
-
-export class MessageListResult extends ApiResult {
-  data: MessageListInfo | null = null;
-}
-
-export class MessageDetailResult extends ApiResult {
-  data: MessageDetailInfo | null = null;
-}
-
-export class MessageSendResult extends ApiResult {
-  mid: string = '';
-}
-
-export class UserProfileResult extends ApiResult {
-  data: ProfileData | null = null;
-}
-
-export class DomainResult extends ApiResult {
-  domain: string = '';
-}
-
-export class CurrentUserResult extends ApiResult {
-  user: UserInfo | null = null;
-}
-
-export class CheckinResult extends ApiResult {
-  data: object | null = null;
-}
-
-export class SearchForumResult extends ApiResult {
-  data: object | null = null;
-}
-
-export class InjectResult extends ApiResult {
-  token: string = '';
-  user: UserInfo | null = null;
-}
+export {
+  ApiResult, VoteResult, CaptchaResult, LoginStep1Result, LoginStep2Result,
+  CategoriesResult, TopicListResult, NotificationsResult, UserProfileResult, DomainResult,
+  CurrentUserResult, CheckinResult, SearchForumResult, InjectResult, UploadAttachmentResult,
+  FavBoardItem, ForumFavoritesResult, ForumStat, UserActivityAnalysis,
+} from '../model/NgaApiResults';
+export { UserInfo } from '../model/UserInfo';
+export { PostInfo, PostAttachInfo } from '../model/PostInfo';
+export { ThreadPagination, ThreadResult, PostAuthResult, PostReplyResult } from '../model/ThreadResult';
+export { MessageListResult, MessageDetailResult, MessageSendResult } from '../model/MessageResult';
 
 // ============== 临时登录会话 ==============
 
@@ -981,12 +851,6 @@ export async function postComment(token: string, tid: number, pid: number,
 
 // ============== 附件上传 ==============
 
-export class UploadAttachmentResult extends ApiResult {
-  url: string = ''
-  attachments: string = ''
-  attachmentsCheck: string = ''
-}
-
 export async function uploadAttachment(token: string, auth: string,
   fid: number, imageData: ArrayBuffer, fileName: string): Promise<UploadAttachmentResult> {
   const result = new UploadAttachmentResult()
@@ -1039,16 +903,6 @@ export async function uploadAttachment(token: string, auth: string,
 }
 
 // ============== 收藏 ==============
-
-export interface FavBoardItem {
-  fid: number
-  stid: number
-  name: string
-}
-
-export class ForumFavoritesResult extends ApiResult {
-  data: FavBoardItem[] = []
-}
 
 export async function fetchForumFavorites(token: string): Promise<ForumFavoritesResult> {
   const result = new ForumFavoritesResult()
@@ -1316,21 +1170,6 @@ export async function sendMessage(token: string, to: string, mid: string,
 }
 
 // ============== 用户成分分析 ==============
-
-export class ForumStat {
-  name: string = '';
-  topicCount: number = 0;
-  replyCount: number = 0;
-}
-
-export class UserActivityAnalysis {
-  forumList: ForumStat[] = [];
-  hourDistribution: number[] = [];
-  topicCount: number = 0;
-  replyCount: number = 0;
-  topicSubjects: string[] = [];
-  replySnippets: string[] = [];
-}
 
 export async function getUserActivityAnalysis(token: string, uid: string): Promise<UserActivityAnalysis | null> {
   const result = new UserActivityAnalysis();

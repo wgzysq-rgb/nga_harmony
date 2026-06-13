@@ -3,7 +3,7 @@ import { uniformTypeDescriptor as utd } from '@kit.ArkData';
 import { common, Context } from '@kit.AbilityKit';
 import { ngaClient } from '../service/NgaClient';
 import { unescapeHtml } from '../common/Utils';
-import type { PostInfo } from '../service/NgaApi';
+import type { PostInfo } from '../model/PostInfo';
 
 export function shareThread(context: Context, tid: number, threadTitle: string): void {
   let builder: string = ''

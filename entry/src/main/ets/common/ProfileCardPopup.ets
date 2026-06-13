@@ -7,7 +7,8 @@ import { Avatar } from '../common/Avatar'
 import { MakeNoteDialog } from '../common/Dialogs'
 import { deviceInfo } from '@kit.BasicServicesKit'
 
-import { getUserActivityAnalysis, UserActivityAnalysis } from '../service/NgaApi'
+import { getUserActivityAnalysis } from '../service/NgaApi'
+import type { UserActivityAnalysis } from '../model/NgaApiResults'
 
 @Component
 export struct ProfileCardPopup {
