@@ -25,6 +25,13 @@ enum HoldingHandStatus {
   UNKNOWN_STATUS = 16
 }
 
+/** 预加载页面临时结果 — startPrefetch 内部收集用 */
+class PrefetchPageResult {
+  page: number = 0
+  threads: object[] = []
+  totalPages: number = 0
+}
+
 @Component
 export struct TopicListPanel {
   @Prop @Watch('onBoardChanged') boardFid: number = 0
@@ -138,6 +145,7 @@ export struct TopicListPanel {
   private async loadTwentyFourTopics(): Promise<void> {
     this.hasError = false
     this.mgr.clearPrefetchedPages()
+    const gen: number = this.mgr.getGeneration()
 
     try {
       const pages: number[] = [1, 2, 3, 4, 5]
@@ -148,6 +156,8 @@ export struct TopicListPanel {
         promises.push(withTimeout<TopicListResult>(getTopicList(appStore.auth.token, params, appStore.getBlacklistIds(), appStore.getEnabledKeywords()), 15000))
       }
       const results: TopicListResult[] = await Promise.all(promises)
+
+      if (gen !== this.mgr.getGeneration()) return
 
       let curTime: number = 0
       const allThreads: object[] = []
@@ -196,13 +206,13 @@ export struct TopicListPanel {
     } catch (e) {
       this.hasError = true
       this.errorMsg = (e as Error).message || '加载失败'
+    } finally {
+      clearTimeout(this.loadingDelayTimer)
+      this.loadingDelayTimer = -1
+      this.loadingContentOpacity = 0
+      this.isLoading = false
+      this.isLoadingMore = false
     }
-
-    clearTimeout(this.loadingDelayTimer)
-    this.loadingDelayTimer = -1
-    this.loadingContentOpacity = 0
-    this.isLoading = false
-    this.isLoadingMore = false
   }
 
   private loadMoreTwentyFourTopics(page: number): void {
@@ -339,7 +349,9 @@ export struct TopicListPanel {
 
   private async startPrefetch(pages: number[]): Promise<void> {
     this.mgr.prefetchInProgress = true
+    const gen: number = this.mgr.getGeneration()
     try {
+      const fetchResults: PrefetchPageResult[] = []
       const promises: Promise<void>[] = []
       for (let i = 0; i < pages.length; i++) {
         const page: number = pages[i]
@@ -351,7 +363,11 @@ export struct TopicListPanel {
                 getTopicList(appStore.auth.token, params, appStore.getBlacklistIds(), appStore.getEnabledKeywords()), 10000
               )
               if (result.ok && result.data) {
-                this.mgr.setPrefetchedPage(page, result.data.threadPageList, result.data.pagination.totalPages)
+                const pr: PrefetchPageResult = new PrefetchPageResult()
+                pr.page = page
+                pr.threads = result.data.threadPageList
+                pr.totalPages = result.data.pagination.totalPages
+                fetchResults.push(pr)
               }
             } catch (e) {
               // silently skip this page
@@ -360,6 +376,11 @@ export struct TopicListPanel {
         )
       }
       await Promise.all(promises)
+      if (gen !== this.mgr.getGeneration()) return
+      for (let i = 0; i < fetchResults.length; i++) {
+        const r: PrefetchPageResult = fetchResults[i]
+        this.mgr.setPrefetchedPage(r.page, r.threads, r.totalPages)
+      }
     } catch (e) {
       // silently fall back
     } finally {

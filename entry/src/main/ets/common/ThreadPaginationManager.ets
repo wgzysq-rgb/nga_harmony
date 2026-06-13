@@ -42,6 +42,7 @@ export class ThreadPaginationManager {
     this.prefetchedPages.clear()
     this.prefetchedPrevPosts = []
     this.prefetchedPrevPage = 0
+    this.generation = 0
   }
 
   hasPrefetchedPage(page: number): boolean {

@@ -219,8 +219,6 @@ export struct ThreadPanel {
   }
 
   private async loadPosts(targetPage: number, mode: string): Promise<void> {
-    const gen: number = this.mgr.nextGeneration()
-
     if (mode === LOAD_REPLACE) {
       this.mgr.reset()
       this.postsDataSource.clear()
@@ -246,6 +244,8 @@ export struct ThreadPanel {
     } else {
       this.isLoadingPrevious = true
     }
+
+    const gen: number = this.mgr.nextGeneration()
 
     try {
       const noteMap: Record<string, string> = appStore.getNoteMap()
@@ -337,6 +337,7 @@ export struct ThreadPanel {
   }
 
   private lastPrefetchTime: number = 0
+  private lastPrefetchPrevTime: number = 0
   private readonly PREFETCH_COOLDOWN_MS: number = 400
 
   private async prefetchNext(): Promise<void> {
@@ -393,6 +394,8 @@ export struct ThreadPanel {
   }
 
   private async prefetchPrev(): Promise<void> {
+    const now: number = Date.now()
+    if (now - this.lastPrefetchPrevTime < this.PREFETCH_COOLDOWN_MS) return
     const defaultPage: number = this.mgr.loadedPageStart - 1
     if (defaultPage < 1) return
     if (this.prefetchPrevInProgress) return
@@ -403,6 +406,7 @@ export struct ThreadPanel {
     }
     if (targetPage < 1) return
 
+    this.lastPrefetchPrevTime = now
     this.prefetchPrevInProgress = true
     const gen: number = this.mgr.getGeneration()
     let ok: boolean = false
