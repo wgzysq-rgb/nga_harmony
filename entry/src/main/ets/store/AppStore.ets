@@ -16,6 +16,7 @@ import type { SettingsState, FavBoard, BlacklistEntry } from './SettingsStore'
 import type { BrowseHistoryEntry } from './HistoryStore'
 import type { ToastState } from '../common/feedback/ToastManager'
 import type { ProfileData } from '../model/User'
+import type { ThreadResult } from '../model/ThreadResult'
 import type { NgaNotification } from '../model/Notification'
 import type { Category } from '../model/Forum'
 
@@ -211,6 +212,9 @@ class AppStoreClass {
   getBrowseHistory(uid: string): Promise<BrowseHistoryEntry[]> { return this.historyStore.getBrowseHistory(uid) }
   addBrowseHistory(uid: string, entry: BrowseHistoryEntry): Promise<void> {
     return this.historyStore.addBrowseHistory(uid, entry)
+  }
+  addBrowseHistoryFromThread(uid: string, result: ThreadResult, tid: string): Promise<void> {
+    return this.historyStore.addFromThreadResult(uid, result, tid)
   }
   removeBrowseHistory(uid: string, tid: string): Promise<void> { return this.historyStore.removeBrowseHistory(uid, tid) }
   clearBrowseHistory(uid: string): Promise<void> { return this.historyStore.clearBrowseHistory(uid) }

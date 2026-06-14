@@ -1,5 +1,7 @@
 import { PreferencesStore } from '../common/infra/PreferencesStore'
 import { SerialQueue } from '../common/infra/SerialQueue'
+import type { ThreadResult } from '../model/ThreadResult'
+import type { ThreadInfo } from '../model/Thread'
 
 /** 浏览历史条目 */
 export class BrowseHistoryEntry {
@@ -73,6 +75,37 @@ export class HistoryStore {
       this.historyItems = newList
     }
     this.persistBrowseHistory(uid)
+  }
+
+  /**
+   * 从帖子详情结果构造浏览历史并写入。
+   * 转换逻辑（threadInfo 优先、posts[0] 兜底、subject 空则不记录）逐字外迁自
+   * ThreadPanel.recordBrowseHistory，行为保持等价。
+   *
+   * @param uid - 当前用户 uid
+   * @param result - getThread 返回的帖子详情结果
+   * @param tid - 主题 tid
+   */
+  async addFromThreadResult(uid: string, result: ThreadResult, tid: string): Promise<void> {
+    const entry: BrowseHistoryEntry = new BrowseHistoryEntry()
+    entry.tid = tid
+    entry.board = result.forumName
+    if (result.threadInfo) {
+      const info: ThreadInfo = result.threadInfo
+      entry.subject = info.subject
+      entry.author = info.author
+      entry.authorid = String(info.authorid)
+      entry.replies = info.replies
+    } else if (result.posts.length > 0) {
+      const firstPost = result.posts[0]
+      entry.subject = firstPost.subject
+      entry.author = firstPost.author
+      entry.authorid = String(firstPost.authorid)
+    }
+    if (entry.subject.length === 0) {
+      return
+    }
+    await this.addBrowseHistory(uid, entry)
   }
 
   async removeBrowseHistory(uid: string, tid: string): Promise<void> {

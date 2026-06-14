@@ -5,13 +5,13 @@ import { BusinessError, deviceInfo } from '@kit.BasicServicesKit'
 import { taskpool } from '@kit.ArkTS'
 
 import { appStore } from '../store/AppStore'
-import { BrowseHistoryEntry } from '../store/HistoryStore'
 import { routerStore, Screen } from '../store/RouterStore'
 import { getThread, addFavorite, removeFavorite, votePost, getActiveDomain } from '../service/NgaApi'
 import type { ThreadResult, PostReplyResult } from '../model/ThreadResult'
 import type { PostInfo } from '../model/PostInfo'
 import type { VoteResult } from '../model/NgaApiResults'
-import { preWarmBatchAwait, getCachedBBNodes } from '../parser/bbcode/BBCodeCache'
+import { getCachedBBNodes } from '../parser/bbcode/BBCodeCache'
+import { collectPostContents, preWarmPosts } from '../common/utils/PostWarmup'
 import { AppColors, ThreadNavMode } from '../common/constants/Constants'
 import { PanelNavBar } from '../common/components/PanelNavBar'
 import { PostItem } from '../common/components/PostItem'
@@ -190,29 +190,6 @@ export struct ThreadPanel {
     }
   }
 
-  private async preWarmPosts(posts: PostInfo[], priority?: taskpool.Priority): Promise<void> {
-    const contents: string[] = this.collectPostContents(posts)
-    try {
-      await preWarmBatchAwait(contents, priority)
-    } catch (e) {
-      // fallback: getCachedBBNodes will sync-parse on cache miss
-    }
-  }
-
-  private collectPostContents(posts: PostInfo[]): string[] {
-    const contents: string[] = []
-    for (let i: number = 0; i < posts.length; i++) {
-      const p: PostInfo = posts[i]
-      if (p.content) contents.push(p.content)
-      if (appStore.settings.showSignature && p.signature) contents.push(p.signature)
-      const comments: PostInfo[] = p.comments
-      for (let j: number = 0; j < comments.length; j++) {
-        if (comments[j].content) contents.push(comments[j].content)
-      }
-    }
-    return contents
-  }
-
   private buildPageArray(): number[] {
     const arr: number[] = []
     for (let i: number = 1; i <= this.pagePickerTotalPages; i++) {
@@ -262,7 +239,7 @@ export struct ThreadPanel {
       if (gen !== this.mgr.getGeneration()) return
 
       if (result.ok) {
-        await this.preWarmPosts(result.posts, taskpool.Priority.HIGH)
+        await preWarmPosts(result.posts, appStore.settings.showSignature, taskpool.Priority.HIGH)
 
         if (result.pagination) {
           this.mgr.totalPages = result.pagination.totalPages
@@ -279,7 +256,7 @@ export struct ThreadPanel {
           this.postsDataSource.replaceAll(result.posts)
           this.pageSwitchPending = false
           if (appStore.auth.isAuthenticated) {
-            this.recordBrowseHistory(result)
+            appStore.addBrowseHistoryFromThread(appStore.auth.uid, result, this.threadTid)
           }
           if (this.threadPid.length > 0) {
             // 延迟一帧确保 LazyForEach 布局完成，目标 item 已创建
@@ -387,7 +364,7 @@ export struct ThreadPanel {
         if (item === null || item.result === null) continue
         if (item.result.ok) {
           this.mgr.setPrefetchedPage(item.page, item.result.posts, item.result.pagination.totalPages)
-          this.preWarmPosts(item.result.posts, taskpool.Priority.MEDIUM).catch(() => {})
+          preWarmPosts(item.result.posts, appStore.settings.showSignature, taskpool.Priority.MEDIUM).catch(() => {})
         }
       }
     } catch (e) {
@@ -427,7 +404,7 @@ export struct ThreadPanel {
       if (result.ok) {
         ok = true
         try {
-          await this.preWarmPosts(result.posts, taskpool.Priority.MEDIUM)
+          await preWarmPosts(result.posts, appStore.settings.showSignature, taskpool.Priority.MEDIUM)
         } catch (e) {
           // 预热失败不影响 posts 存储
         }
@@ -475,28 +452,6 @@ export struct ThreadPanel {
     } else {
       this.loadPosts(prevPage, LOAD_PREPEND)
     }
-  }
-
-  private recordBrowseHistory(result: ThreadResult): void {
-    const entry = new BrowseHistoryEntry()
-    entry.tid = this.threadTid
-    entry.board = result.forumName
-    if (result.threadInfo) {
-      const info: ThreadInfo = result.threadInfo
-      entry.subject = info.subject
-      entry.author = info.author
-      entry.authorid = String(info.authorid)
-      entry.replies = info.replies
-    } else if (result.posts.length > 0) {
-      const firstPost = result.posts[0]
-      entry.subject = firstPost.subject
-      entry.author = firstPost.author
-      entry.authorid = String(firstPost.authorid)
-    }
-    if (entry.subject.length === 0) {
-      return
-    }
-    appStore.addBrowseHistory(appStore.auth.uid, entry)
   }
 
   private async handleReplySend(text: string, isAnony: boolean): Promise<void> {

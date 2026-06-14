@@ -15,6 +15,17 @@ import { BBCodeContentView } from '../common/components/BBCodeContentView'
 import { openImageViewer, handleForumLink } from '../common/utils/LinkUtils'
 import { Context } from '@kit.AbilityKit'
 
+/**
+ * 个人主页统计项数据模型（驱动 Grid 中的 ForEach）。
+ * visible=false 的项不参与渲染（等价于原 if 条件分支）。
+ */
+class StatItem {
+  iconRes: Resource = $r('app.media.icon_chat_bubble')
+  label: string = ''
+  value: string = ''
+  visible: boolean = true
+}
+
 @Component
 export struct ProfilePanel {
   @State isLoading: boolean = true
@@ -115,23 +126,6 @@ export struct ProfilePanel {
     }
   }
 
-  private async handleCheckin(): Promise<void> {
-    this.checkinLoading = true
-    try {
-      const result = await checkin(appStore.auth.token)
-      if (result.ok) {
-        this.checkinResult = '签到成功'
-      } else {
-        this.checkinResult = result.error || '签到失败'
-      }
-    } catch (e) {
-      this.checkinResult = '签到失败'
-    }
-    this.checkinLoading = false
-    appStore.showToast(this.checkinResult)
-    setTimeout(() => { this.checkinResult = '' }, 3000)
-  }
-
   private formatBadge(count: number): string {
     if (count <= 0) return ''
     if (count > 99) return '99+'
@@ -147,29 +141,63 @@ export struct ProfilePanel {
     return template.trim()
   }
 
-  private dispatchAction(actionType: number): void {
-    switch (actionType) {
-      case 0:
-        routerStore.navigateActivity(Screen.messages())
-        break
-      case 1:
-        routerStore.navigateActivity(Screen.notifications())
-        break
-      case 2:
-        routerStore.navigateActivity(Screen.topicList('我的收藏', 0, '', '1'))
-        break
-      case 3:
-        routerStore.navigateActivity(Screen.browseHistory())
-        break
-      case 4:
-        this.handleCheckin()
-        break
-      case 5:
-        routerStore.navigateActivity(Screen.settings())
-        break
-      default:
-        break
+  /**
+   * 构造个人主页统计项数组（数据驱动 Grid ForEach）。
+   * 格式化规则与原 7 个硬编码 GridItem 逐字一致：
+   * posts/money/rvrc 走 fmtNum；regdate 走 formatTime 或兜底「未知」；
+   * group 兜底「普通会员」；fame/followByNum 仅在 >0 时显示。
+   */
+  private buildStatItems(): StatItem[] {
+    const items: StatItem[] = []
+    const p: ProfileData = this.profile!
+
+    let s1: StatItem = new StatItem()
+    s1.iconRes = $r('app.media.icon_chat_bubble')
+    s1.label = '发帖数'
+    s1.value = fmtNum(p.posts)
+    items.push(s1)
+
+    let s2: StatItem = new StatItem()
+    s2.iconRes = $r('app.media.icon_money')
+    s2.label = '金钱'
+    s2.value = fmtNum(p.money)
+    items.push(s2)
+
+    let s3: StatItem = new StatItem()
+    s3.iconRes = $r('app.media.icon_medal')
+    s3.label = '威望'
+    s3.value = fmtNum(p.rvrc)
+    items.push(s3)
+
+    let s4: StatItem = new StatItem()
+    s4.iconRes = $r('app.media.icon_calendar')
+    s4.label = '注册日期'
+    s4.value = p.regdate ? formatTime(Number(p.regdate)) : '未知'
+    items.push(s4)
+
+    let s5: StatItem = new StatItem()
+    s5.iconRes = $r('app.media.icon_people')
+    s5.label = '会员组'
+    s5.value = p.group || '普通会员'
+    items.push(s5)
+
+    if (Number(p.fame) > 0) {
+      let s6: StatItem = new StatItem()
+      s6.iconRes = $r('app.media.icon_star')
+      s6.label = '声望'
+      s6.value = fmtNum(p.fame)
+      items.push(s6)
     }
+
+    if (Number(p.followByNum) > 0) {
+      let s7: StatItem = new StatItem()
+      s7.iconRes = $r('app.media.icon_shield')
+      s7.label = '被关注'
+      s7.value = p.followByNum
+      items.push(s7)
+    }
+
+    return items
   }
 
   build() {
@@ -258,101 +286,21 @@ export struct ProfilePanel {
             .padding({ top: 24 })
 
             Grid() {
-              GridItem() {
-                Column() {
-                  Row() {
-                    Image($r('app.media.icon_chat_bubble')).width(16).height(16).fillColor(AppColors.textSecondary)
-                    Text('发帖数').fontSize(12).fontColor(AppColors.textSecondary).margin({ left: 4 })
-                  }
-                  .alignItems(VerticalAlign.Center)
-                  Text(fmtNum(this.profile!.posts)).fontSize(15).fontWeight(FontWeight.Medium).fontColor(AppColors.textPrimary).margin({ top: 6 })
-                }
-                .alignItems(HorizontalAlign.Center)
-                .width('100%')
-                .padding({ top: 12, bottom: 12 })
-              }
-              GridItem() {
-                Column() {
-                  Row() {
-                    Image($r('app.media.icon_money')).width(16).height(16).fillColor(AppColors.textSecondary)
-                    Text('金钱').fontSize(12).fontColor(AppColors.textSecondary).margin({ left: 4 })
-                  }
-                  .alignItems(VerticalAlign.Center)
-                  Text(fmtNum(this.profile!.money)).fontSize(15).fontWeight(FontWeight.Medium).fontColor(AppColors.textPrimary).margin({ top: 6 })
-                }
-                .alignItems(HorizontalAlign.Center)
-                .width('100%')
-                .padding({ top: 12, bottom: 12 })
-              }
-              GridItem() {
-                Column() {
-                  Row() {
-                    Image($r('app.media.icon_medal')).width(16).height(16).fillColor(AppColors.textSecondary)
-                    Text('威望').fontSize(12).fontColor(AppColors.textSecondary).margin({ left: 4 })
-                  }
-                  .alignItems(VerticalAlign.Center)
-                  Text(fmtNum(this.profile!.rvrc)).fontSize(15).fontWeight(FontWeight.Medium).fontColor(AppColors.textPrimary).margin({ top: 6 })
-                }
-                .alignItems(HorizontalAlign.Center)
-                .width('100%')
-                .padding({ top: 12, bottom: 12 })
-              }
-              GridItem() {
-                Column() {
-                  Row() {
-                    Image($r('app.media.icon_calendar')).width(16).height(16).fillColor(AppColors.textSecondary)
-                    Text('注册日期').fontSize(12).fontColor(AppColors.textSecondary).margin({ left: 4 })
-                  }
-                  .alignItems(VerticalAlign.Center)
-                  Text(this.profile!.regdate ? formatTime(Number(this.profile!.regdate)) : '未知').fontSize(15).fontWeight(FontWeight.Medium).fontColor(AppColors.textPrimary).margin({ top: 6 })
-                }
-                .alignItems(HorizontalAlign.Center)
-                .width('100%')
-                .padding({ top: 12, bottom: 12 })
-              }
-              GridItem() {
-                Column() {
-                  Row() {
-                    Image($r('app.media.icon_people')).width(16).height(16).fillColor(AppColors.textSecondary)
-                    Text('会员组').fontSize(12).fontColor(AppColors.textSecondary).margin({ left: 4 })
-                  }
-                  .alignItems(VerticalAlign.Center)
-                  Text(this.profile!.group || '普通会员').fontSize(15).fontWeight(FontWeight.Medium).fontColor(AppColors.textPrimary).margin({ top: 6 })
-                }
-                .alignItems(HorizontalAlign.Center)
-                .width('100%')
-                .padding({ top: 12, bottom: 12 })
-              }
-              if (Number(this.profile!.fame) > 0) {
+              ForEach(this.buildStatItems(), (item: StatItem) => {
                 GridItem() {
                   Column() {
                     Row() {
-                      Image($r('app.media.icon_star')).width(16).height(16).fillColor(AppColors.textSecondary)
-                      Text('声望').fontSize(12).fontColor(AppColors.textSecondary).margin({ left: 4 })
+                      Image(item.iconRes).width(16).height(16).fillColor(AppColors.textSecondary)
+                      Text(item.label).fontSize(12).fontColor(AppColors.textSecondary).margin({ left: 4 })
                     }
                     .alignItems(VerticalAlign.Center)
-                    Text(fmtNum(this.profile!.fame)).fontSize(15).fontWeight(FontWeight.Medium).fontColor(AppColors.textPrimary).margin({ top: 6 })
+                    Text(item.value).fontSize(15).fontWeight(FontWeight.Medium).fontColor(AppColors.textPrimary).margin({ top: 6 })
                   }
                   .alignItems(HorizontalAlign.Center)
                   .width('100%')
                   .padding({ top: 12, bottom: 12 })
                 }
-              }
-              if (Number(this.profile!.followByNum) > 0) {
-                GridItem() {
-                  Column() {
-                    Row() {
-                      Image($r('app.media.icon_shield')).width(16).height(16).fillColor(AppColors.textSecondary)
-                      Text('被关注').fontSize(12).fontColor(AppColors.textSecondary).margin({ left: 4 })
-                    }
-                    .alignItems(VerticalAlign.Center)
-                    Text(this.profile!.followByNum).fontSize(15).fontWeight(FontWeight.Medium).fontColor(AppColors.textPrimary).margin({ top: 6 })
-                  }
-                  .alignItems(HorizontalAlign.Center)
-                  .width('100%')
-                  .padding({ top: 12, bottom: 12 })
-                }
-              }
+              }, (item: StatItem) => item.label)
             }
             .columnsTemplate(this.getStatGridTemplate())
             .columnsGap(8)
