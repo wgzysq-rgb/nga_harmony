@@ -3,8 +3,7 @@
  * 含 HTML 强制模式调试开关、JSON/HTML 双通道解析与图片预热。
  */
 
-import { ngaClient } from '../NgaClient';
-import { ngaUploadFile } from '../NgaClient';
+import { ngaClient, ngaUploadFile } from '../NgaClient';
 import { appStore } from '../../store/AppStore';
 import { parseThreadData } from '../../parser/ThreadParser';
 import { parseNgaError } from '../../parser/ErrorParser';
@@ -13,6 +12,7 @@ import { resolveAttachUrl } from '../../parser/_shared/AttachUrl';
 import { parseHtmlTask } from '../../parser/task/HtmlParseTask';
 import { taskpool } from '@kit.ArkTS';
 import { ImageLoadStrategy } from '../../common/constants/Constants';
+import { KEY_FORCE_HTML_MODE } from '../../common/constants/AppStorageKeys';
 import { fetchImageSize } from '../../common/media/ImageSizeUtil';
 import { isWifiConnected } from '../../common/utils/NetworkUtil';
 import type { ThreadData, ThreadRowInfo, Attachment, ThreadInfo } from '../../model/Thread';
@@ -23,15 +23,13 @@ import { UploadAttachmentResult } from '../../model/NgaApiResults';
 // ============== 调试开关 ==============
 
 /** 调试开关：true 时 getThread 强制走 HTML 解析模式，跳过 JSON API */
-const HTML_MODE_KEY: string = 'nga_forceHtmlMode'
-
 function getForceHtmlMode(): boolean {
-  const stored: boolean = AppStorage.get<boolean>(HTML_MODE_KEY) ?? false
+  const stored: boolean = AppStorage.get<boolean>(KEY_FORCE_HTML_MODE) ?? false
   return stored
 }
 
 export function setForceHtmlMode(v: boolean): void {
-  AppStorage.setOrCreate<boolean>(HTML_MODE_KEY, v)
+  AppStorage.setOrCreate<boolean>(KEY_FORCE_HTML_MODE, v)
 }
 
 // ============== 帖子详情 ==============

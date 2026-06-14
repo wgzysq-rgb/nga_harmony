@@ -34,23 +34,6 @@ function extractIntVar(html: string, varName: string, defaultValue: number): num
 }
 
 /**
- * 从 HTML 中提取 `varName = '<字符串>'` 形式的字符串变量。
- *
- * @param html 源 HTML
- * @param varName 变量名
- * @param defaultValue 未找到时的默认值
- * @returns 变量值；未找到时返回 defaultValue
- */
-function extractStringVar(html: string, varName: string, defaultValue: string): string {
-  const regex: RegExp = new RegExp(varName + '\\s*=\\s*\'([^\']*)\'');
-  const match: RegExpExecArray | null = regex.exec(html);
-  if (match) {
-    return match[1];
-  }
-  return defaultValue;
-}
-
-/**
  * 将 NGA HTML 帖子页面解析为与 __output=8 JSON API 相同形状的对象。
  *
  * @param html NGA 帖子页 HTML

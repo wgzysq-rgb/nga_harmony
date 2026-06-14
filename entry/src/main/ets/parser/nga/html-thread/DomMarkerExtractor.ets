@@ -4,40 +4,10 @@
  * 各 extract 函数保守保留独立实现（未强行参数化），原因：
  * - marker 构造存在差异：部分 marker 自带闭合 `>`（如 postsubject），部分需后续 indexOf('>')
  * - 结果后处理存在差异：postcontent/postsubject 调 unescapeHtml，postdate/forumName/threadsubject 调 trim
- * - extractPostAuthorId 走 `lastIndexOf('<a')` + `uid=(\d+)` 正则，逻辑独立
  * 物理拆分零风险，逻辑统一收益低且需逐字节验证，故仅迁移。
  */
 
 import { unescapeHtml } from '../../_shared/HtmlEntityCodec';
-
-/**
- * 按 id 前缀/后缀 + 标签名 + 结束标记，提取标签内文本（已去掉首尾标签）。
- *
- * @param html 源 HTML
- * @param idPrefix id 属性前缀部分（如 `id='postcontent`）
- * @param idSuffix id 属性后缀部分（如 `'`）
- * @param tagName 未使用（保留参数以兼容调用方）
- * @param endMarker 结束标记（如 `</span>`）
- * @returns 标签内文本；未找到时返回空串
- */
-function extractTagContentById(html: string, idPrefix: string, idSuffix: string,
-  tagName: string, endMarker: string): string {
-  const marker: string = idPrefix + idSuffix;
-  const startIdx: number = html.indexOf(marker);
-  if (startIdx < 0) {
-    return '';
-  }
-  const afterId: number = html.indexOf('>', startIdx);
-  if (afterId < 0) {
-    return '';
-  }
-  const contentStart: number = afterId + 1;
-  const endIdx: number = html.indexOf(endMarker, contentStart);
-  if (endIdx < 0) {
-    return '';
-  }
-  return html.substring(contentStart, endIdx);
-}
 
 /**
  * 提取指定楼层的帖子正文（已反转 HTML 实体）。
@@ -111,31 +81,6 @@ function extractPostDate(html: string, lou: number): string {
 }
 
 /**
- * 提取指定楼层作者 uid（从 postauthor 标记向前找 `<a`，正则匹配 `uid=(\d+)`）。
- *
- * @param html 源 HTML
- * @param lou 楼层号
- * @returns 作者 uid 字符串；未找到时返回空串
- */
-function extractPostAuthorId(html: string, lou: number): string {
-  const marker: string = `id='postauthor${lou}'`;
-  const startIdx: number = html.indexOf(marker);
-  if (startIdx < 0) {
-    return '';
-  }
-  const before: number = html.lastIndexOf('<a', startIdx);
-  if (before < 0) {
-    return '';
-  }
-  const tagContent: string = html.substring(before, startIdx + marker.length);
-  const uidMatch: RegExpExecArray | null = /uid=(\d+)/.exec(tagContent);
-  if (uidMatch) {
-    return uidMatch[1];
-  }
-  return '';
-}
-
-/**
  * 提取版块名称（已 trim）。
  *
  * @param html 源 HTML
@@ -200,6 +145,6 @@ function extractPostAuthorName(userInfo: Record<string, Object>, authorid: numbe
 }
 
 export {
-  extractTagContentById, extractPostContent, extractPostSubject, extractPostDate,
-  extractPostAuthorId, extractForumName, extractThreadSubject, extractPostAuthorName,
+  extractPostContent, extractPostSubject, extractPostDate,
+  extractForumName, extractThreadSubject, extractPostAuthorName,
 };

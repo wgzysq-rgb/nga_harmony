@@ -51,3 +51,6 @@ export const KEY_PROFILE_VERSION: string = 'profileVersion'
 
 /** 网络变更版本号（wifi/cellular 切换时 +1，触发图片重载） */
 export const KEY_NETWORK_CHANGE_VERSION: string = 'networkChangeVersion'
+
+/** 调试开关：true 时帖子详情强制走 HTML 解析模式，跳过 JSON API */
+export const KEY_FORCE_HTML_MODE: string = 'nga_forceHtmlMode'

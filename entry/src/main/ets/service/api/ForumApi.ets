@@ -72,24 +72,6 @@ export function createTopicListParams(): TopicListParams {
   };
 }
 
-/**
- * 提取帖子内容摘要（去 BBCode/HTML/图片引用等）
- */
-function extractSnippet(content: string): string {
-  let text = content;
-  text = text.replace(/\[img\][^\[]*\[\/img\]/gi, '');
-  text = text.replace(/\[\/?(?:pid|uid|tid|quote|collapse|code|b|i|u|del|h|item|l|r|color|size|font|url|list|align|table|tr|td|style|collapse|flash|lessernuke|album|hip|comment|randomblock|dice|s)\d*[^\]]*\]/gi, '');
-  text = text.replace(/\[@\d+\]/g, '');
-  text = text.replace(/Post by [^\n]*/gi, '');
-  text = text.replace(/\[s:\w+:\w+\]/g, '');
-  text = text.replace(/\.?\/mon_\S+\.(?:jpg|jpeg|png|gif|webp|bmp)/gi, '');
-  text = text.replace(/https?:\/\/\S+\.(?:jpg|jpeg|png|gif|webp|bmp)\S*/gi, '');
-  text = text.replace(/<[^>]+>/g, '');
-  text = text.replace(/&\w+;/g, ' ');
-  text = text.replace(/\s+/g, ' ').trim();
-  return text.slice(0, 150);
-}
-
 export async function getTopicList(token: string, params: TopicListParams,
   blacklist: Set<string> = new Set(),
   keywords: string[] = []): Promise<TopicListResult> {

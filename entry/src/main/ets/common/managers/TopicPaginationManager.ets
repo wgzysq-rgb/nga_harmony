@@ -15,10 +15,18 @@ export class TopicPaginationManager extends PaginationManager {
   /** 是否有预取正在进行，用于防止重复发起。 */
   prefetchInProgress: boolean = false
 
+  /**
+   * 重置到初始分页状态。
+   *
+   * hasMore 复位为 true：reset 后乐观假设还有更多页，避免 UI 立即判定无可加载内容；
+   * 这与 {@link PaginationManager.applyState} 根据实际响应（page < totalPages）设置 hasMore
+   * 的语义不同——后者反映服务端事实，前者只是 reset 的安全默认值。
+   */
   reset(): void {
     this.threads = []
     this.currentPage = 1
     this.totalPages = 0
+    // 乐观假设还有更多页，待首次加载响应到达后由 applyState 按实际页数修正
     this.hasMore = true
     this.clearPrefetchedPages()
     this.resetGeneration()

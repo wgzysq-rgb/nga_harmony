@@ -24,6 +24,13 @@ export class ThreadPaginationManager extends PaginationManager {
   /** 反向预取对应的页码，0 表示无缓存。 */
   prefetchedPrevPage: number = 0
 
+  /**
+   * 重置到初始分页状态。
+   *
+   * hasMore 复位为 true：reset 后乐观假设还有更多页，避免 UI 立即判定无可加载内容；
+   * 这与 {@link PaginationManager.applyState} 根据实际响应（page < totalPages）设置 hasMore
+   * 的语义不同——后者反映服务端事实，前者只是 reset 的安全默认值。
+   */
   reset(): void {
     this.posts = []
     this.pageOfIndex = []
@@ -31,6 +38,7 @@ export class ThreadPaginationManager extends PaginationManager {
     this.loadedPageStart = 1
     this.currentPage = 1
     this.totalPages = 0
+    // 乐观假设还有更多页，待首次加载响应到达后由 applyState 按实际页数修正
     this.hasMore = true
     this.clearPrefetchedPages()
     this.prefetchedPrevPosts = []

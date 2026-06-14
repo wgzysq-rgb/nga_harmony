@@ -106,9 +106,7 @@ export class BaseLazyDataSource<T> implements IDataSource {
       return
     }
     this.dataList[index] = item
-    for (let i = 0; i < this.listeners.length; i++) {
-      this.listeners[i].onDataChange(index)
-    }
+    this.notifyDataChange(index)
   }
 
   /** 返回当前元素数量，与 `totalCount` 等价。 */
