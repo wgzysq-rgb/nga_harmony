@@ -1,5 +1,6 @@
 import { BBNode, BBNodeType } from '../../../model/BBCodeNode'
 import { createBBNode, isSafeUrl, resolveMediaUrl, ParseState } from '../lexer'
+import { guessMediaTypeFromExt } from '../inline-parser'
 
 /**
  * [flash] / [flash=video] / [flash=audio] 媒体块处理器。
@@ -52,26 +53,21 @@ export const handleFlash = (state: ParseState, result: BBNode[]): boolean => {
     state.pos = pFlash.lastIndex
     const rawUrl: string = ffm[1].trim()
     const resolved: string = resolveMediaUrl(rawUrl)
-    const extMatch: RegExpExecArray | null = /\.(\w+)(\?.*)?$/.exec(resolved)
-    const ext: string = extMatch ? extMatch[1].toLowerCase() : ''
-    const videoExts: string[] = ['mp4', 'webm', 'ogg', 'mov', '3gp']
-    const audioExts: string[] = ['mp3', 'wav', 'flac', 'aac', 'm4a']
-    if (videoExts.indexOf(ext) >= 0) {
-      const n = createBBNode()
+    const safeSrc: string = isSafeUrl(resolved) ? resolved : ''
+    const guessedType: BBNodeType = guessMediaTypeFromExt(resolved)
+    const n = createBBNode()
+    if (guessedType === BBNodeType.VIDEO) {
       n.type = BBNodeType.VIDEO
-      n.src = isSafeUrl(resolved) ? resolved : ''
-      result.push(n)
-    } else if (audioExts.indexOf(ext) >= 0) {
-      const n = createBBNode()
+      n.src = safeSrc
+    } else if (guessedType === BBNodeType.AUDIO) {
       n.type = BBNodeType.AUDIO
-      n.src = isSafeUrl(resolved) ? resolved : ''
-      result.push(n)
+      n.src = safeSrc
     } else {
-      const n = createBBNode()
+      // 非视频/音频扩展名：flash 标签语义上即 FLASH 播放器，兜底为 FLASH 类型
       n.type = BBNodeType.FLASH
-      n.href = isSafeUrl(resolved) ? resolved : ''
-      result.push(n)
+      n.href = safeSrc
     }
+    result.push(n)
     return true
   }
 

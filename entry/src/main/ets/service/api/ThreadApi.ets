@@ -17,7 +17,7 @@ import { fetchImageSize } from '../../common/media/ImageSizeUtil';
 import { isWifiConnected } from '../../common/utils/NetworkUtil';
 import type { ThreadData, ThreadRowInfo, Attachment, ThreadInfo } from '../../model/Thread';
 import { PostInfo, PostAttachInfo } from '../../model/PostInfo';
-import { ThreadResult, ThreadPagination, PostAuthResult, PostReplyResult } from '../../model/ThreadResult';
+import { ThreadResult, ThreadPaging, PostAuthResult, PostReplyResult } from '../../model/ThreadResult';
 import { UploadAttachmentResult } from '../../model/NgaApiResults';
 
 // ============== 调试开关 ==============
@@ -260,7 +260,7 @@ function fillThreadResult(raw: Record<string, Object>, result: ThreadResult,
     }
   }
 
-  result.pagination = new ThreadPagination();
+  result.pagination = new ThreadPaging();
   result.pagination.page = data.pagination.page;
   result.pagination.totalPages = data.pagination.totalPages;
   result.pagination.totalRows = data.pagination.totalRows;

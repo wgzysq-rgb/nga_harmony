@@ -1,19 +1,12 @@
 import { ImageLoadStrategy, ThreadNavMode } from '../../common/constants/Constants'
+import { FavBoard } from '../../model/SocialEntries'
+import type { BlacklistEntry } from '../../model/SocialEntries'
 import { FilterKeyword } from '../../model/FilterKeyword'
 import type { UserNoteEntry } from '../../model/NoteInfo'
 
-/** 收藏版块 */
-export class FavBoard {
-  fid: number = 0
-  stid: number = 0
-  name: string = ''
-}
-
-/** 黑名单条目 */
-export interface BlacklistEntry {
-  userId: string
-  nickName: string
-}
+// 类型定义已迁至 model/SocialEntries.ets，此处 re-export 保持 store 内调用方零改动
+export { FavBoard }
+export type { BlacklistEntry }
 
 /**
  * 用户设置持久化根状态。
