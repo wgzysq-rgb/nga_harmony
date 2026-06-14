@@ -1,5 +1,6 @@
 import { SettingsContext } from '../SettingsContext'
 import { SettingsState } from '../SettingsState'
+import { KEY_SHOW_SIGNATURE } from '../../../common/constants/AppStorageKeys'
 
 /**
  * 显示设置域子 store。
@@ -36,7 +37,7 @@ export class DisplaySettings {
   /** 设置是否显示签名（同步 AppStorage 供 UI 响应式读取，并持久化） */
   setShowSignature(enabled: boolean): void {
     this.ctx.state.showSignature = enabled
-    AppStorage.setOrCreate('showSignature', enabled)
+    AppStorage.setOrCreate(KEY_SHOW_SIGNATURE, enabled)
     this.ctx.persist()
   }
 

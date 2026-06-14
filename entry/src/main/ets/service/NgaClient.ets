@@ -160,6 +160,111 @@ interface HttpResponse {
   body: ArrayBuffer
 }
 
+/**
+ * 统一的「首次请求 + 失败后遍历 DOMAINS 重试 + ngaThrottler acquire/release」执行器。
+ *
+ * ngaRequest（轮换域名）与 ngaGetHtmlText（固定域名，不轮换）逻辑同构，差异仅在
+ * 调用方传入的 baseUrl：传空字符串时重试遍历 DOMAINS 轮换；传非空字符串（如
+ * DOMAINS[activeDomainIndex]）时重试始终命中该域名，行为与原实现逐字等价。
+ *
+ * header 构造逻辑统一：User-Agent + X-User-Agent + extraHeaders(可选) + Cookie(可选) +
+ * POST 时的 Content-Type/Content-Length。GET 调用方传 method=GET、body=''、
+ * extraHeaders=undefined 时行为与原 ngaGetHtmlText 的 header 构造等价。
+ *
+ * throttler 时序：首次 acquire(hostname)；首次成功则 finally 兜底 release(hostname)；
+ * 首次失败立即 release + 置 released=true，重试各域名单独 acquire/finally release。
+ *
+ * @param path - API 路径
+ * @param params - query 参数
+ * @param method - HTTP 方法
+ * @param body - 请求体（POST 时）
+ * @param cookies - 会话 cookie（可选）
+ * @param extraHeaders - 额外 header（可选）
+ * @param baseUrl - 调用方传入的基础 URL；空串则首次/重试均用 DOMAINS 轮换
+ * @returns HTTP 响应（status + ArrayBuffer body）
+ */
+async function executeWithRetry(
+  path: string,
+  params: Record<string, string>,
+  method: http.RequestMethod,
+  body: string,
+  cookies: Cookies | undefined,
+  extraHeaders: Record<string, string> | undefined,
+  baseUrl: string
+): Promise<HttpResponse> {
+  const resolvedBaseUrl: string = baseUrl || DOMAINS[activeDomainIndex];
+  const hostname: string = extractHostname(resolvedBaseUrl);
+
+  const url: string = buildUrl(resolvedBaseUrl, path, params);
+  const header: Record<string, string> = {
+    'User-Agent': 'NGA_WP_JW',
+    'X-User-Agent': 'Nga_Official',
+  };
+
+  if (extraHeaders) {
+    const keys = Object.keys(extraHeaders);
+    for (let i = 0; i < keys.length; i++) {
+      header[keys[i]] = extraHeaders[keys[i]];
+    }
+  }
+
+  if (cookies) {
+    header['Cookie'] = `ngaPassportUid=${cookies.uid}; ngaPassportCid=${cookies.cid}`;
+  }
+
+  if (method === http.RequestMethod.POST) {
+    if (body && !header['Content-Type']) {
+      header['Content-Type'] = 'application/x-www-form-urlencoded';
+    }
+    if (!header['Content-Length']) {
+      header['Content-Length'] = body ? String(body.length) : '0';
+    }
+  }
+
+  let released: boolean = false;
+  let response: HttpResponse = { status: 0, body: new ArrayBuffer(0) };
+  let firstErrorMsg: string = '';
+
+  try {
+    await ngaThrottler.acquire(hostname);
+    try {
+      response = await httpReq(url, method, header, body);
+    } catch (firstError) {
+      firstErrorMsg = (firstError as Error).message;
+      ngaThrottler.release(hostname);
+      released = true;
+
+      let retrySuccess = false;
+      for (let i = 1; i < DOMAINS.length; i++) {
+        const retryDomainIdx = (activeDomainIndex + i) % DOMAINS.length;
+        const retryBaseUrl = baseUrl || DOMAINS[retryDomainIdx];
+        const retryHostname = extractHostname(retryBaseUrl);
+
+        await ngaThrottler.acquire(retryHostname);
+        try {
+          const retryUrl = buildUrl(retryBaseUrl, path, params);
+          response = await httpReq(retryUrl, method, header, body);
+          retrySuccess = true;
+          break;
+        } catch (retryError) {
+          firstErrorMsg = (retryError as Error).message;
+        } finally {
+          ngaThrottler.release(retryHostname);
+        }
+      }
+
+      if (!retrySuccess) {
+        throw new Error(`请求失败: ${firstErrorMsg}`);
+      }
+    }
+    return response;
+  } finally {
+    if (!released) {
+      ngaThrottler.release(hostname);
+    }
+  }
+}
+
 // ============== NGA 核心 ==============
 
 async function ngaGet(path: string, params: Record<string, string>,
@@ -201,61 +306,14 @@ async function ngaGetRaw(path: string, params: Record<string, string>,
 
 async function ngaGetHtmlText(path: string, params: Record<string, string>,
   cookies?: Cookies): Promise<string> {
-  const baseUrl: string = DOMAINS[activeDomainIndex];
-  const hostname: string = extractHostname(baseUrl);
-  let released: boolean = false;
-  let response: HttpResponse = { status: 0, body: new ArrayBuffer(0) };
-  let firstErrorMsg: string = '';
-
-  try {
-    await ngaThrottler.acquire(hostname);
-
-    const url: string = buildUrl(baseUrl, path, params);
-    const header: Record<string, string> = {
-      'User-Agent': 'NGA_WP_JW',
-      'X-User-Agent': 'Nga_Official',
-    };
-    if (cookies) {
-      header['Cookie'] = `ngaPassportUid=${cookies.uid}; ngaPassportCid=${cookies.cid}`;
-    }
-
-    try {
-      response = await httpReq(url, http.RequestMethod.GET, header);
-    } catch (firstError) {
-      firstErrorMsg = (firstError as Error).message;
-      ngaThrottler.release(hostname);
-      released = true;
-
-      let retrySuccess = false;
-      for (let i = 1; i < DOMAINS.length; i++) {
-        const retryDomainIdx = (activeDomainIndex + i) % DOMAINS.length;
-        const retryBaseUrl = baseUrl || DOMAINS[retryDomainIdx];
-        const retryHostname = extractHostname(retryBaseUrl);
-
-        await ngaThrottler.acquire(retryHostname);
-        try {
-          const retryUrl = buildUrl(retryBaseUrl, path, params);
-          response = await httpReq(retryUrl, http.RequestMethod.GET, header);
-          retrySuccess = true;
-          break;
-        } catch (retryError) {
-          firstErrorMsg = (retryError as Error).message;
-        } finally {
-          ngaThrottler.release(retryHostname);
-        }
-      }
-
-      if (!retrySuccess) {
-        throw new Error(`请求失败: ${firstErrorMsg}`);
-      }
-    }
-
-    return decodeGb18030(response.body);
-  } finally {
-    if (!released) {
-      ngaThrottler.release(hostname);
-    }
-  }
+  // 传入 DOMAINS[activeDomainIndex]（非空），使 executeWithRetry 内的
+  // retryBaseUrl = baseUrl || DOMAINS[retryDomainIdx] 永远命中 baseUrl，
+  // 保持原 ngaGetHtmlText "重试不轮换域名"的行为。
+  const response: HttpResponse = await executeWithRetry(
+    path, params, http.RequestMethod.GET, '', cookies, undefined,
+    DOMAINS[activeDomainIndex]
+  );
+  return decodeGb18030(response.body);
 }
 
 async function ngaGetWithBaseUrl(path: string, params: Record<string, string>,
@@ -276,116 +334,49 @@ async function ngaRequest(path: string, method: http.RequestMethod,
   cookies: Cookies | undefined, baseUrl: string,
   extraHeaders: Record<string, string> | undefined,
   skipInchst?: boolean): Promise<object> {
-  const resolvedBaseUrl = baseUrl || DOMAINS[activeDomainIndex];
-  const hostname = extractHostname(resolvedBaseUrl);
-
   if (!skipInchst && !params['__inchst']) {
     params['__inchst'] = 'UTF8';
   }
 
-  let released = false;
+  // baseUrl 由调用方传入：常为空串，使 executeWithRetry 重试时遍历 DOMAINS 轮换。
+  const response: HttpResponse = await executeWithRetry(
+    path, params, method, body, cookies, extraHeaders, baseUrl
+  );
 
+  // GB18030 解码
+  const rawText = decodeGb18030(response.body);
+  logChunks('[NGA][RES] body:', rawText);
+
+  // 处理 HTML 错误页
+  const trimmed = rawText.trimStart();
+  if (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html')) {
+    const msgMatch = rawText.match(/<!--msginfostart-->([\s\S]*?)<!--msginfoend-->/);
+    const codeMatch = rawText.match(/<!--msgcodestart-->(\d+)<!--msgcodeend-->/);
+    const titleMatch = rawText.match(/<title>([\s\S]*?)<\/title>/);
+    const htmlError = msgMatch ? msgMatch[1].replace(/<[^>]+>/g, '').trim()
+      : titleMatch ? titleMatch[1].trim()
+      : '服务器返回了非预期的HTML页面';
+
+    const errObj: Record<string, string> = { '0': htmlError };
+    const result: Record<string, Object> = { 'error': errObj as Object };
+    if (codeMatch) {
+      const codeNum = Number(codeMatch[1]);
+      result['error_code'] = codeNum as Object;
+    }
+    return result;
+  }
+
+  // JSON 处理
+  const text = preprocessJson(rawText);
   try {
-    await ngaThrottler.acquire(hostname);
-
-    const url = buildUrl(resolvedBaseUrl, path, params);
-    const header: Record<string, string> = {
-      'User-Agent': 'NGA_WP_JW',
-      'X-User-Agent': 'Nga_Official',
+    return JSON.parse(text) as Record<string, Object>;
+  } catch (parseError) {
+    const errResult: Record<string, Object> = {
+      '__parseError': true as Object,
+      '__rawLength': text.length as Object,
+      'error': new Error((parseError as Error).message) as Object,
     };
-
-    if (extraHeaders) {
-      const keys = Object.keys(extraHeaders);
-      for (let i = 0; i < keys.length; i++) {
-        header[keys[i]] = extraHeaders[keys[i]];
-      }
-    }
-
-    if (cookies) {
-      header['Cookie'] = `ngaPassportUid=${cookies.uid}; ngaPassportCid=${cookies.cid}`;
-    }
-
-    if (method === http.RequestMethod.POST) {
-      if (body && !header['Content-Type']) {
-        header['Content-Type'] = 'application/x-www-form-urlencoded';
-      }
-      if (!header['Content-Length']) {
-        header['Content-Length'] = body ? String(body.length) : '0';
-      }
-    }
-
-    let response: HttpResponse = { status: 0, body: new ArrayBuffer(0) };
-    let firstErrorMsg = '';
-    try {
-      response = await httpReq(url, method, header, body);
-    } catch (firstError) {
-      firstErrorMsg = (firstError as Error).message;
-      ngaThrottler.release(hostname);
-      released = true;
-
-      let retrySuccess = false;
-      for (let i = 1; i < DOMAINS.length; i++) {
-        const retryDomainIdx = (activeDomainIndex + i) % DOMAINS.length;
-        const retryBaseUrl = baseUrl || DOMAINS[retryDomainIdx];
-        const retryHostname = extractHostname(retryBaseUrl);
-
-        await ngaThrottler.acquire(retryHostname);
-        try {
-          const retryUrl = buildUrl(retryBaseUrl, path, params);
-          response = await httpReq(retryUrl, method, header, body);
-          retrySuccess = true;
-          break;
-        } catch (retryError) {
-          firstErrorMsg = (retryError as Error).message;
-        } finally {
-          ngaThrottler.release(retryHostname);
-        }
-      }
-
-      if (!retrySuccess) {
-        throw new Error(`请求失败: ${firstErrorMsg}`);
-      }
-    }
-
-    // GB18030 解码
-    const rawText = decodeGb18030(response.body);
-    logChunks('[NGA][RES] body:', rawText);
-
-    // 处理 HTML 错误页
-    const trimmed = rawText.trimStart();
-    if (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html')) {
-      const msgMatch = rawText.match(/<!--msginfostart-->([\s\S]*?)<!--msginfoend-->/);
-      const codeMatch = rawText.match(/<!--msgcodestart-->(\d+)<!--msgcodeend-->/);
-      const titleMatch = rawText.match(/<title>([\s\S]*?)<\/title>/);
-      const htmlError = msgMatch ? msgMatch[1].replace(/<[^>]+>/g, '').trim()
-        : titleMatch ? titleMatch[1].trim()
-        : '服务器返回了非预期的HTML页面';
-
-      const errObj: Record<string, string> = { '0': htmlError };
-      const result: Record<string, Object> = { 'error': errObj as Object };
-      if (codeMatch) {
-        const codeNum = Number(codeMatch[1]);
-        result['error_code'] = codeNum as Object;
-      }
-      return result;
-    }
-
-    // JSON 处理
-    const text = preprocessJson(rawText);
-    try {
-      return JSON.parse(text) as Record<string, Object>;
-    } catch (parseError) {
-      const errResult: Record<string, Object> = {
-        '__parseError': true as Object,
-        '__rawLength': text.length as Object,
-        'error': new Error((parseError as Error).message) as Object,
-      };
-      return errResult;
-    }
-  } finally {
-    if (!released) {
-      ngaThrottler.release(hostname);
-    }
+    return errResult;
   }
 }
 

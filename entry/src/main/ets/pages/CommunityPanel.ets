@@ -8,7 +8,7 @@ import type { Category, BoardContent } from '../model/Forum'
 import { Avatar } from '../common/components/Avatar'
 
 @Component
-export struct CommunityTabContent {
+export struct CommunityPanel {
   @State isLoading: boolean = true
   @State favoritesList: FavBoard[] = []
   @State selectedSectionId: string = ''

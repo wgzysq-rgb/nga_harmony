@@ -4,6 +4,7 @@ import { FilterListManager } from '../../../common/utils/FilterListManager'
 import { SettingsContext } from '../SettingsContext'
 import { FavBoard, SettingsState } from '../SettingsState'
 import type { BlacklistEntry } from '../SettingsState'
+import { KEY_FAV_VERSION } from '../../../common/constants/AppStorageKeys'
 
 const TAG = 'SocialListSettings'
 const DOMAIN = 0x0000
@@ -82,7 +83,7 @@ export class SocialListSettings {
         }
         this.ctx.state.favorites = favs
         this.ctx.persist()
-        AppStorage.setOrCreate('favVersion', (AppStorage.get<number>('favVersion') ?? 0) + 1)
+        AppStorage.setOrCreate(KEY_FAV_VERSION, (AppStorage.get<number>(KEY_FAV_VERSION) ?? 0) + 1)
       }
       this.favoritesLoaded = true
     } catch (e) {
@@ -93,13 +94,13 @@ export class SocialListSettings {
   addFavorite(board: FavBoard): void {
     this.ctx.state.favorites = [...this.ctx.state.favorites, board]
     this.ctx.persist()
-    AppStorage.setOrCreate('favVersion', (AppStorage.get<number>('favVersion') ?? 0) + 1)
+    AppStorage.setOrCreate(KEY_FAV_VERSION, (AppStorage.get<number>(KEY_FAV_VERSION) ?? 0) + 1)
   }
 
   removeFavorite(fid: number): void {
     this.ctx.state.favorites = this.ctx.state.favorites.filter(f => f.fid !== fid)
     this.ctx.persist()
-    AppStorage.setOrCreate('favVersion', (AppStorage.get<number>('favVersion') ?? 0) + 1)
+    AppStorage.setOrCreate(KEY_FAV_VERSION, (AppStorage.get<number>(KEY_FAV_VERSION) ?? 0) + 1)
   }
 
   // ============== Lifecycle ==============

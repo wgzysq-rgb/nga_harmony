@@ -3,6 +3,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit'
 import { updateStatusBarStyle } from '../../../common/managers/StatusBarManager'
 import { SettingsContext } from '../SettingsContext'
 import { SettingsState } from '../SettingsState'
+import { KEY_THEME_NAME, KEY_EFFECTIVE_COLOR_MODE } from '../../../common/constants/AppStorageKeys'
 
 const TAG = 'ThemeSettings'
 const DOMAIN = 0x0000
@@ -36,7 +37,7 @@ export class ThemeSettings {
     let effectiveTheme: string
     if (theme === 'system') {
       mode = ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET
-      effectiveTheme = AppStorage.get<string>('effectiveColorMode') ?? 'light'
+      effectiveTheme = AppStorage.get<string>(KEY_EFFECTIVE_COLOR_MODE) ?? 'light'
     } else if (theme === 'dark') {
       mode = ConfigurationConstant.ColorMode.COLOR_MODE_DARK
       effectiveTheme = 'dark'
@@ -49,8 +50,8 @@ export class ThemeSettings {
     } catch (err) {
       hilog.error(DOMAIN, TAG, 'setColorMode failed: %{public}s', JSON.stringify(err))
     }
-    AppStorage.setOrCreate('themeName', theme)
-    AppStorage.setOrCreate('effectiveColorMode', effectiveTheme)
+    AppStorage.setOrCreate(KEY_THEME_NAME, theme)
+    AppStorage.setOrCreate(KEY_EFFECTIVE_COLOR_MODE, effectiveTheme)
 
     try {
       updateStatusBarStyle(effectiveTheme === 'dark')

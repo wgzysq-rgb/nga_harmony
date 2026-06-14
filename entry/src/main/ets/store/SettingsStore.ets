@@ -13,6 +13,12 @@ import { FilterKeywordSettings } from './settings/domain/FilterKeywordSettings'
 import { NoteSettings } from './settings/domain/NoteSettings'
 import { CheckinSettings } from './settings/domain/CheckinSettings'
 import type { AuthState } from './AuthStore'
+import {
+  KEY_SHOW_SIGNATURE,
+  KEY_IMAGE_LOAD_STRATEGY,
+  KEY_ENABLE_IMAGE_SIZE_PREFETCH,
+  KEY_VIDEO_MUTED,
+} from '../common/constants/AppStorageKeys'
 
 // 类型与构造器从新位置 re-export，保持调用方 `from './SettingsStore'` 零改动
 export { SettingsState, FavBoard } from './settings/SettingsState'
@@ -103,10 +109,10 @@ export class SettingsStore {
       this.noteSettings.load(saved)
       this.checkinSettings.load(saved)
     }
-    AppStorage.setOrCreate('showSignature', this.state.showSignature)
-    AppStorage.setOrCreate('imageLoadStrategy', this.state.imageLoadStrategy)
-    AppStorage.setOrCreate('enableImageSizePrefetch', this.state.enableImageSizePrefetch)
-    AppStorage.setOrCreate('videoMuted', this.state.videoMuted)
+    AppStorage.setOrCreate(KEY_SHOW_SIGNATURE, this.state.showSignature)
+    AppStorage.setOrCreate(KEY_IMAGE_LOAD_STRATEGY, this.state.imageLoadStrategy)
+    AppStorage.setOrCreate(KEY_ENABLE_IMAGE_SIZE_PREFETCH, this.state.enableImageSizePrefetch)
+    AppStorage.setOrCreate(KEY_VIDEO_MUTED, this.state.videoMuted)
   }
 
   // ============== Facade: 兼容转发 setter ==============

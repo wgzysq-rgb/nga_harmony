@@ -5,6 +5,7 @@ import { PreferencesStore } from '../common/infra/PreferencesStore'
 import { SerialQueue } from '../common/infra/SerialQueue'
 import type { ProfileData } from '../model/User'
 import type { AuthState } from './AuthStore'
+import { KEY_PROFILE_VERSION } from '../common/constants/AppStorageKeys'
 
 const TAG = 'ProfileStore'
 const DOMAIN = 0x0000
@@ -106,7 +107,7 @@ export class ProfileStore {
         this.cache.set(uid, result.data)
         if (newJson !== oldJson) {
           this.profileVersion++
-          AppStorage.setOrCreate('profileVersion', this.profileVersion)
+          AppStorage.setOrCreate(KEY_PROFILE_VERSION, this.profileVersion)
           this.persistProfiles()
         }
         return result.data

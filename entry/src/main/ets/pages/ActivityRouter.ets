@@ -16,7 +16,7 @@ import { TopicListPanel } from './TopicListPanel'
 import { WebViewPanel } from './WebViewPanel'
 
 @Component
-export struct ActivityPanelComponent {
+export struct ActivityRouter {
   @Prop activityStack: NavEntry[] = []
   @StorageProp('statusBarHeight') statusBarHeight: number = 0
 

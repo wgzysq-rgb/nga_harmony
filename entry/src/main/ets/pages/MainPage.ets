@@ -19,11 +19,11 @@ import { verifyToken } from '../service/NgaApi'
 
 import { floatingLayerStore, FloatingLayerStoreClass, FloatingPage } from '../store/FloatingLayerStore'
 import { AppColors } from '../common/constants/Constants'
-import { ActivityPanelComponent } from './ActivityPanelComponent'
-import { BoardPanelComponent } from './BoardPanelComponent'
-import { SidebarComponent } from './SidebarComponent'
-import { CommunityTabContent } from './CommunityTabContent'
-import { FloatingLayerComponent } from './FloatingLayerComponent'
+import { ActivityRouter } from './ActivityRouter'
+import { BoardRouter } from './BoardRouter'
+import { SidebarComponent } from '../common/components/SidebarComponent'
+import { CommunityPanel } from './CommunityPanel'
+import { FloatingLayerComponent } from '../common/components/FloatingLayerComponent'
 import { EmptyHint } from '../common/components/EmptyHint'
 import { ToastComponent } from '../common/components/Toast'
 
@@ -84,13 +84,13 @@ struct MainPage {
         Row() {
           Column() {
             if (this.currentBreakpoint === 'sm') {
-              CommunityTabContent({ currentBreakpoint: 'sm' })
+              CommunityPanel({ currentBreakpoint: 'sm' })
                 .width('100%').height('100%')
                 .visibility(!this.router.boardSlot && !this.router.topActivity
                   ? Visibility.Visible : Visibility.None)
             }
             if (this.router.boardSlot) {
-              BoardPanelComponent({ boardSlot: this.router.boardSlot })
+              BoardRouter({ boardSlot: this.router.boardSlot })
             }
             if (this.currentBreakpoint !== 'sm' && !this.router.boardSlot && !this.router.topActivity) {
               EmptyHint()
@@ -102,7 +102,7 @@ struct MainPage {
           .visibility(this.getBoardColVisibility())
 
           Column() {
-            ActivityPanelComponent({ activityStack: this.router.activityStack })
+            ActivityRouter({ activityStack: this.router.activityStack })
           }
           .layoutWeight(1)
           .height('100%')

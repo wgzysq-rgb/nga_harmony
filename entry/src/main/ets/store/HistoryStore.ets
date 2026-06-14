@@ -2,6 +2,8 @@ import { PreferencesStore } from '../common/infra/PreferencesStore'
 import { SerialQueue } from '../common/infra/SerialQueue'
 import type { ThreadResult } from '../model/ThreadResult'
 import type { ThreadInfo } from '../model/Thread'
+import { PostInfo } from '../model/PostInfo'
+import { KEY_BROWSE_HISTORY_VERSION } from '../common/constants/AppStorageKeys'
 
 /** 浏览历史条目 */
 export class BrowseHistoryEntry {
@@ -97,7 +99,7 @@ export class HistoryStore {
       entry.authorid = String(info.authorid)
       entry.replies = info.replies
     } else if (result.posts.length > 0) {
-      const firstPost = result.posts[0]
+      const firstPost: PostInfo = result.posts[0]
       entry.subject = firstPost.subject
       entry.author = firstPost.author
       entry.authorid = String(firstPost.authorid)
@@ -131,7 +133,7 @@ export class HistoryStore {
     this.writeQueue.enqueue(async (): Promise<void> => {
       await this.store.putJSON(this.historyKey(uid), this.historyItems, false)
       this.historyVersion++
-      AppStorage.setOrCreate('browseHistoryVersion', this.historyVersion)
+      AppStorage.setOrCreate(KEY_BROWSE_HISTORY_VERSION, this.historyVersion)
       this.store.scheduleFlush()
     })
   }

@@ -1,5 +1,11 @@
 import { SettingsContext } from '../SettingsContext'
 import { SettingsState } from '../SettingsState'
+import {
+  KEY_IMAGE_LOAD_STRATEGY,
+  KEY_NETWORK_CHANGE_VERSION,
+  KEY_ENABLE_IMAGE_SIZE_PREFETCH,
+  KEY_VIDEO_MUTED,
+} from '../../../common/constants/AppStorageKeys'
 
 /**
  * 媒体设置域子 store。
@@ -15,22 +21,22 @@ export class MediaSettings {
 
   setImageLoadStrategy(v: string): void {
     this.ctx.state.imageLoadStrategy = v
-    AppStorage.setOrCreate('imageLoadStrategy', v)
-    const version: number = AppStorage.get<number>('networkChangeVersion') ?? 0
-    AppStorage.setOrCreate('networkChangeVersion', version + 1)
+    AppStorage.setOrCreate(KEY_IMAGE_LOAD_STRATEGY, v)
+    const version: number = AppStorage.get<number>(KEY_NETWORK_CHANGE_VERSION) ?? 0
+    AppStorage.setOrCreate(KEY_NETWORK_CHANGE_VERSION, version + 1)
     this.ctx.persist()
   }
 
   setEnableImageSizePrefetch(enabled: boolean): void {
     this.ctx.state.enableImageSizePrefetch = enabled
-    AppStorage.setOrCreate('enableImageSizePrefetch', enabled)
+    AppStorage.setOrCreate(KEY_ENABLE_IMAGE_SIZE_PREFETCH, enabled)
     this.ctx.persist()
   }
 
   /** 设置视频全局静音开关（同步 AppStorage 供 UI 响应式读取，并持久化） */
   setVideoMuted(enabled: boolean): void {
     this.ctx.state.videoMuted = enabled
-    AppStorage.setOrCreate('videoMuted', enabled)
+    AppStorage.setOrCreate(KEY_VIDEO_MUTED, enabled)
     this.ctx.persist()
   }
 

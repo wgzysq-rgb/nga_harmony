@@ -13,6 +13,7 @@ import { PanelNavBar } from '../common/components/PanelNavBar'
 import { Avatar } from '../common/components/Avatar'
 import { NotificationDataSource } from '../common/datasource/LazyDataSource'
 import { LoadingStateView, ErrorStateView, EmptyStateView } from '../common/components/PageStateView'
+import { KEY_UNREAD_NOTI_COUNT } from '../common/constants/AppStorageKeys'
 
 interface FilterMode {
   key: number
@@ -80,7 +81,7 @@ export struct NotificationPanel {
       }
     }
     this.isLoading = false
-    AppStorage.setOrCreate('unreadNotiCount', 0)
+    AppStorage.setOrCreate(KEY_UNREAD_NOTI_COUNT, 0)
   }
 
   private getFilteredNotifications(): NotificationInfo[] {
@@ -108,7 +109,7 @@ export struct NotificationPanel {
       this.notifications = []
       this.notificationsDataSource.clear()
       appStore.clearCachedNotifications()
-      AppStorage.setOrCreate('unreadNotiCount', 0)
+      AppStorage.setOrCreate(KEY_UNREAD_NOTI_COUNT, 0)
     } catch (e) {
       appStore.showToast('清除失败')
     }

@@ -1,9 +1,9 @@
 import { display, componentUtils } from '@kit.ArkUI'
-import { floatingLayerStore, FloatingLayerStoreClass, FloatingPage } from '../store/FloatingLayerStore'
-import { AppColors, IconColors } from '../common/constants/Constants'
-import { ImageViewer } from '../common/components/ImageViewer'
-import { ProfileCardPopup } from '../common/components/ProfileCardPopup'
-import { ReplyDialog } from '../common/components/ReplyDialog'
+import { floatingLayerStore, FloatingLayerStoreClass, FloatingPage } from '../../store/FloatingLayerStore'
+import { AppColors, IconColors } from '../constants/Constants'
+import { ImageViewer } from './ImageViewer'
+import { ProfileCardPopup } from './ProfileCardPopup'
+import { ReplyDialog } from './ReplyDialog'
 
 @Component
 export struct FloatingLayerComponent {

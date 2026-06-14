@@ -4,6 +4,7 @@ import { PreferencesStore } from '../common/infra/PreferencesStore'
 import { SerialQueue } from '../common/infra/SerialQueue'
 import type { Category } from '../model/Forum'
 import type { AuthState } from './AuthStore'
+import { KEY_CAT_VERSION } from '../common/constants/AppStorageKeys'
 
 const TAG = 'CategoryStore'
 const DOMAIN = 0x0000
@@ -41,7 +42,7 @@ export class CategoryStore {
     if (saved && saved.length > 0) {
       this.cachedCategories = saved
       this.categoriesVersion++
-      AppStorage.setOrCreate('catVersion', this.categoriesVersion)
+      AppStorage.setOrCreate(KEY_CAT_VERSION, this.categoriesVersion)
       hilog.info(DOMAIN, TAG, 'Loaded cached categories: %{public}d', saved.length)
     }
   }
@@ -73,7 +74,7 @@ export class CategoryStore {
         if (newJson !== oldJson) {
           this.cachedCategories = result.data
           this.categoriesVersion++
-          AppStorage.setOrCreate('catVersion', this.categoriesVersion)
+          AppStorage.setOrCreate(KEY_CAT_VERSION, this.categoriesVersion)
           this.persistCategories()
           hilog.info(DOMAIN, TAG, 'Categories updated from network')
         } else {

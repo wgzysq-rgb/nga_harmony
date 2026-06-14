@@ -1,9 +1,9 @@
-import { appStore } from '../store/AppStore'
-import type { AuthState } from '../store/AuthStore'
-import { routerStore, Screen } from '../store/RouterStore'
-import { AppColors } from '../common/constants/Constants'
-import { Avatar } from '../common/components/Avatar'
-import { CommunityTabContent } from './CommunityTabContent'
+import { appStore } from '../../store/AppStore'
+import type { AuthState } from '../../store/AuthStore'
+import { routerStore, Screen } from '../../store/RouterStore'
+import { AppColors } from '../constants/Constants'
+import { Avatar } from './Avatar'
+import { CommunityPanel } from '../../pages/CommunityPanel'
 
 @Component
 export struct SidebarComponent {
@@ -52,7 +52,7 @@ export struct SidebarComponent {
       })
 
       Column() {
-        CommunityTabContent({ currentBreakpoint: this.currentBreakpoint })
+        CommunityPanel({ currentBreakpoint: this.currentBreakpoint })
       }
       .layoutWeight(1)
     }

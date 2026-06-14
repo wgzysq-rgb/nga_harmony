@@ -4,6 +4,7 @@ import { PreferencesStore } from '../common/infra/PreferencesStore'
 import { SerialQueue } from '../common/infra/SerialQueue'
 import type { NgaNotification } from '../model/Notification'
 import type { AuthState } from './AuthStore'
+import { KEY_UNREAD_NOTI_COUNT } from '../common/constants/AppStorageKeys'
 
 const TAG = 'NotificationStore'
 const DOMAIN = 0x0000
@@ -53,7 +54,7 @@ export class NotificationStore {
           }
         }
         this.unreadNotiCount = unreadCount
-        AppStorage.setOrCreate('unreadNotiCount', this.unreadNotiCount)
+        AppStorage.setOrCreate(KEY_UNREAD_NOTI_COUNT, this.unreadNotiCount)
         this.cachedNotifications = result.data
         this.persistCachedNotifications()
       }

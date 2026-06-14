@@ -4,6 +4,13 @@ import { display, window } from '@kit.ArkUI';
 import { appStore } from '../store/AppStore';
 import { initStatusBarManager, updateStatusBarStyle } from '../common/managers/StatusBarManager';
 import { startNetworkMonitor } from '../common/managers/NetworkMonitor';
+import {
+  KEY_THEME_NAME,
+  KEY_EFFECTIVE_COLOR_MODE,
+  KEY_STATUS_BAR_HEIGHT,
+  KEY_NAV_BAR_HEIGHT,
+  KEY_CURRENT_BREAKPOINT,
+} from '../common/constants/AppStorageKeys';
 
 const DOMAIN = 0x0000;
 const TAG = 'EntryAbility';
@@ -17,8 +24,8 @@ export default class EntryAbility extends UIAbility {
     try {
       const appContext = this.context.getApplicationContext()
       appContext.setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET)
-      AppStorage.setOrCreate('themeName', 'light')
-      AppStorage.setOrCreate('effectiveColorMode', 'light')
+      AppStorage.setOrCreate(KEY_THEME_NAME, 'light')
+      AppStorage.setOrCreate(KEY_EFFECTIVE_COLOR_MODE, 'light')
     } catch (err) {
       hilog.error(DOMAIN, TAG, 'Failed to set colorMode. Cause: %{public}s', JSON.stringify(err));
     }
@@ -38,11 +45,11 @@ export default class EntryAbility extends UIAbility {
   }
 
   onConfigurationUpdate(newConfig: Configuration): void {
-    const themeName = AppStorage.get<string>('themeName') ?? 'light'
+    const themeName = AppStorage.get<string>(KEY_THEME_NAME) ?? 'light'
     if (themeName === 'system') {
       const isDark = newConfig.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK
       const effective = isDark ? 'dark' : 'light'
-      AppStorage.setOrCreate('effectiveColorMode', effective)
+      AppStorage.setOrCreate(KEY_EFFECTIVE_COLOR_MODE, effective)
       updateStatusBarStyle(isDark)
     }
   }
@@ -66,15 +73,15 @@ export default class EntryAbility extends UIAbility {
         mainWindow.setWindowLayoutFullScreen(true)
 
         initStatusBarManager(mainWindow)
-        const isDark: boolean = (AppStorage.get<string>('effectiveColorMode') ?? 'light') === 'dark'
+        const isDark: boolean = (AppStorage.get<string>(KEY_EFFECTIVE_COLOR_MODE) ?? 'light') === 'dark'
         updateStatusBarStyle(isDark)
 
         const avoidArea = mainWindow.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM)
         const density = display.getDefaultDisplaySync().densityPixels
         const topInset = avoidArea.topRect.height / density
         const bottomInset = avoidArea.bottomRect.height / density
-        AppStorage.setOrCreate('statusBarHeight', topInset)
-        AppStorage.setOrCreate('navBarHeight', bottomInset)
+        AppStorage.setOrCreate(KEY_STATUS_BAR_HEIGHT, topInset)
+        AppStorage.setOrCreate(KEY_NAV_BAR_HEIGHT, bottomInset)
 
         this.updateBreakpoint(mainWindow.getWindowProperties().windowRect.width)
         mainWindow.on('windowSizeChange', (size: window.Size) => {
@@ -120,7 +127,7 @@ export default class EntryAbility extends UIAbility {
     }
     if (this.curBp !== newBp) {
       this.curBp = newBp
-      AppStorage.setOrCreate('currentBreakpoint', newBp)
+      AppStorage.setOrCreate(KEY_CURRENT_BREAKPOINT, newBp)
       hilog.info(DOMAIN, TAG, 'Breakpoint changed to: %{public}s (%{public}f vp)', newBp, widthVp)
     }
   }

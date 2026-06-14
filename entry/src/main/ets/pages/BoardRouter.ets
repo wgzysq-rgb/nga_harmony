@@ -3,7 +3,7 @@ import { TopicListPanel } from './TopicListPanel'
 import { SearchPanel } from './SearchPanel'
 
 @Component
-export struct BoardPanelComponent {
+export struct BoardRouter {
   @Prop boardSlot: BoardSlot | null
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'sm'
 

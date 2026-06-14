@@ -13,6 +13,7 @@ import { SettingRow } from '../common/components/SettingRow'
 import { getCachedBBNodes, preWarmBatch } from '../parser/bbcode/BBCodeCache'
 import { BBCodeContentView } from '../common/components/BBCodeContentView'
 import { openImageViewer, handleForumLink } from '../common/utils/LinkUtils'
+import { KEY_UNREAD_NOTI_COUNT } from '../common/constants/AppStorageKeys'
 import { Context } from '@kit.AbilityKit'
 
 /**
@@ -120,7 +121,7 @@ export struct ProfilePanel {
           }
         }
         this.unreadNotifications = unreadCount
-        AppStorage.setOrCreate('unreadNotiCount', this.unreadNotifications)
+        AppStorage.setOrCreate(KEY_UNREAD_NOTI_COUNT, this.unreadNotifications)
       }
     } catch (e) {
     }
@@ -151,38 +152,38 @@ export struct ProfilePanel {
     const items: StatItem[] = []
     const p: ProfileData = this.profile!
 
-    let s1: StatItem = new StatItem()
+    const s1: StatItem = new StatItem()
     s1.iconRes = $r('app.media.icon_chat_bubble')
     s1.label = '发帖数'
     s1.value = fmtNum(p.posts)
     items.push(s1)
 
-    let s2: StatItem = new StatItem()
+    const s2: StatItem = new StatItem()
     s2.iconRes = $r('app.media.icon_money')
     s2.label = '金钱'
     s2.value = fmtNum(p.money)
     items.push(s2)
 
-    let s3: StatItem = new StatItem()
+    const s3: StatItem = new StatItem()
     s3.iconRes = $r('app.media.icon_medal')
     s3.label = '威望'
     s3.value = fmtNum(p.rvrc)
     items.push(s3)
 
-    let s4: StatItem = new StatItem()
+    const s4: StatItem = new StatItem()
     s4.iconRes = $r('app.media.icon_calendar')
     s4.label = '注册日期'
     s4.value = p.regdate ? formatTime(Number(p.regdate)) : '未知'
     items.push(s4)
 
-    let s5: StatItem = new StatItem()
+    const s5: StatItem = new StatItem()
     s5.iconRes = $r('app.media.icon_people')
     s5.label = '会员组'
     s5.value = p.group || '普通会员'
     items.push(s5)
 
     if (Number(p.fame) > 0) {
-      let s6: StatItem = new StatItem()
+      const s6: StatItem = new StatItem()
       s6.iconRes = $r('app.media.icon_star')
       s6.label = '声望'
       s6.value = fmtNum(p.fame)
@@ -190,7 +191,7 @@ export struct ProfilePanel {
     }
 
     if (Number(p.followByNum) > 0) {
-      let s7: StatItem = new StatItem()
+      const s7: StatItem = new StatItem()
       s7.iconRes = $r('app.media.icon_shield')
       s7.label = '被关注'
       s7.value = p.followByNum
