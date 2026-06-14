@@ -1,97 +1,73 @@
-import { AppColors, ImageLoadStrategy } from '../constants/Constants'
-import { formatTime, escHtml, parseAlterinfoTs, formatTimestampCST } from '../utils/Utils'
-import { Avatar } from './Avatar'
-import { AnonymousName } from './AnonymousName'
+import { AppColors } from '../constants/Constants'
+import { parseAlterinfoTs, formatTimestampCST } from '../utils/Utils'
 import { getCachedBBNodes } from '../../parser/bbcode/BBCodeCache'
 import { BBCodeContentView } from './BBCodeContentView'
-import { PostInfo, PostAttachInfo } from '../../model/PostInfo'
-import { floatingLayerStore, FloatingPage } from '../../store/FloatingLayerStore'
-import { appStore } from '../../store/AppStore'
-import { BBNode, BBNodeType } from '../../model/BBCodeNode'
-import { AudioPlayer } from '../media/AudioPlayer'
-import { MutedVideo } from '../media/MutedVideo'
-import { ImageSize } from '../media/ImageSizeUtil'
-import { fetchVideoSize, getCachedVideoSize } from '../media/VideoSizeUtil'
-import { isWifiConnected } from '../utils/NetworkUtil'
-const VIDEO_EXTS: string[] = ['mp4', 'webm', 'ogg', 'mov', '3gp']
-const AUDIO_EXTS: string[] = ['mp3', 'wav', 'flac', 'aac', 'm4a']
+import { PostInfo } from '../../model/PostInfo'
+import { PostItemHeader } from './post-item/PostItemHeader'
+import { PostAttachments } from './post-item/PostAttachments'
+import { PostVoteBar } from './post-item/PostVoteBar'
+import { PostComments } from './post-item/PostComments'
 
+/**
+ * 帖子卡片组件（编排层）。
+ *
+ * 由 4 个独立子组件编排而成：PostItemHeader（顶部）、PostAttachments（附件区）、
+ * PostVoteBar（动作栏）、PostComments（评论区）。本组件保留签名折叠区（sigExpanded）
+ * 与屏蔽/编辑时间/正文渲染等主体逻辑。所有展开/折叠/菜单状态已下沉对应子组件，
+ * 各子组件自持 @State 并在 aboutToReuse 中重置；本组件 aboutToReuse 仅重置 sigExpanded。
+ */
 @Component
 export struct PostItem {
+  /** 所属帖子信息（@Prop 值拷贝） */
   @Prop post: PostInfo = new PostInfo()
+  /** 是否已点赞 */
   @Prop isVotedUp: boolean = false
+  /** 是否已踩 */
   @Prop isVotedDown: boolean = false
+  /** 握姿：0=右手布局，1=左手布局 */
   @Prop holdingHand: number = 0
+  /** 是否显示签名，订阅 AppStorage */
   @StorageProp('showSignature') showSignature: boolean = true
-  @StorageProp('imageLoadStrategy') imageLoadStrategy: string = ImageLoadStrategy.ALWAYS
-  @StorageProp('networkChangeVersion') networkChangeVersion: number = 0
-  @State private commentsExpanded: boolean = false
-  @State private attachsExpanded: boolean = false
+  /** 签名折叠状态 */
   @State private sigExpanded: boolean = false
-  @State private videoSizes: Map<string, ImageSize> = new Map()
-  @State private menuExpanded: boolean = false
+  /** 图片点击回调 */
   onImageClick: (urls: string[], index: number) => void = (_urls: string[], _index: number) => {}
+  /** 链接点击回调 */
   onLinkClick: (href: string) => void = (_href: string) => {}
+  /** 视频点击回调 */
   onVideoClick: (url: string) => void = (_url: string) => {}
+  /** 点击用户资料回调，传入 uid 与点击位置的屏幕坐标 */
   onProfileClick: (uid: string, screenX: number, screenY: number) => void = (_uid: string, _x: number, _y: number) => {}
+  /** 投票回调，value=1 为赞，-1 为踩 */
   onVote: (post: PostInfo, value: number) => void = (_post: PostInfo, _value: number) => {}
+  /** 回复回调 */
   onReply: (post: PostInfo) => void = (_post: PostInfo) => {}
+  /** 评论回调 */
   onComment: (post: PostInfo) => void = (_post: PostInfo) => {}
+  /** 编辑回调 */
   onEdit: (post: PostInfo) => void = (_post: PostInfo) => {}
+  /** 分享回调 */
   onShare: (post: PostInfo) => void = (_post: PostInfo) => {}
+  /** AI 总结回调 */
   onSummarize: (post: PostInfo) => void = (_post: PostInfo) => {}
+  /** 朗读回调 */
   onReadAloud: (post: PostInfo) => void = (_post: PostInfo) => {}
+  /** 是否为主题作者（楼主），传给 PostItemHeader 显示标记 */
   isTopicAuthor: boolean = false
+  /** 是否为本人的帖子，传给 PostVoteBar 决定是否显示编辑按钮 */
   isOwnPost: boolean = false
 
   aboutToReuse(params: Record<string, Object>): void {
-    this.commentsExpanded = false
-    this.attachsExpanded = false
     this.sigExpanded = false
-    this.menuExpanded = false
-    this.videoSizes = new Map()
   }
 
   build() {
     Column() {
-        Row() {
-          Row() {
-            Avatar({ avatar: this.post.avatar, uid: String(this.post.authorid), name: this.post.author, avatarSize: 32 })
-
-            Column() {
-              Row() {
-                AnonymousName({ author: this.post.author, isAnonymous: this.post.isanonymous, fontSize: 14, normalColor: AppColors.primary })
-                if (this.post.userNote && this.post.userNote.length > 0) {
-                  Text('(' + this.post.userNote + ')')
-                    .fontSize(11).fontColor(AppColors.warning).margin({ left: 4 })
-                }
-                if (this.isTopicAuthor) {
-                  Text('楼主').fontSize(11).fontColor(AppColors.primary).fontWeight(FontWeight.Medium)
-                    .margin({ left: 4 })
-                }
-              }
-              Row() {
-                if (this.post.memberGroup && this.post.memberGroup.length > 0) {
-                  Text(this.post.memberGroup).fontSize(11).fontColor(AppColors.textTertiary)
-                }
-                Text(formatTime(Number(this.post.postdate))).fontSize(11).fontColor(AppColors.textTertiary).margin({ left: 6 })
-              }
-            }.alignItems(HorizontalAlign.Start).margin({ left: 8 }).layoutWeight(1)
-          }.layoutWeight(1)
-          .onClick((event: ClickEvent) => {
-            if (this.post.isanonymous) {
-              appStore.showToast('该用户已匿名')
-              return
-            }
-            const uid = String(this.post.authorid)
-            if (uid) {
-              this.onProfileClick(uid, event.windowX, event.windowY)
-            }
-          })
-
-          Text(this.post.lou === 0 ? '楼主' : this.post.lou === 1 ? '沙发' : `#${this.post.lou}`)
-            .fontSize(13).fontColor(AppColors.textTertiary)
-        }.width('100%')
+        PostItemHeader({
+          post: this.post,
+          isTopicAuthor: this.isTopicAuthor,
+          onProfileClick: this.onProfileClick,
+        })
 
         if (this.post.isInBlackList) {
           Text('该用户已被屏蔽').fontSize(14).fontColor(AppColors.textTertiary)
@@ -111,7 +87,10 @@ export struct PostItem {
           }).width('100%').margin({ top: 12 })
 
           if (this.post.attachs.length > 0) {
-            this.AttachmentsSection()
+            PostAttachments({
+              post: this.post,
+              onImageClick: this.onImageClick,
+            })
           }
 
           if (this.showSignature && this.post.signature && this.post.signature.length > 0) {
@@ -145,381 +124,30 @@ export struct PostItem {
           }
 
           if (this.post.comments.length > 0) {
-            this.CommentsSection()
+            PostComments({
+              post: this.post,
+              onImageClick: this.onImageClick,
+              onLinkClick: this.onLinkClick,
+              onProfileClick: this.onProfileClick,
+            })
           }
 
-          this.VoteBar()
+          PostVoteBar({
+            post: this.post,
+            isVotedUp: this.isVotedUp,
+            isVotedDown: this.isVotedDown,
+            holdingHand: this.holdingHand,
+            isOwnPost: this.isOwnPost,
+            onVote: this.onVote,
+            onReply: this.onReply,
+            onEdit: this.onEdit,
+            onShare: this.onShare,
+            onSummarize: this.onSummarize,
+            onReadAloud: this.onReadAloud,
+          })
         }
       }
       .width('100%').padding({ left: 16, right: 16, top: 16, bottom: 16 }).alignItems(HorizontalAlign.Start)
-  }
-
-  @Builder
-  AttachmentsSection() {
-    Row() {
-      Row() {
-        if (!this.attachsExpanded) {
-          Image($r('app.media.icon_attachment')).width(13).height(13).fillColor(AppColors.textTertiary).margin({ right: 4 })
-        }
-        Text(this.attachsExpanded ? '收起附件' : `附件 (${this.post.attachs.length})`).fontSize(13).fontColor(AppColors.textTertiary)
-      }
-        .onClick(() => {
-          this.attachsExpanded = !this.attachsExpanded
-          if (this.attachsExpanded) {
-            this.fetchAttachVideoSizes()
-          }
-        })
-      }.margin({ top: 12 })
-      if (this.attachsExpanded) {
-      Column() {
-        ForEach(this.post.attachs, (att: PostAttachInfo) => {
-          this.renderVideoAttach(att)
-        })
-        ForEach(this.post.attachs, (att: PostAttachInfo) => {
-          this.renderAudioAttach(att)
-        })
-        Flex({ wrap: FlexWrap.Wrap }) {
-          ForEach(this.post.attachs, (att: PostAttachInfo) => {
-            this.renderImageAttach(att)
-          })
-        }
-      }.margin({ top: 4 })
-    }
-  }
-
-  @Builder
-  renderVideoAttach(att: PostAttachInfo) {
-    if (VIDEO_EXTS.indexOf(att.ext.toLowerCase()) >= 0) {
-      MutedVideo({ src: att.attachurl, videoAspectRatio: this.getAttachVideoAspectRatio(att.attachurl) })
-        .margin({ bottom: 6 })
-    }
-  }
-
-  @Builder
-  renderAudioAttach(att: PostAttachInfo) {
-    if (AUDIO_EXTS.indexOf(att.ext.toLowerCase()) >= 0) {
-      AudioPlayer({ src: att.attachurl })
-        .margin({ bottom: 6 })
-    }
-  }
-
-  @Builder
-  renderImageAttach(att: PostAttachInfo) {
-    if (VIDEO_EXTS.indexOf(att.ext.toLowerCase()) < 0 && AUDIO_EXTS.indexOf(att.ext.toLowerCase()) < 0) {
-      if (this.shouldUsePassive()) {
-        Stack() {
-          Image($r('app.media.icon_image'))
-            .width(20).height(20)
-            .fillColor(AppColors.textTertiary)
-            .opacity(0.45)
-        }
-        .width(100).height(100).borderRadius(8)
-        .backgroundColor(AppColors.bgSecondary)
-        .margin({ right: 6, top: 6 })
-        .onClick(() => { this.dispatchAttachClick(att.attachurl) })
-      } else {
-        Image(att.attachurl).width(100).height(100).borderRadius(8)
-          .objectFit(ImageFit.Cover).backgroundColor(AppColors.bgSecondary)
-          .margin({ right: 6, top: 6 }).onError(() => {})
-          .onClick(() => { this.dispatchAttachClick(att.attachurl) })
-      }
-    }
-  }
-
-   @Builder
-  VoteBar() {
-    Row() {
-       if (this.holdingHand === 1) {
-         Row() {
-           Row() {
-             Row() {
-               Image($r('app.media.icon_more'))
-                 .width(16).height(16)
-                 .fillColor(this.menuExpanded ? AppColors.primary : AppColors.textTertiary)
-                 .rotate({ angle: this.menuExpanded ? -90 : 0 })
-             }
-             .padding({ left: 6, right: 6, top: 4, bottom: 4 })
-             .borderRadius(6)
-             .alignItems(VerticalAlign.Center)
-             .onClick(() => { this.getUIContext()?.animateTo({ duration: 150, curve: Curve.EaseInOut }, () => { this.menuExpanded = !this.menuExpanded }) })
-
-              if (this.menuExpanded) {
-                Row() {
-                  Image($r('app.media.icon_ai'))
-                    .width(16).height(16)
-                    .fillColor(AppColors.textTertiary)
-                }
-                .padding({ left: 6, right: 6, top: 4, bottom: 4 })
-                .borderRadius(6)
-                .margin({ left: 6 })
-                .alignItems(VerticalAlign.Center)
-                .transition(TransitionEffect.OPACITY)
-                .onClick(() => this.onSummarize(this.post))
-
-                Row() {
-                  Image($r('app.media.icon_volume_up'))
-                    .width(16).height(16)
-                    .fillColor(AppColors.textTertiary)
-                }
-                .padding({ left: 6, right: 6, top: 4, bottom: 4 })
-                .borderRadius(6)
-                .margin({ left: 6 })
-                .alignItems(VerticalAlign.Center)
-                .transition(TransitionEffect.OPACITY)
-                .onClick(() => this.onReadAloud(this.post))
-
-                Row() {
-                  Image($r('app.media.icon_share'))
-                    .width(16).height(16)
-                    .fillColor(AppColors.textTertiary)
-                }
-                .padding({ left: 6, right: 6, top: 4, bottom: 4 })
-                .borderRadius(6)
-                .margin({ left: 6 })
-                .alignItems(VerticalAlign.Center)
-                .transition(TransitionEffect.OPACITY)
-                .onClick(() => this.onShare(this.post))
-              }
-
-              if (this.isOwnPost) {
-               Row() {
-                 Image($r('app.media.icon_compose'))
-                   .width(16).height(16)
-                   .fillColor(AppColors.textTertiary)
-               }
-               .padding({ left: 6, right: 6, top: 4, bottom: 4 })
-               .borderRadius(6)
-               .margin({ left: 6 })
-               .alignItems(VerticalAlign.Center)
-               .onClick(() => this.onEdit(this.post))
-             }
-
-             Row() {
-               Image($r('app.media.icon_reply'))
-                 .width(16).height(16)
-                 .fillColor(AppColors.textTertiary)
-             }
-             .padding({ left: 6, right: 6, top: 4, bottom: 4 })
-             .borderRadius(6)
-             .margin({ left: 6 })
-             .alignItems(VerticalAlign.Center)
-             .onClick(() => this.onReply(this.post))
-
-             Row() {
-               Image($r('app.media.icon_thumb_down'))
-                 .width(16).height(16)
-                 .fillColor(this.isVotedDown ? AppColors.destructive : AppColors.textTertiary)
-               if (this.post.score_2 > 0 || this.isVotedDown) {
-                 Text(String(this.post.score_2))
-                   .fontSize(13)
-                   .fontColor(this.isVotedDown ? AppColors.destructive : AppColors.textSecondary)
-                   .margin({ left: 3 })
-               }
-             }
-             .padding({ left: 6, right: 6, top: 4, bottom: 4 })
-             .borderRadius(6)
-             .margin({ left: 6 })
-             .alignItems(VerticalAlign.Center)
-             .onClick(() => this.onVote(this.post, -1))
-
-             Row() {
-               Image($r('app.media.icon_thumb_up'))
-                 .width(16).height(16)
-                 .fillColor(this.isVotedUp ? AppColors.primary : AppColors.textTertiary)
-               if (this.post.score > 0 || this.isVotedUp) {
-                 Text(String(this.post.score))
-                   .fontSize(13)
-                   .fontColor(this.isVotedUp ? AppColors.primary : AppColors.textSecondary)
-                   .margin({ left: 3 })
-               }
-             }
-             .padding({ left: 6, right: 6, top: 4, bottom: 4 })
-             .borderRadius(6)
-             .margin({ left: 6 })
-             .alignItems(VerticalAlign.Center)
-             .onClick(() => this.onVote(this.post, 1))
-           }
-           .alignItems(VerticalAlign.Center)
-           .transition(TransitionEffect.OPACITY)
-
-            Row().layoutWeight(1)
-          }
-       } else {
-         Row().layoutWeight(1)
-        Row() {
-          Row() {
-            Image($r('app.media.icon_thumb_up'))
-              .width(16).height(16)
-              .fillColor(this.isVotedUp ? AppColors.primary : AppColors.textTertiary)
-            if (this.post.score > 0 || this.isVotedUp) {
-              Text(String(this.post.score))
-                .fontSize(13)
-                .fontColor(this.isVotedUp ? AppColors.primary : AppColors.textSecondary)
-                .margin({ left: 3 })
-            }
-          }
-          .padding({ left: 6, right: 6, top: 4, bottom: 4 })
-          .borderRadius(6)
-          .alignItems(VerticalAlign.Center)
-          .onClick(() => this.onVote(this.post, 1))
-
-          Row() {
-            Image($r('app.media.icon_thumb_down'))
-              .width(16).height(16)
-              .fillColor(this.isVotedDown ? AppColors.destructive : AppColors.textTertiary)
-            if (this.post.score_2 > 0 || this.isVotedDown) {
-              Text(String(this.post.score_2))
-                .fontSize(13)
-                .fontColor(this.isVotedDown ? AppColors.destructive : AppColors.textSecondary)
-                .margin({ left: 3 })
-            }
-          }
-          .padding({ left: 6, right: 6, top: 4, bottom: 4 })
-          .borderRadius(6)
-          .margin({ left: 6 })
-          .alignItems(VerticalAlign.Center)
-          .onClick(() => this.onVote(this.post, -1))
-
-          Row() {
-            Image($r('app.media.icon_reply'))
-              .width(16).height(16)
-              .fillColor(AppColors.textTertiary)
-          }
-          .padding({ left: 6, right: 6, top: 4, bottom: 4 })
-          .borderRadius(6)
-          .margin({ left: 6 })
-          .alignItems(VerticalAlign.Center)
-           .onClick(() => this.onReply(this.post))
-
-          if (this.isOwnPost) {
-            Row() {
-              Image($r('app.media.icon_compose'))
-                .width(16).height(16)
-                .fillColor(AppColors.textTertiary)
-            }
-            .padding({ left: 6, right: 6, top: 4, bottom: 4 })
-            .borderRadius(6)
-            .margin({ left: 6 })
-            .alignItems(VerticalAlign.Center)
-            .onClick(() => this.onEdit(this.post))
-          }
-
-          if (this.menuExpanded) {
-            Row() {
-              Image($r('app.media.icon_share'))
-                .width(16).height(16)
-                .fillColor(AppColors.textTertiary)
-            }
-            .padding({ left: 6, right: 6, top: 4, bottom: 4 })
-            .borderRadius(6)
-            .margin({ left: 6 })
-            .alignItems(VerticalAlign.Center)
-            .transition(TransitionEffect.OPACITY)
-            .onClick(() => this.onShare(this.post))
-
-            Row() {
-              Image($r('app.media.icon_ai'))
-                .width(16).height(16)
-                .fillColor(AppColors.textTertiary)
-            }
-            .padding({ left: 6, right: 6, top: 4, bottom: 4 })
-            .borderRadius(6)
-            .margin({ left: 6 })
-            .alignItems(VerticalAlign.Center)
-            .transition(TransitionEffect.OPACITY)
-            .onClick(() => this.onSummarize(this.post))
-
-            Row() {
-              Image($r('app.media.icon_volume_up'))
-                .width(16).height(16)
-                .fillColor(AppColors.textTertiary)
-            }
-            .padding({ left: 6, right: 6, top: 4, bottom: 4 })
-            .borderRadius(6)
-            .margin({ left: 6 })
-            .alignItems(VerticalAlign.Center)
-            .transition(TransitionEffect.OPACITY)
-            .onClick(() => this.onReadAloud(this.post))
-          }
-
-          Row() {
-            Image($r('app.media.icon_more'))
-              .width(16).height(16)
-              .fillColor(this.menuExpanded ? AppColors.primary : AppColors.textTertiary)
-              .rotate({ angle: this.menuExpanded ? 90 : 0 })
-          }
-          .padding({ left: 6, right: 6, top: 4, bottom: 4 })
-          .borderRadius(6)
-          .margin({ left: 6 })
-          .alignItems(VerticalAlign.Center)
-          .onClick(() => { this.getUIContext()?.animateTo({ duration: 150, curve: Curve.EaseInOut }, () => { this.menuExpanded = !this.menuExpanded }) })
-        }
-        .alignItems(VerticalAlign.Center)
-        .transition(TransitionEffect.OPACITY)
-      }
-    }.width('100%').margin({ top: 12 }).alignItems(VerticalAlign.Center)
-  }
-
-  @Builder
-  CommentsSection() {
-    Column() {
-      ForEach(this.commentsExpanded ? this.post.comments : this.post.comments.slice(0, 2), (c: PostInfo) => {
-        Row() {
-          Avatar({ avatar: c.avatar, uid: String(c.authorid), name: c.author, avatarSize: 24 })
-            .onClick((event: ClickEvent) => {
-              if (c.isanonymous) {
-                appStore.showToast('该用户已匿名')
-                return
-              }
-              const uid = String(c.authorid)
-              if (uid) {
-                this.onProfileClick(uid, event.windowX, event.windowY)
-              }
-            })
-
-          Column() {
-            Row() {
-              AnonymousName({ author: c.author, isAnonymous: c.isanonymous, fontSize: 12, normalColor: AppColors.primary })
-              if (appStore.getNote(String(c.authorid)).length > 0) {
-                Text('(' + appStore.getNote(String(c.authorid)) + ')')
-                  .fontSize(10).fontColor(AppColors.warning).margin({ left: 3 })
-              }
-            }
-
-            BBCodeContentView({
-              nodes: filterBBTags(getCachedBBNodes(c.content), [BBNodeType.QUOTE, BBNodeType.POST_BY]),
-              onImageClick: this.onImageClick,
-              onLinkClick: this.onLinkClick,
-            }).width('100%')
-          }
-          .layoutWeight(1)
-          .alignItems(HorizontalAlign.Start)
-          .margin({ left: 8 })
-        }
-        .width('100%').alignItems(VerticalAlign.Top).padding({ top: 6, bottom: 6 })
-      }, (c: PostInfo) => String(c.pid))
-      if (this.post.comments.length > 2) {
-        Text(this.commentsExpanded ? '收起' : `查看全部 ${this.post.comments.length} 条评论`)
-          .fontSize(12).fontColor(AppColors.primary).margin({ top: 4 })
-          .onClick(() => { this.commentsExpanded = !this.commentsExpanded })
-      }
-    }
-    .width('80%').alignSelf(ItemAlign.End).padding(12).backgroundColor(AppColors.bgSecondary).borderRadius(8).margin({ top: 12 })
-  }
-
-  private getAttachVideoAspectRatio(url: string): number {
-    const size: ImageSize | undefined = this.videoSizes.get(url)
-    if (size && size.width > 0 && size.height > 0) {
-      return size.width / size.height
-    }
-    return 16 / 9
-  }
-
-  private setAttachVideoSize(url: string, size: ImageSize): void {
-    const m: Map<string, ImageSize> = new Map()
-    this.videoSizes.forEach((v: ImageSize, k: string) => { m.set(k, v) })
-    m.set(url, size)
-    this.videoSizes = m
   }
 
   private getEditTimeDisplay(): string {
@@ -528,84 +156,4 @@ export struct PostItem {
     if (et === null) return ''
     return ' [在' + formatTimestampCST(et) + '修改]'
   }
-
-  private dispatchAttachClick(targetUrl: string): void {
-    const urls: string[] = []
-    for (let i = 0; i < this.post.attachs.length; i++) {
-      const url = this.post.attachs[i].attachurl
-      if (url && url.length > 0) {
-        urls.push(url)
-      }
-    }
-    if (urls.length > 0) {
-      let idx = 0
-      for (let i = 0; i < urls.length; i++) {
-        if (urls[i] === targetUrl) {
-          idx = i
-          break
-        }
-      }
-      this.onImageClick(urls, idx)
-    }
-  }
-
-  private shouldUsePassive(): boolean {
-    let strategy: string = this.imageLoadStrategy
-    if (strategy === ImageLoadStrategy.ALWAYS) {
-      return false
-    }
-    if (strategy === ImageLoadStrategy.MANUAL) {
-      return true
-    }
-    return !isWifiConnected()
-  }
-
-  private fetchAttachVideoSizes(): void {
-    for (let i = 0; i < this.post.attachs.length; i++) {
-      const att: PostAttachInfo = this.post.attachs[i]
-      if (VIDEO_EXTS.indexOf(att.ext.toLowerCase()) >= 0 && att.attachurl.length > 0) {
-        const cached: ImageSize | null = getCachedVideoSize(att.attachurl)
-        if (cached) {
-          this.setAttachVideoSize(att.attachurl, cached)
-        } else if (!this.videoSizes.has(att.attachurl)) {
-          fetchVideoSize(att.attachurl).then((size: ImageSize | null) => {
-            if (size) {
-              this.setAttachVideoSize(att.attachurl, size)
-            }
-          })
-        }
-      }
-    }
-  }
-}
-
-
-function filterBBTags(nodes: BBNode[], skipTypes: BBNodeType[]): BBNode[] {
-  const result: BBNode[] = []
-  for (const node of nodes) {
-    if (skipTypes.indexOf(node.type) >= 0) continue
-    if (node.children.length > 0) {
-      const n = new BBNode()
-      n.type = node.type
-      n.text = node.text
-      n.id = node.id
-      n.href = node.href
-      n.color = node.color
-      n.size = node.size
-      n.src = node.src
-      n.title = node.title
-      n.emotionCat = node.emotionCat
-      n.emotionCode = node.emotionCode
-      n.fontFamily = node.fontFamily
-      n.align = node.align
-      n.colSpan = node.colSpan
-      n.rowSpan = node.rowSpan
-      n.colWidth = node.colWidth
-      n.children = filterBBTags(node.children, skipTypes)
-      result.push(n)
-    } else {
-      result.push(node)
-    }
-  }
-  return result
 }

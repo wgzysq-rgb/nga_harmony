@@ -1,0 +1,96 @@
+import { BBNode, BBNodeType } from '../../../model/BBCodeNode'
+
+/**
+ * 判断 BBCode 节点类型是否为内联（inline）节点。
+ *
+ * 内联节点在渲染时会被组合进同一个 Text 容器中，与块级（block）节点相对。
+ *
+ * @param type - BBCode 节点类型
+ * @returns 是否为内联节点
+ */
+export function isInlineNode(type: BBNodeType): boolean {
+  return type === BBNodeType.TEXT || type === BBNodeType.BOLD ||
+    type === BBNodeType.ITALIC || type === BBNodeType.UNDERLINE ||
+    type === BBNodeType.STRIKETHROUGH || type === BBNodeType.COLOR ||
+    type === BBNodeType.SIZE || type === BBNodeType.FONT ||
+    type === BBNodeType.URL || type === BBNodeType.PID_LINK ||
+    type === BBNodeType.UID_LINK || type === BBNodeType.TID_LINK ||
+    type === BBNodeType.MENTION || type === BBNodeType.EMOTION ||
+    type === BBNodeType.SUBSCRIPT || type === BBNodeType.SUPERSCRIPT
+}
+
+/**
+ * 计算 SIZE 标签缩放后的字体像素尺寸（受引用上下文影响）。
+ *
+ * @param size - BBCode size 百分比（如 150 表示 150%）
+ * @param inQuote - 是否处于引用块内（引用内基础字号 14，正文 15）
+ * @returns 缩放后的字号，最小 8
+ */
+export function calcScaleSize(size: number, inQuote: boolean): number {
+  return Math.max(8, Math.round((inQuote ? 14 : 15) * size / 100))
+}
+
+/**
+ * 判断一组内联节点是否整体为空白（仅含空白文本节点）。
+ *
+ * 用于过滤掉仅由空格/换行组成的内联分组，避免渲染空 Text。
+ *
+ * @param nodes - 内联节点数组
+ * @returns 是否整体为空白
+ */
+export function isInlineGroupBlank(nodes: BBNode[]): boolean {
+  for (let i = 0; i < nodes.length; i++) {
+    if (nodes[i].type !== BBNodeType.TEXT) return false
+    if (nodes[i].text.replace(/\s/g, '').length > 0) return false
+  }
+  return true
+}
+
+/** 下标/上标相对基础字号的缩放比例 */
+export const SUB_SUP_SCALE: number = 0.7
+
+/** 下标相对基础字号的向上偏移比例 */
+export const SUB_OFFSET_RATIO: number = 0.3
+
+/** 上标相对基础字号的向上偏移比例 */
+export const SUP_OFFSET_RATIO: number = 0.35
+
+/**
+ * 计算下标（subscript）文本的字号。
+ *
+ * @param baseSize - 基础字号
+ * @returns 下标字号
+ */
+export function calcSubscriptSize(baseSize: number): number {
+  return Math.round(baseSize * SUB_SUP_SCALE)
+}
+
+/**
+ * 计算下标文本的 baselineOffset（向上为负）。
+ *
+ * @param baseSize - 基础字号
+ * @returns baselineOffset 像素值（负数表示向下）
+ */
+export function calcSubscriptOffset(baseSize: number): number {
+  return -(baseSize * SUB_OFFSET_RATIO)
+}
+
+/**
+ * 计算上标（superscript）文本的字号。
+ *
+ * @param baseSize - 基础字号
+ * @returns 上标字号
+ */
+export function calcSuperscriptSize(baseSize: number): number {
+  return Math.round(baseSize * SUB_SUP_SCALE)
+}
+
+/**
+ * 计算上标文本的 baselineOffset（向上为正）。
+ *
+ * @param baseSize - 基础字号
+ * @returns baselineOffset 像素值（正数表示向上）
+ */
+export function calcSuperscriptOffset(baseSize: number): number {
+  return baseSize * SUP_OFFSET_RATIO
+}

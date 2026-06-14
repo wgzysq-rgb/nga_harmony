@@ -7,74 +7,21 @@ import { ImageSize, fetchImageSize, getCachedImageSize } from '../media/ImageSiz
 import { fetchVideoSize, getCachedVideoSize } from '../media/VideoSizeUtil'
 import { isWifiConnected } from '../utils/NetworkUtil'
 import { LengthMetrics } from '@kit.ArkUI'
-
-function isInlineNode(type: BBNodeType): boolean {
-  return type === BBNodeType.TEXT || type === BBNodeType.BOLD ||
-    type === BBNodeType.ITALIC || type === BBNodeType.UNDERLINE ||
-    type === BBNodeType.STRIKETHROUGH || type === BBNodeType.COLOR ||
-    type === BBNodeType.SIZE || type === BBNodeType.FONT ||
-    type === BBNodeType.URL || type === BBNodeType.PID_LINK ||
-    type === BBNodeType.UID_LINK || type === BBNodeType.TID_LINK ||
-    type === BBNodeType.MENTION || type === BBNodeType.EMOTION ||
-    type === BBNodeType.SUBSCRIPT || type === BBNodeType.SUPERSCRIPT
-}
-
-function calcScaleSize(size: number, inQuote: boolean): number {
-  return Math.max(8, Math.round((inQuote ? 14 : 15) * size / 100))
-}
-
-function isInlineGroupBlank(nodes: BBNode[]): boolean {
-  for (let i = 0; i < nodes.length; i++) {
-    if (nodes[i].type !== BBNodeType.TEXT) return false
-    if (nodes[i].text.replace(/\s/g, '').length > 0) return false
-  }
-  return true
-}
-
-const QUOTE_BORDER_COLORS: Resource[] = AppColors.quoteBorders
-
-const SUB_SUP_SCALE: number = 0.7
-const SUB_OFFSET_RATIO: number = 0.3
-const SUP_OFFSET_RATIO: number = 0.35
-
-function calcSubscriptSize(baseSize: number): number {
-  return Math.round(baseSize * SUB_SUP_SCALE)
-}
-
-function calcSubscriptOffset(baseSize: number): number {
-  return -(baseSize * SUB_OFFSET_RATIO)
-}
-
-function calcSuperscriptSize(baseSize: number): number {
-  return Math.round(baseSize * SUB_SUP_SCALE)
-}
-
-function calcSuperscriptOffset(baseSize: number): number {
-  return baseSize * SUP_OFFSET_RATIO
-}
-
-class RenderContext {
-  inQuote: boolean = false
-  quoteDepth: number = 0
-}
-
-class QuoteSplit {
-  hasHeader: boolean = false
-  body: BBNode[] = []
-}
-
-function splitQuoteChildren(children: BBNode[]): QuoteSplit {
-  const result = new QuoteSplit()
-  if (children.length > 0 && children[0].type === BBNodeType.POST_BY) {
-    result.hasHeader = true
-    const b: BBNode[] = []
-    for (let i = 1; i < children.length; i++) b.push(children[i])
-    result.body = b
-  } else {
-    result.body = children
-  }
-  return result
-}
+import {
+  isInlineNode,
+  isInlineGroupBlank,
+  calcScaleSize,
+  calcSubscriptSize,
+  calcSubscriptOffset,
+  calcSuperscriptSize,
+  calcSuperscriptOffset,
+} from './bbcode/bbcode-utils'
+import {
+  RenderContext,
+  NodeGroup,
+  splitQuoteChildren,
+  QUOTE_BORDER_COLORS,
+} from './bbcode/BBCodeRenderContext'
 
 @Component
 export struct BBCodeContentView {
@@ -869,9 +816,4 @@ export struct BBCodeContentView {
     .margin({ top: 4, bottom: 2 })
     .alignItems(HorizontalAlign.Start)
   }
-}
-
-class NodeGroup {
-  kind: string = 'inline'
-  nodes: BBNode[] = []
 }
