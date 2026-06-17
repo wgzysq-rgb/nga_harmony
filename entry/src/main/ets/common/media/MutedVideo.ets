@@ -1,6 +1,6 @@
 import { appStore } from '../../store/AppStore'
 import { AppColors, ImageLoadStrategy } from '../constants/Constants'
-import { isWifiConnected } from '../utils/NetworkUtil'
+import { shouldUsePassive } from '../utils/NetworkUtil'
 
 /**
  * 视频播放组件（带全局静音切换）。
@@ -36,10 +36,7 @@ export struct MutedVideo {
    * @returns true=播放前送显首帧，false=保持黑屏
    */
   private shouldShowFirstFrame(): boolean {
-    const strategy: string = this.imageLoadStrategy
-    if (strategy === ImageLoadStrategy.ALWAYS) return true
-    if (strategy === ImageLoadStrategy.MANUAL) return false
-    return isWifiConnected()
+    return !shouldUsePassive(this.imageLoadStrategy)
   }
 
   build() {
