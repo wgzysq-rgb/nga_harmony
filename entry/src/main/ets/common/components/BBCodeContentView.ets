@@ -5,7 +5,7 @@ import { AudioPlayer } from '../media/AudioPlayer'
 import { MutedVideo } from '../media/MutedVideo'
 import { ImageSize, fetchImageSize, getCachedImageSize } from '../media/ImageSizeUtil'
 import { fetchVideoSize, getCachedVideoSize } from '../media/VideoSizeUtil'
-import { isWifiConnected } from '../utils/NetworkUtil'
+import { isWifiConnected, shouldUsePassive } from '../utils/NetworkUtil'
 import { LengthMetrics } from '@kit.ArkUI'
 import {
   isInlineNode,
@@ -137,17 +137,6 @@ export struct BBCodeContentView {
       return size.width / size.height
     }
     return 16 / 9
-  }
-
-  private shouldUsePassive(): boolean {
-    let strategy: string = this.imageLoadStrategy
-    if (strategy === ImageLoadStrategy.ALWAYS) {
-      return false
-    }
-    if (strategy === ImageLoadStrategy.MANUAL) {
-      return true
-    }
-    return !isWifiConnected()
   }
 
   private getImageIndex(src: string): number {
@@ -468,7 +457,7 @@ export struct BBCodeContentView {
 
   @Builder
   RenderImageContent(src: string, inQuote: boolean) {
-    if (this.shouldUsePassive()) {
+    if (shouldUsePassive(this.imageLoadStrategy)) {
       // 被动式：紧凑占位图
       Row() {
         Stack() {
