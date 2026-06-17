@@ -3,8 +3,9 @@
  * 支持图片加载失败时显示首字母
  */
 
-import { AppColors } from '../constants/Constants'
+import { AppColors, ImageLoadStrategy } from '../constants/Constants'
 import { getAvatarUrl, nameToHue, hslToHex, getInitial } from '../utils/Utils'
+import { shouldUsePassive } from '../utils/NetworkUtil'
 
 @Component
 export struct Avatar {
@@ -13,6 +14,10 @@ export struct Avatar {
   @Prop name: string = ''
   @Prop avatarSize: number = 40
   @State imgError: boolean = false
+  /** 图片加载策略，订阅 AppStorage，决定头像是否走被动占位 */
+  @StorageProp('imageLoadStrategy') imageLoadStrategy: string = ImageLoadStrategy.ALWAYS
+  /** 网络变化版本号，订阅 AppStorage，WiFi/蜂窝切换时触发重算 */
+  @StorageProp('networkChangeVersion') networkChangeVersion: number = 0
 
   build() {
     Stack() {
@@ -23,8 +28,8 @@ export struct Avatar {
         .fontWeight(FontWeight.Bold)
         .visibility(this.getAvatarUrlStr() && !this.imgError ? Visibility.None : Visibility.Visible)
 
-      // 头像图片：仅在 URL 有效且未出错时渲染
-      if (this.getAvatarUrlStr() && !this.imgError) {
+      // 头像图片：URL 有效、未出错、且非被动模式时渲染
+      if (this.getAvatarUrlStr() && !this.imgError && !shouldUsePassive(this.imageLoadStrategy)) {
         Image(this.getAvatarUrlStr())
           .width(this.avatarSize)
           .height(this.avatarSize)
