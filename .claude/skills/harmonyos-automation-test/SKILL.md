@@ -18,7 +18,7 @@ description: Use when asked to verify a HarmonyOS/ArkUI app change via hdc on em
 
 接到任务后**先不设计测试**，先决策：
 
-1. 列出测试的全部「数据/状态前提」（帖子/用户/数据/网络/设备/账号状态）。
+1. 列出测试的全部「数据/状态前提」（帖子/用户/数据/网络/设备/账号状态/领域结构——如板块层级、同名元素）。
 2. 每个前提判定线上可控性：
    - 稳定可得（普通文本帖、默认设置、标准导航）→ 可自动化
    - 低概率/不可控（视频帖、特定头像用户、崩溃态、权限态）→ 需用户辅助
@@ -55,7 +55,7 @@ description: Use when asked to verify a HarmonyOS/ArkUI app change via hdc on em
 - `lib/dump.sh` → `./layout.json`
 - `lib/snap.sh <name>` → `./<name>.jpeg`
 - `lib/log.sh <pid> <pattern>`
-- `lib/tap.js <text>|--id <id>|--xy <x> <y>`
+- `lib/tap.js <text>|--id <id>|--xy <x> <y> [--exact][--nth N][--region=x1,y1,x2,y2]`  --exact 精确匹配避免子串误命中(如"设置"被帖子标题命中); 多同名不消歧则 AMBIGUOUS exit 2
 - `lib/parse.js find <text> | count <type> [--region=x1,y1,x2,y2] | attr <text> <attr>`
 - `lib/assert.js exists|count-eq|visible|text-eq|log-contains ...`（exit 0=PASS/1=FAIL）
 
@@ -71,11 +71,12 @@ node 用 DevEco 自带 `tools/node/node.exe`。**lib 内部已设 `MSYS_NO_PATHC
 - 数据不满足前提硬测 → 走 §0 门禁
 - 靠 AI 看图下结论 → 控件树断言为主，视觉仅佐证
 - 坐标硬编码 → tap 按 text/id 定位
+- text 定位忽略同名节点（如主板块/子版块同名）→ tap 命中多个会 exit 2；先 dump 通览同名数，>1 用 --nth/--region 消歧；短词易被子串误命中(如"设置"匹配帖子标题《..设置..》)→ 用 --exact
 - 重复 dump/recv 样板 → 用 lib
 
 ## 项目适配（skill 之外）
 
 skill 主体零项目数据。项目差异三层外置：
 - 静态约定/地图/数据线索 → 项目 CLAUDE.md / 项目 memory
-- 运行时常量（bundle/Ability/实例名）→ 项目级配置文件，lib 读取
+- 运行时常量（bundle/Ability/实例名）→ flows 套件脚本首部声明，调用 lib 时传入
 - 单测试细节 → flows/ 特化套件

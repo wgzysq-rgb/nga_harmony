@@ -58,7 +58,7 @@ sleep 5
 "$NODE" "$SK/lib/parse.js" find 网事杂谈 >/dev/null || { echo "FAIL: 未到主页"; exit 2; }
 
 # 打开主题到右列（先开主题，再切设置——右列主题常驻，设置切换触发 Avatar 重渲染）
-"$NODE" "$SK/lib/tap.js" 网事杂谈 >/dev/null; sleep 4
+"$NODE" "$SK/lib/tap.js" 网事杂谈 --nth 2 >/dev/null; sleep 4   # 同名消歧：[1]主板块/分区标题(不导航) [2]子版块(进帖子列表)
 "$SK/lib/dump.sh"
 "$NODE" "$SK/lib/tap.js" iOS客户端闪退 >/dev/null; sleep 5   # 进入置顶帖（作者 gerraerd 有头像）
 "$SK/lib/dump.sh"
