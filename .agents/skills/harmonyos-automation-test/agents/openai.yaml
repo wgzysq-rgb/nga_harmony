@@ -1,0 +1,4 @@
+interface:
+  display_name: "HarmonyOS Automation Test"
+  short_description: "Verify HarmonyOS app changes with hdc"
+  default_prompt: "Use $harmonyos-automation-test to verify this HarmonyOS app change with hdc."
