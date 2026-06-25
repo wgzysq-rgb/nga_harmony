@@ -12,6 +12,7 @@ import { HistoryStore } from './HistoryStore'
 import { ToastManager } from '../common/feedback/ToastManager'
 
 import type { AuthState, Session } from './AuthStore'
+import { routerStore } from './RouterStore'
 import type { SettingsState, FavBoard, BlacklistEntry } from './SettingsStore'
 import type { BrowseHistoryEntry } from './HistoryStore'
 import type { ToastState } from '../common/feedback/ToastManager'
@@ -98,6 +99,12 @@ class AppStoreClass {
   }
 
   clearAuth(): void {
+    // ⚠️ 以下顺序有严格依赖：cancel/reset 必须在 authStore.clearAuth() 之前，
+    // 否则后者 enqueue 的 persistAuth 写入任务会被取消。
+    // 先取消队列中所有待执行的任务（如已入队的 history/vote 旧 uid 写入）
+    this.writeQueue.cancel()
+    this.writeQueue.reset()
+    // 再清空认证状态（会 enqueue 写入空 auth，此时 queue 已重置为干净状态）
     this.authStore.clearAuth()
     this.settingsStore.reset()
     this.categoryStore.reset()
@@ -105,6 +112,7 @@ class AppStoreClass {
     this.notificationStore.reset()
     this.voteStore.reset()
     this.historyStore.reset()
+    routerStore.reset()
   }
 
   createSession(uid: string, cid: string, nickName: string, avatarUrl: string): Promise<string> {

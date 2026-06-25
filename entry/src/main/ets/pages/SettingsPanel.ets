@@ -5,6 +5,7 @@
 
 import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
+import { logout } from '../service/api/AuthApi'
 import { AppColors, IconColors, ImageLoadStrategy, ThreadNavMode, THEME_OPTIONS, ThemeOption } from '../common/constants/Constants'
 import { ConfirmDialog, ActionSheetDialog, ActionOption, CredentialPasswordDialog } from '../common/dialogs/Dialogs'
 import { PanelNavBar } from '../common/components/PanelNavBar'
@@ -51,7 +52,11 @@ export struct SettingsPanel {
       confirmLabel: '退出',
       destructive: true,
       icon: $r('app.media.icon_exit'),
-      onConfirm: () => {
+      onConfirm: async () => {
+        const token = appStore.auth.token
+        if (token) {
+          try { await logout(token) } catch (e) { /* 服务端登出失败不影响本地退出 */ }
+        }
         appStore.clearAuth()
         this.getUIContext().getRouter().replaceUrl({ url: 'pages/LoginPage' })
       },

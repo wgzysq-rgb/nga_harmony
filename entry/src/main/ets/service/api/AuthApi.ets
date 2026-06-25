@@ -3,6 +3,7 @@
  * 提供验证码获取、两步登录、凭据注入、会话校验与登出等能力。
  */
 
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ngaClient } from '../NgaClient';
 import { appStore } from '../../store/AppStore';
 import type { Session } from '../../store/AuthStore';
@@ -245,8 +246,25 @@ export async function injectCredentials(uid: string, cid: string): Promise<Injec
 
 // ============== 登出 ==============
 
+const LOGOUT_TAG = 'AuthApi'
+const LOGOUT_DOMAIN = 0x0000
+
+/**
+ * 登出当前 token 对应的会话。
+ *
+ * 先尝试调用 NGA 服务端登出接口使 cid 失效。
+ * 本地 session 与认证状态清理由调用方后续调用的 clearAuth() 统一完成。
+ * 网络失败不阻塞本地登出，调用方在 UI 层继续执行 clearAuth()。
+ */
 export async function logout(token: string): Promise<void> {
-  await appStore.destroySession(token);
+  const session = appStore.getSession(token);
+  if (session) {
+    try {
+      await ngaClient.logout({ uid: session.uid, cid: session.cid });
+    } catch (e) {
+      hilog.warn(LOGOUT_DOMAIN, LOGOUT_TAG, '服务端登出失败: %{public}s', JSON.stringify(e));
+    }
+  }
 }
 
 /**

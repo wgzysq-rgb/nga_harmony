@@ -436,6 +436,7 @@ interface INgaClient {
     cookies?: Cookies) => Promise<string>;
   getCaptchaV2: (captchaId: string) => Promise<string>;
   loginPassword: (loginParams: LoginParams) => Promise<LoginResultData>;
+  logout: (cookies: Cookies) => Promise<void>;
   rotateDomain: () => void;
   getActiveDomain: () => string;
   setActiveDomainIndex: (index: number) => void;
@@ -572,6 +573,14 @@ const client: INgaClient = {
       success: false, uid: '', cid: '', error: errorMsg, setCookies: cookies,
     };
     return failResult;
+  },
+
+  async logout(cookies: Cookies): Promise<void> {
+    const params: Record<string, string> = {
+      '__lib': 'logout',
+      '__output': '1',
+    };
+    await ngaGet('/nuke.php', params, cookies);
   },
 
   rotateDomain(): void {

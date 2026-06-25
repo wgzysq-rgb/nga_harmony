@@ -22,6 +22,7 @@ export class CategoryStore {
   categoriesLoaded: boolean = false
   categoriesError: string = ''
   private static readonly REFRESH_DELAY: number = 10000
+  private refreshGeneration: number = 0
 
   async init(store: PreferencesStore, queue: SerialQueue, auth: AuthState): Promise<void> {
     this.store = store
@@ -36,6 +37,7 @@ export class CategoryStore {
     this.categoriesRefreshing = false
     this.categoriesLoaded = false
     this.categoriesError = ''
+    this.refreshGeneration++
   }
 
   // ============== Cache ==============
@@ -63,14 +65,16 @@ export class CategoryStore {
   ensureCategories(): void {
     if (this.categoriesRefreshing) return
     this.categoriesRefreshing = true
+    const gen = ++this.refreshGeneration
     const hasCache = this.cachedCategories.length > 0
     setTimeout(async () => {
-      await this.doRefreshCategories()
+      await this.doRefreshCategories(gen)
       this.categoriesRefreshing = false
     }, hasCache ? CategoryStore.REFRESH_DELAY : 0)
   }
 
-  private async doRefreshCategories(): Promise<void> {
+  private async doRefreshCategories(gen: number): Promise<void> {
+    if (gen !== this.refreshGeneration) return
     if (!this.auth.isAuthenticated) {
       this.categoriesLoaded = true
       this.categoriesError = '未登录'

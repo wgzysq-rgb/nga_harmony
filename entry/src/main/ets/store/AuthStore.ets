@@ -68,6 +68,11 @@ export class AuthStore {
   }
 
   clearAuth(): void {
+    if (this.state.token) {
+      this.sessions.delete(this.state.token)
+      this.sessionsDirty = true
+      this.persistSessions(true)
+    }
     this.state.token = ''
     this.state.uid = ''
     this.state.nickName = ''
