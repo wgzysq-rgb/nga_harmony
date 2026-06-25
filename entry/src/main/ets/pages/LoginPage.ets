@@ -6,6 +6,8 @@
 import { loginStep1, loginStep2, injectCredentials, getActiveDomain } from '../service/NgaApi'
 import { appStore } from '../store/AppStore'
 import { AppColors } from '../common/constants/Constants'
+import { CredentialPasswordDialog } from '../common/dialogs/Dialogs'
+import { deserializeCredentialExport, isEncryptedCredentialExport } from '../common/security/CredentialExportCrypto'
 import { picker, fileIo } from '@kit.CoreFileKit'
 import { common } from '@kit.AbilityKit'
 import { BusinessError } from '@kit.BasicServicesKit'
@@ -35,6 +37,8 @@ struct LoginPage {
   private cookiePollTimer: number = -1
   private pollingActive: boolean = false
   private authTriggered: boolean = false
+  private pendingCredentialContent: string = ''
+  private importCredentialDialogController?: CustomDialogController
 
   build() {
     Stack() {
@@ -293,7 +297,7 @@ struct LoginPage {
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext
       const documentSelectOptions = new picker.DocumentSelectOptions()
       documentSelectOptions.maxSelectNumber = 1
-      documentSelectOptions.fileSuffixFilters = ['.txt', '.ini', '.cfg']
+      documentSelectOptions.fileSuffixFilters = ['.ngacred']
 
       const documentViewPicker = new picker.DocumentViewPicker(context)
       const uris: string[] = await documentViewPicker.select(documentSelectOptions)
@@ -313,28 +317,50 @@ struct LoginPage {
       const textDecoder = util.TextDecoder.create('utf-8')
       const content = textDecoder.decodeToString(new Uint8Array(buffer, 0, readLen))
 
-      const uidMatch = content.match(/NGA_UID\s*=\s*(\S+)/)
-      const cidMatch = content.match(/NGA_CID\s*=\s*(\S+)/)
-
-      if (!uidMatch || !cidMatch) {
-        this.error = '文件格式无效，需要包含 NGA_UID 和 NGA_CID'
+      if (!isEncryptedCredentialExport(content)) {
+        this.error = '文件格式无效，请导入 .ngacred 加密凭证文件'
         return
       }
 
-      const uid = uidMatch[1]
-      const cid = cidMatch[1]
+      this.pendingCredentialContent = content
+      this.importCredentialDialogController = new CustomDialogController({
+        builder: CredentialPasswordDialog({
+          title: '导入加密凭证',
+          message: '请输入导出时设置的加密密码。',
+          confirmLabel: '导入',
+          minLength: 8,
+          onConfirm: (password: string): void => {
+            this.importEncryptedCredential(password)
+          }
+        }),
+        autoCancel: true,
+        customStyle: true
+      })
+      this.importCredentialDialogController?.open()
+    } catch (e) {
+      this.error = (e as Error).message || '导入失败'
+    } finally {
+      this.importing = false
+    }
+  }
 
-      const result = await injectCredentials(uid, cid)
+  private async importEncryptedCredential(password: string): Promise<void> {
+    this.error = ''
+    this.importing = true
+    try {
+      const credential = await deserializeCredentialExport(this.pendingCredentialContent, password)
+      const result = await injectCredentials(credential.uid, credential.cid)
 
       if (result.ok && result.token && result.user) {
         const user = result.user
         await appStore.setAuth(result.token, user.uid, user.nickName, user.avatarUrl)
+        this.pendingCredentialContent = ''
         this.getUIContext().getRouter().replaceUrl({ url: 'pages/MainPage' })
       } else {
-        this.error = result.error || '凭据验证失败'
+        this.error = result.error || '凭证验证失败'
       }
     } catch (e) {
-      this.error = (e as Error).message || '导入失败'
+      this.error = '解密失败，请检查密码或文件是否正确'
     } finally {
       this.importing = false
     }
@@ -449,5 +475,7 @@ struct LoginPage {
 
   aboutToDisappear(): void {
     this.stopCookiePolling()
+    this.importCredentialDialogController = undefined
+    this.pendingCredentialContent = ''
   }
 }

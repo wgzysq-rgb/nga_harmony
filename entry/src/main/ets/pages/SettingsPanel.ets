@@ -6,9 +6,10 @@
 import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
 import { AppColors, IconColors, ImageLoadStrategy, ThreadNavMode, THEME_OPTIONS, ThemeOption } from '../common/constants/Constants'
-import { ConfirmDialog, ActionSheetDialog, ActionOption } from '../common/dialogs/Dialogs'
+import { ConfirmDialog, ActionSheetDialog, ActionOption, CredentialPasswordDialog } from '../common/dialogs/Dialogs'
 import { PanelNavBar } from '../common/components/PanelNavBar'
 import { SettingRow, SettingToggleRow, SettingPickerRow } from '../common/components/SettingRow'
+import { serializeCredentialExport } from '../common/security/CredentialExportCrypto'
 import { picker, fileIo, storageStatistics } from '@kit.CoreFileKit'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { common, contextConstant } from '@kit.AbilityKit'
@@ -42,6 +43,7 @@ export struct SettingsPanel {
   imageStrategyDialogController?: CustomDialogController
   threadNavDialogController?: CustomDialogController
   prefetchPageDialogController?: CustomDialogController
+  exportCredentialDialogController?: CustomDialogController
   logoutDialogController?: CustomDialogController = new CustomDialogController({
     builder: ConfirmDialog({
       title: '退出登录',
@@ -72,6 +74,7 @@ export struct SettingsPanel {
     this.imageStrategyDialogController = undefined
     this.threadNavDialogController = undefined
     this.prefetchPageDialogController = undefined
+    this.exportCredentialDialogController = undefined
   }
 
   private formatSize(bytes: number): string {
@@ -149,6 +152,30 @@ export struct SettingsPanel {
   }
 
   private async handleExport(): Promise<void> {
+    const token = appStore.auth.token
+    const session = appStore.getSession(token)
+    if (!session) {
+      appStore.showToast('未找到登录会话')
+      return
+    }
+
+    this.exportCredentialDialogController = new CustomDialogController({
+      builder: CredentialPasswordDialog({
+        title: '加密导出凭证',
+        message: '导出的文件将使用此密码加密，导入时需要再次输入。',
+        confirmLabel: '导出',
+        minLength: 8,
+        onConfirm: (password: string): void => {
+          this.exportEncryptedCredential(password)
+        }
+      }),
+      autoCancel: true,
+      customStyle: true
+    })
+    this.exportCredentialDialogController?.open()
+  }
+
+  private async exportEncryptedCredential(password: string): Promise<void> {
     try {
       const token = appStore.auth.token
       const session = appStore.getSession(token)
@@ -158,10 +185,10 @@ export struct SettingsPanel {
       }
 
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext
-      const userName = session.nickName || `User${session.uid}`
+      const userName = session?.nickName || `User${session?.uid ?? ''}`
       const documentSaveOptions = new picker.DocumentSaveOptions()
-      documentSaveOptions.newFileNames = [`nga_${userName}.txt`]
-      documentSaveOptions.fileSuffixChoices = ['文档|.txt']
+      documentSaveOptions.newFileNames = [`nga_${userName}.ngacred`]
+      documentSaveOptions.fileSuffixChoices = ['NGA 凭证|.ngacred']
 
       const documentViewPicker = new picker.DocumentViewPicker(context)
       const uris: string[] = await documentViewPicker.save(documentSaveOptions)
@@ -170,13 +197,13 @@ export struct SettingsPanel {
         return
       }
 
-      const content = `NGA_UID=${session.uid}\nNGA_CID=${session.cid}`
+      const content = await serializeCredentialExport({ uid: session.uid, cid: session.cid }, password)
       const file = fileIo.openSync(uris[0], fileIo.OpenMode.READ_WRITE)
       fileIo.writeSync(file.fd, content)
       fileIo.closeSync(file)
-      appStore.showToast('账号凭证已导出')
+      appStore.showToast('账号凭证已加密导出')
     } catch (e) {
-      appStore.showToast('导出失败')
+      appStore.showToast((e as Error).message || '导出失败')
     }
   }
 

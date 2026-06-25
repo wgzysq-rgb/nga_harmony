@@ -153,6 +153,85 @@ export struct ActionSheetDialog {
 
 // 备注编辑对话框
 @CustomDialog
+export struct CredentialPasswordDialog {
+  controller: CustomDialogController
+  @Prop title: string = ''
+  @Prop message: string = ''
+  @Prop confirmLabel: string = '确定'
+  @Prop minLength: number = 8
+  @State password: string = ''
+  onConfirm?: (password: string) => void
+  onCancel?: () => void
+
+  build() {
+    Column() {
+      Text(this.title)
+        .fontSize(17)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(AppColors.textPrimary)
+        .margin({ top: 20, bottom: 8 })
+        .alignSelf(ItemAlign.Center)
+
+      Text(this.message)
+        .fontSize(13)
+        .fontColor(AppColors.textSecondary)
+        .textAlign(TextAlign.Center)
+        .margin({ bottom: 12 })
+
+      TextInput({ text: this.password, placeholder: '输入加密密码' })
+        .type(InputType.Password)
+        .height(44)
+        .fontSize(15)
+        .borderRadius(12)
+        .backgroundColor(AppColors.bgSecondary)
+        .onChange((value: string) => { this.password = value })
+
+      Text('至少 ' + this.minLength + ' 位，请妥善保存')
+        .fontSize(11)
+        .fontColor(AppColors.textTertiary)
+        .margin({ top: 6 })
+        .alignSelf(ItemAlign.Start)
+
+      Divider().color(AppColors.separator).margin({ top: 12 })
+
+      Row() {
+        Button('取消')
+          .layoutWeight(1)
+          .height(44)
+          .backgroundColor(Color.Transparent)
+          .fontColor(AppColors.primary)
+          .fontSize(16)
+          .onClick(() => {
+            this.controller.close()
+            if (this.onCancel) this.onCancel()
+          })
+
+        Divider().vertical(true).height(24).color(AppColors.separator)
+
+        Button(this.confirmLabel)
+          .layoutWeight(1)
+          .height(44)
+          .backgroundColor(Color.Transparent)
+          .fontColor(this.password.trim().length >= this.minLength ? AppColors.primary : AppColors.textTertiary)
+          .fontWeight(FontWeight.Bold)
+          .fontSize(16)
+          .onClick(() => {
+            if (this.password.trim().length >= this.minLength) {
+              const password = this.password
+              this.controller.close()
+              if (this.onConfirm) this.onConfirm(password)
+            }
+          })
+      }
+    }
+    .constraintSize({ maxWidth: 340 })
+    .padding({ left: 20, right: 20, bottom: 12 })
+    .backgroundColor(AppColors.bgTertiary)
+    .borderRadius(14)
+  }
+}
+
+@CustomDialog
 export struct MakeNoteDialog {
   controller: CustomDialogController
   @Prop userName: string = ''
