@@ -250,13 +250,13 @@ const LOGOUT_TAG = 'AuthApi'
 const LOGOUT_DOMAIN = 0x0000
 
 /**
- * 登出当前 token 对应的会话。
+ * 通知 NGA 服务端使当前 token 对应的 cid 会话失效。
  *
- * 先尝试调用 NGA 服务端登出接口使 cid 失效。
- * 本地 session 与认证状态清理由调用方后续调用的 clearAuth() 统一完成。
- * 网络失败不阻塞本地登出，调用方在 UI 层继续执行 clearAuth()。
+ * 仅做网络请求，不碰本地 Store 状态。
+ * 本地清理由 LogoutOrchestrator 编排的 clearAuth() 统一完成。
+ * 网络失败不阻塞本地登出。
  */
-export async function logout(token: string): Promise<void> {
+export async function invalidateServerSession(token: string): Promise<void> {
   const session = appStore.getSession(token);
   if (session) {
     try {
