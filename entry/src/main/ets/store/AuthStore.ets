@@ -1,4 +1,5 @@
 import { hilog } from '@kit.PerformanceAnalysisKit'
+import { BaseStore } from './BaseStore'
 import { PreferencesStore } from '../common/infra/PreferencesStore'
 import { SerialQueue } from '../common/infra/SerialQueue'
 
@@ -38,16 +39,13 @@ const SESSION_KEY: string = 'sessions'
 /**
  * 认证状态与多账户登录会话管理
  */
-export class AuthStore {
-  state: AuthState = new AuthState()
-  private store!: PreferencesStore
-  private writeQueue!: SerialQueue
+export class AuthStore extends BaseStore<AuthState> {
+  override state: AuthState = new AuthState()
   private sessions: Map<string, Session> = new Map()
   private sessionsDirty: boolean = false
 
   async init(store: PreferencesStore, queue: SerialQueue): Promise<void> {
-    this.store = store
-    this.writeQueue = queue
+    this.setDeps(store, queue)
     await this.loadSessions()
     await this.migrateAuthIfNeeded()
     await this.loadAuth()
@@ -221,5 +219,6 @@ export class AuthStore {
   /** 重置认证状态（登出时调用） */
   reset(): void {
     this.clearAuth()
+    super.reset()
   }
 }
