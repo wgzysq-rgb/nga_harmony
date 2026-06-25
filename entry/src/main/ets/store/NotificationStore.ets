@@ -1,10 +1,11 @@
 import { hilog } from '@kit.PerformanceAnalysisKit'
 import { getNotifications } from '../service/NgaApi'
+import { BaseStore } from './BaseStore'
 import { PreferencesStore } from '../common/infra/PreferencesStore'
 import { SerialQueue } from '../common/infra/SerialQueue'
+import { KEY_UNREAD_NOTI_COUNT } from '../common/constants/AppStorageKeys'
 import type { NgaNotification } from '../model/Notification'
 import type { AuthState } from './AuthStore'
-import { KEY_UNREAD_NOTI_COUNT } from '../common/constants/AppStorageKeys'
 
 const TAG = 'NotificationStore'
 const DOMAIN = 0x0000
@@ -12,19 +13,15 @@ const DOMAIN = 0x0000
 /**
  * 通知缓存与未读数管理
  */
-export class NotificationStore {
+export class NotificationStore extends BaseStore<Object> {
+  override state: Object = new Object()
   unreadNotiCount: number = 0
-  private store!: PreferencesStore
-  private writeQueue!: SerialQueue
-  private auth!: AuthState
   private cachedNotifications: NgaNotification[] = []
   private lastNotiQueryTime: number = 0
   private static readonly NOTI_QUERY_DELAY: number = 30 * 1000
 
   async init(store: PreferencesStore, queue: SerialQueue, auth: AuthState): Promise<void> {
-    this.store = store
-    this.writeQueue = queue
-    this.auth = auth
+    this.setDeps(store, queue, auth)
     if (auth.uid) {
       await this.loadCachedNotifications()
     }
@@ -35,6 +32,7 @@ export class NotificationStore {
     this.cachedNotifications = []
     this.unreadNotiCount = 0
     this.lastNotiQueryTime = 0
+    super.reset()
   }
 
   // ============== Refresh ==============

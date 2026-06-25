@@ -1,12 +1,13 @@
 import { hilog } from '@kit.PerformanceAnalysisKit'
 import { getUserProfile } from '../service/NgaApi'
 import { LruCache } from '../common/cache/LruCache'
+import { BaseStore } from './BaseStore'
 import { PreferencesStore } from '../common/infra/PreferencesStore'
 import { SerialQueue } from '../common/infra/SerialQueue'
-import type { ProfileData } from '../model/User'
-import type { AuthState } from './AuthStore'
 import { KEY_PROFILE_VERSION } from '../common/constants/AppStorageKeys'
 import { bumpAppStorageVersion } from '../common/utils/AppStorageVersion'
+import type { ProfileData } from '../model/User'
+import type { AuthState } from './AuthStore'
 
 const TAG = 'ProfileStore'
 const DOMAIN = 0x0000
@@ -14,18 +15,14 @@ const DOMAIN = 0x0000
 /**
  * 用户资料 LRU 缓存管理
  */
-export class ProfileStore {
-  private store!: PreferencesStore
-  private writeQueue!: SerialQueue
-  private auth!: AuthState
+export class ProfileStore extends BaseStore<Object> {
+  override state: Object = new Object()
   private cache: LruCache<ProfileData> = new LruCache<ProfileData>(200, 5 * 60 * 1000)
   private refreshingUids: Set<string> = new Set()
   private static readonly REFRESH_DELAY: number = 10000
 
   async init(store: PreferencesStore, queue: SerialQueue, auth: AuthState): Promise<void> {
-    this.store = store
-    this.writeQueue = queue
-    this.auth = auth
+    this.setDeps(store, queue, auth)
     if (auth.uid) {
       await this.loadCachedProfiles()
     }
@@ -35,6 +32,7 @@ export class ProfileStore {
   reset(): void {
     this.cache.clear()
     this.refreshingUids = new Set()
+    super.reset()
   }
 
   // ============== Cache ==============

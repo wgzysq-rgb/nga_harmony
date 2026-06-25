@@ -1,4 +1,5 @@
 import { Context } from '@kit.AbilityKit'
+import { BaseStore } from './BaseStore'
 import { PreferencesStore } from '../common/infra/PreferencesStore'
 import { SerialQueue } from '../common/infra/SerialQueue'
 import { SettingsState, FavBoard } from './settings/SettingsState'
@@ -32,11 +33,8 @@ export type { BlacklistEntry } from './settings/SettingsState'
  * persistSettings / reset 生命周期。所有 setter 兼容转发到对应域子 store，
  * 保证现有 AppStore / pages 调用方零改动。
  */
-export class SettingsStore {
-  state: SettingsState = new SettingsState()
-  private store!: PreferencesStore
-  private writeQueue!: SerialQueue
-  private auth!: AuthState
+export class SettingsStore extends BaseStore<SettingsState> {
+  override state: SettingsState = new SettingsState()
   private context?: Context
   private ctx: SettingsContext
 
@@ -50,6 +48,7 @@ export class SettingsStore {
   readonly checkinSettings: CheckinSettings
 
   constructor() {
+    super()
     this.ctx = new SettingsContext(this.state, (): void => this.persistSettings())
     this.themeSettings = new ThemeSettings(this.ctx)
     this.displaySettings = new DisplaySettings(this.ctx)
@@ -62,9 +61,7 @@ export class SettingsStore {
   }
 
   async init(store: PreferencesStore, queue: SerialQueue, auth: AuthState, ctx?: Context): Promise<void> {
-    this.store = store
-    this.writeQueue = queue
-    this.auth = auth
+    this.setDeps(store, queue, auth)
     this.context = ctx
     this.ctx.auth = auth
     this.ctx.context = ctx
@@ -80,6 +77,7 @@ export class SettingsStore {
     this.socialListSettings.reset()
     this.filterKeywordSettings.reset()
     this.noteSettings.reset()
+    super.reset()
   }
 
   // ============== Persist ==============
