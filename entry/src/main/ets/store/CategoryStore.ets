@@ -2,6 +2,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit'
 import { getForumCategories } from '../service/NgaApi'
 import { PreferencesStore } from '../common/infra/PreferencesStore'
 import { SerialQueue } from '../common/infra/SerialQueue'
+import { BaseStore } from './BaseStore'
 import type { Category } from '../model/Forum'
 import type { AuthState } from './AuthStore'
 import { KEY_CAT_VERSION } from '../common/constants/AppStorageKeys'
@@ -13,21 +14,15 @@ const DOMAIN = 0x0000
 /**
  * 论坛分类缓存管理
  */
-export class CategoryStore {
+export class CategoryStore extends BaseStore<Object> {
+  override state: Object = new Object()
   cachedCategories: Category[] = []
-  private store!: PreferencesStore
-  private writeQueue!: SerialQueue
-  private auth!: AuthState
   private categoriesRefreshing: boolean = false
   categoriesLoaded: boolean = false
   categoriesError: string = ''
   private static readonly REFRESH_DELAY: number = 10000
-  private refreshGeneration: number = 0
-
   async init(store: PreferencesStore, queue: SerialQueue, auth: AuthState): Promise<void> {
-    this.store = store
-    this.writeQueue = queue
-    this.auth = auth
+    this.setDeps(store, queue, auth)
     await this.loadCachedCategories()
   }
 
@@ -37,7 +32,7 @@ export class CategoryStore {
     this.categoriesRefreshing = false
     this.categoriesLoaded = false
     this.categoriesError = ''
-    this.refreshGeneration++
+    super.reset()
   }
 
   // ============== Cache ==============
@@ -65,7 +60,7 @@ export class CategoryStore {
   ensureCategories(): void {
     if (this.categoriesRefreshing) return
     this.categoriesRefreshing = true
-    const gen = ++this.refreshGeneration
+    const gen = ++this.generation
     const hasCache = this.cachedCategories.length > 0
     setTimeout(async () => {
       await this.doRefreshCategories(gen)
@@ -74,7 +69,7 @@ export class CategoryStore {
   }
 
   private async doRefreshCategories(gen: number): Promise<void> {
-    if (gen !== this.refreshGeneration) return
+    if (!this.isCurrent(gen)) return
     if (!this.auth.isAuthenticated) {
       this.categoriesLoaded = true
       this.categoriesError = '未登录'
