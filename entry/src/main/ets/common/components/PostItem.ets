@@ -106,16 +106,25 @@ export struct PostItem {
               .margin({ bottom: 4 })
               .onClick(() => { this.sigExpanded = !this.sigExpanded })
 
-              Column() {
-                BBCodeContentView({
-                  nodes: getCachedBBNodes(this.post.signature),
-                  onImageClick: this.onImageClick,
-                  onLinkClick: this.onLinkClick,
-                  hideFailedImages: true,
-                })
+              if (this.sigExpanded) {
+                Column() {
+                  BBCodeContentView({
+                    nodes: getCachedBBNodes(this.post.signature),
+                    onImageClick: this.onImageClick,
+                    onLinkClick: this.onLinkClick,
+                    hideFailedImages: true,
+                  })
+                }
+                .width('100%')
+              } else {
+                Text(this.getSignaturePreview())
+                  .fontSize(12)
+                  .fontColor(AppColors.textSecondary)
+                  .lineHeight(20)
+                  .maxLines(4)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  .width('100%')
               }
-              .constraintSize({ maxHeight: this.sigExpanded ? 10000 : 150 })
-              .clip(true)
             }
             .alignItems(HorizontalAlign.Start)
             .margin({ top: 12 })
@@ -155,5 +164,19 @@ export struct PostItem {
     const et: number | null = parseAlterinfoTs(this.post.alterinfo)
     if (et === null) return ''
     return ' [在' + formatTimestampCST(et) + '修改]'
+  }
+
+  private getSignaturePreview(): string {
+    let s: string = this.post.signature || ''
+    s = s.replace(/\[quote\][\s\S]*?\[\/quote\]/gi, '')
+    s = s.replace(/\[\/?(?:pid|uid|tid|b|i|u|del|h|url|color|size|font|collapse|code|img|flash|audio|list|item|align|style|table|tr|td|sub|sup)\d*[^\]]*\]/gi, '')
+    s = s.replace(/\[s:\w+:\w+\]/g, '')
+    s = s.replace(/<[^>]+>/g, '')
+    s = s.replace(/https?:\/\/\S+/g, '')
+    s = s.replace(/\s+/g, ' ').trim()
+    if (s.length > 160) {
+      return s.substring(0, 160) + '...'
+    }
+    return s
   }
 }

@@ -239,7 +239,7 @@ export struct ThreadPanel {
       if (gen !== this.mgr.getGeneration()) return
 
       if (result.ok) {
-        await preWarmPosts(result.posts, appStore.settings.showSignature, taskpool.Priority.HIGH)
+        await preWarmPosts(result.posts, false, taskpool.Priority.HIGH)
 
         if (result.pagination) {
           this.mgr.totalPages = result.pagination.totalPages
@@ -364,7 +364,7 @@ export struct ThreadPanel {
         if (item === null || item.result === null) continue
         if (item.result.ok) {
           this.mgr.setPrefetchedPage(item.page, item.result.posts, item.result.pagination.totalPages)
-          preWarmPosts(item.result.posts, appStore.settings.showSignature, taskpool.Priority.MEDIUM).catch(() => {})
+          preWarmPosts(item.result.posts, false, taskpool.Priority.MEDIUM).catch(() => {})
         }
       }
     } catch (e) {
@@ -404,7 +404,7 @@ export struct ThreadPanel {
       if (result.ok) {
         ok = true
         try {
-          await preWarmPosts(result.posts, appStore.settings.showSignature, taskpool.Priority.MEDIUM)
+          await preWarmPosts(result.posts, false, taskpool.Priority.MEDIUM)
         } catch (e) {
           // 预热失败不影响 posts 存储
         }
