@@ -106,7 +106,7 @@ export class BBNode {
 | `lexer.ets` | 词法/状态层：节点工厂、文本预处理、URL 白名单、HTML 实体入口 | `ParseState`、`preprocessContent`、`isSafeUrl`、`createBBNode`、`pushTextNode` |
 | `parser.ets` | 编排层：块级循环、标签族分发、表格/列表结构化解析 | `parseBBCode`、`parseBlockNodes`、`tryMatchBlock` |
 | `inline-parser.ets` | 行内层：pid/uid/tid 链接、@提及、表情、格式化标签 | `parseInlineInto`、`checkInlineFormat`、`guessMediaTypeFromExt` |
-| `block-handlers/` | 各块级标签的独立 handler（9 个文件） | `handleQuote` / `handleCollapse` / `handleCode` / `handleList` / `handleNuke` / `handleTable` / `handleFlash` / `handleImg` / `handlePostBy` / `handleFormat`（含 `handleDice` / `handleFloatLeft` / `handleFloatRight` / `handleAlign` / `handleStyle` / `handleHip` / `handleComment` / `handleRandomBlock`） |
+| `block-handlers/` | 各块级标签的独立 handler（10 个文件） | `handleQuote` / `handleCollapse` / `handleCode` / `handleList` / `handleNuke` / `handleTable` / `handleFlash` / `handleImg` / `handlePostBy` / `handleFormat`（含 `handleDice` / `handleFloatLeft` / `handleFloatRight` / `handleAlign` / `handleStyle` / `handleHip` / `handleComment` / `handleRandomBlock`） |
 
 ### 预处理阶段
 

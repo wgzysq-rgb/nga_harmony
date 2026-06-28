@@ -105,14 +105,14 @@ try {
 
 | 方法 | 函数名 | 说明 |
 |------|--------|------|
-| GET | `ngaClient.get`（`ngaGet` `NgaClient.ets:270-273`） | 标准 GET 请求 |
-| POST | `ngaClient.post`（`ngaPost` `NgaClient.ets:275-280`） | 表单编码 POST，支持 GBK 字段 |
-| POST with query | `ngaClient.postWithQuery`（`NgaClient.ets:282-290`） | POST + URL 参数，跳过 `__inchst` |
-| Multipart | `ngaClient.postMultipart`（`NgaClient.ets:292-299`） | multipart/form-data 表单 |
-| Raw | `ngaClient.getRaw`（`NgaClient.ets:301-305`） | 返回 ArrayBuffer，不解码 |
-| HTML | `ngaClient.getHtmlText`（`NgaClient.ets:307-317`） | 返回 GB18030 解码后的 HTML 文本，不轮换域名 |
-| 指定 baseUrl | `ngaClient.getWithBaseUrl`（`NgaClient.ets:319-322`） | GET 但绑定特定域名 |
-| 附件二进制上传 | `ngaUploadFile`（`NgaClient.ets:579-672`） | 上传到 `img8.nga.cn/attach.php` |
+| GET | `ngaClient.get`（`ngaGet` `NgaClient.ets:291-294`） | 标准 GET 请求 |
+| POST | `ngaClient.post`（`ngaPost` `NgaClient.ets:296-301`） | 表单编码 POST，支持 GBK 字段 |
+| POST with query | `ngaClient.postWithQuery`（`NgaClient.ets:303-311`） | POST + URL 参数，跳过 `__inchst` |
+| Multipart | `ngaClient.postMultipart`（`NgaClient.ets:313-320`） | multipart/form-data 表单 |
+| Raw | `ngaClient.getRaw`（`NgaClient.ets:322-326`） | 返回 ArrayBuffer，不解码 |
+| HTML | `ngaClient.getHtmlText`（`NgaClient.ets:328-338`） | 返回 GB18030 解码后的 HTML 文本，不轮换域名 |
+| 指定 baseUrl | `ngaClient.getWithBaseUrl`（`NgaClient.ets:340-343`） | GET 但绑定特定域名 |
+| 附件二进制上传 | `ngaUploadFile`（`NgaClient.ets:613-706`） | 上传到 `img8.nga.cn/attach.php` |
 
 ### 错误检测与降级
 

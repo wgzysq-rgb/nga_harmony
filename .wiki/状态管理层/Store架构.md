@@ -2,7 +2,7 @@
 
 ## 概述
 
-状态管理层采用 Facade 模式：`AppStore` 作为统一门面，将各领域职责委派给独立子 Store。所有 Store 文件位于 `store/` 目录下，共 20 个源文件——10 个根级 Store（含 AppStore 门面）+ `settings/` 下 2 个（`SettingsState` 持久化根状态、`SettingsContext` 共享依赖上下文）+ `settings/domain/` 下 8 个设置域子 store。
+状态管理层采用 Facade 模式：`AppStore` 作为统一门面，将各领域职责委派给独立子 Store。所有 Store 文件位于 `store/` 目录下，共 21 个源文件——11 个根级 Store（含 BaseStore 与 AppStore 门面）+ `settings/` 下 2 个（`SettingsState` 持久化根状态、`SettingsContext` 共享依赖上下文）+ `settings/domain/` 下 8 个设置域子 store。
 
 > 重构注记：`ToastManager`（消息提示）已迁出至 `common/feedback/`，`FilterListManager`（过滤列表）已迁至 `common/utils/`，`PreferencesStore`（KV 持久化）与 `SerialQueue`（串行写队列）已迁至 `common/infra/`。它们仍是 Store 层的依赖，但物理文件不再位于 `store/`，下图与下文均按迁移后的真实位置描述。
 
@@ -121,7 +121,7 @@ sequenceDiagram
 
 ## 文件清单
 
-### 根级 Store（`store/`，10 文件）
+### 根级 Store（`store/`，11 文件）
 
 | 文件 | 类/导出 | 职责 |
 |------|---------|------|
