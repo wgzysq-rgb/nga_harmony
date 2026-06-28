@@ -12,4 +12,3 @@
 /.appanalyzer
 **/language-server.log
 /java
-opencode.json
