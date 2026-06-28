@@ -54,10 +54,10 @@ graph TB
 
 ### 核心请求流程
 
-`ngaRequest` 是 JSON 接口的核心入口（`NgaClient.ets:332-381`）：
+`ngaRequest` 是 JSON 接口的核心入口（`NgaClient.ets:353-402`）：
 
 ```typescript
-// NgaClient.ets:332-381 — JSON 核心请求
+// NgaClient.ets:353-402 — JSON 核心请求
 async function ngaRequest(path, method, params, body, cookies, baseUrl, extraHeaders, skipInchst?) {
   // 1. 默认注入 __inchst=UTF8（skipInchst 时跳过，如 ngaPostWithQuery）
   if (!skipInchst && !params['__inchst']) params['__inchst'] = 'UTF8';
@@ -75,10 +75,10 @@ async function ngaRequest(path, method, params, body, cookies, baseUrl, extraHea
 
 ### executeWithRetry — 统一的容错执行器（P2-4 抽取）
 
-`executeWithRetry`（`NgaClient.ets:186-266`）封装了「首次请求 + 失败后遍历 `DOMAINS` 重试 + `ngaThrottler` acquire/release」三段逻辑，被 `ngaRequest` 与 `ngaGetHtmlText` 共用：
+`executeWithRetry`（`NgaClient.ets:206-287`）封装了「首次请求 + 失败后遍历 `DOMAINS` 重试 + `ngaThrottler` acquire/release」三段逻辑，被 `ngaRequest` 与 `ngaGetHtmlText` 共用：
 
 ```typescript
-// NgaClient.ets:228-265 — 限流 + 域名轮换重试
+// NgaClient.ets:249-287 — 限流 + 域名轮换重试
 await ngaThrottler.acquire(hostname);          // 首次按域名限流
 try {
   response = await httpReq(url, method, header, body);
@@ -96,7 +96,7 @@ try {
 } finally { if (!released) ngaThrottler.release(hostname); }
 ```
 
-**保守决策（baseUrl quirk）：** `baseUrl` 形参控制重试是否轮换域名（`NgaClient.ets:240`）：
+**保守决策（baseUrl quirk）：** `baseUrl` 形参控制重试是否轮换域名（`NgaClient.ets:213`）：
 
 - `ngaRequest` 传入 `baseUrl = ''`（空串）→ `retryBaseUrl = baseUrl || DOMAINS[retryDomainIdx]` 命中轮换后的域名，**会轮换**。
 - `ngaGetHtmlText` 传入 `baseUrl = DOMAINS[activeDomainIndex]`（非空）→ `retryBaseUrl` 永远命中该域名，**不轮换**，逐字保持原行为（HTML 接口与 JSON 接口的域名语义不同，强行轮换会破坏会话）。
@@ -116,10 +116,10 @@ try {
 
 ### 错误检测与降级
 
-`NgaClient.ets:351-367` 处理服务器返回的 HTML 错误页面（而非 JSON）：
+`NgaClient.ets:372-388` 处理服务器返回的 HTML 错误页面（而非 JSON）：
 
 ```typescript
-// NgaClient.ets:351-367 — 检测 HTML 错误标记
+// NgaClient.ets:372-388 — 检测 HTML 错误标记
 const trimmed = rawText.trimStart();
 if (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html')) {
   // 提取 <!--msginfostart--> 中的错误描述（兜底用 <title>）
@@ -128,17 +128,17 @@ if (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html')) {
 }
 ```
 
-JSON 解析失败时（`NgaClient.ets:373-380`）返回带 `__parseError` 标记的对象，而非抛异常，让业务层自行决定降级路径（如 `getThread` 在 JSON 失败时降级到 HTML 解析）。
+JSON 解析失败时（`NgaClient.ets:390-401`）返回带 `__parseError` 标记的对象，而非抛异常，让业务层自行决定降级路径（如 `getThread` 在 JSON 失败时降级到 HTML 解析）。
 
 ### 限流控制
 
 | 参数 | 值 | 位置 |
 |------|-----|------|
-| 连接超时 | `15000 ms` | `NgaClient.ets:141` |
-| 读取超时 | `30000 ms` | `NgaClient.ets:140` |
-| 限流器 | `ngaThrottler`（令牌桶） | `common/concurrency/Throttler.ets:114` |
-| 默认最大并发 | `6`（每域名） | `Throttler.ets:19` |
-| 默认最小间隔 | `150 ms`（每域名） | `Throttler.ets:20` |
+| 连接超时 | `15000 ms` | `NgaClient.ets:146` |
+| 读取超时 | `30000 ms` | `NgaClient.ets:145` |
+| 限流器 | `ngaThrottler`（令牌桶） | `common/concurrency/Throttler.ets:149` |
+| 默认最大并发 | `6`（每域名） | `Throttler.ets:26` |
+| 默认最小间隔 | `150 ms`（每域名） | `Throttler.ets:27` |
 
 `Throttler` 在 P1-2 从 `service/Throttle.ets` 迁入 `common/concurrency/`，按域名维护独立的令牌桶（`Throttler.ets:22-112`）。
 
@@ -169,10 +169,10 @@ JSON 解析失败时（`NgaClient.ets:373-380`）返回带 `__parseError` 标记
 | 接口函数 | 实现位置 | 说明 |
 |----------|----------|------|
 | `verifyToken` | `api/AuthApi.ets:192-211` | Token 有效性验证（网络异常默认视为有效，避免离线强制登出） |
-| `getCaptcha` / `loginStep1` / `loginStep2` | `api/AuthApi.ets:28` / `:41-65` / `:67-136` | 验证码、两步登录 |
+| `getCaptcha` / `loginStep1` / `loginStep2` | `api/AuthApi.ets:29` / `:41-65` / `:67-136` | 验证码、两步登录 |
 | `injectCredentials` | `api/AuthApi.ets:215-244` | uid+cid 直登 |
 | `getForumCategories` | `api/ForumApi.ets:14` | 论坛板块分类 |
-| `getTopicList` | `api/ForumApi.ets:93` | 主题列表（分页） |
+| `getTopicList` | `api/ForumApi.ets:75` | 主题列表（分页） |
 | `searchForum` | `api/ForumApi.ets:33` | 板块搜索 |
 | `getThread` | `api/ThreadApi.ets:39-115` | 帖子详情，JSON API 优先、失败降级 HTML |
 | `getThreadHtml` | `api/ThreadApi.ets:279-309` | 强制走 HTML 解析的降级入口 |
@@ -264,7 +264,7 @@ function parseHtmlTask(html: string): Object {
 }
 ```
 
-调用点：`api/ThreadApi.ets:65` 与 `:102`，`const rawObj = await taskpool.execute(parseHtmlTask, html)`。`parseHtmlToRawJson` 实际由 `parser/nga/html-thread/index.ets` 装配（`HtmlThreadParser.ets` 是 barrel 转发，详见 [BBCode 解析与渲染](./BBCode解析与渲染.md)）。
+调用点：`api/ThreadApi.ets:68` 与 `:106`，`const rawObj = await taskpool.execute(parseHtmlTask, html)`。`parseHtmlToRawJson` 实际由 `parser/nga/html-thread/index.ets` 装配（`HtmlThreadParser.ets` 是 barrel 转发，详见 [BBCode 解析与渲染](./BBCode解析与渲染.md)）。
 
 ## 数据模型
 
@@ -285,12 +285,12 @@ function parseHtmlTask(html: string): Object {
 ## 边缘情况
 
 1. **非标准 JSON**：NGA 接口 JSON 前可能附加非 JSON 字符，`preprocessJson`（`parser/NgaJsonSanitizer.ets`）负责清理。
-2. **HTML 错误页**：某些错误码下服务器直接返回 HTML 而非 JSON，`ngaRequest` 正则提取 `msginfo` / `msgcode`（`NgaClient.ets:351-367`）。
+2. **HTML 错误页**：某些错误码下服务器直接返回 HTML 而非 JSON，`ngaRequest` 正则提取 `msginfo` / `msgcode`（`NgaClient.ets:372-388`）。
 3. **GB18030 编码**：服务端使用 GB18030，所有响应文本需 `decodeGb18030` 解码后才能 `JSON.parse`。
-4. **GBK 表单字段**：发帖/回复的 `post_content`、`post_subject` 含中文与 emoji，必须经 `gbkPercentEncode`（emoji 先转 HTML 实体避免代理对被拆分），由 `ngaPost` 的 `gbkFieldKeys` 参数触发（`api/ThreadApi.ets:371`）。
+4. **GBK 表单字段**：发帖/回复的 `post_content`、`post_subject` 含中文与 emoji，必须经 `gbkPercentEncode`（emoji 先转 HTML 实体避免代理对被拆分，`common/utils/CodecUtils.ets:80`），由 `ngaPost` 的 `gbkFieldKeys` 参数触发（`api/ThreadApi.ets`）。
 5. **空响应**：部分接口成功返回空对象，需防御性处理。
-6. **JSON 解析失败**：`ngaRequest` 返回 `{ __parseError: true, __rawLength, error }` 而非抛异常（`NgaClient.ets:373-380`），业务层据此决定是否降级。
-7. **附件上传响应是 JS 对象字面量**：`uploadAttachment` 需把单引号转双引号、补全属性名引号后才可 `JSON.parse`（`api/ThreadApi.ets:445-454`）；`error_code != 0` 视为附件过大被拒。
+6. **JSON 解析失败**：`ngaRequest` 返回 `{ __parseError: true, __rawLength, error }` 而非抛异常（`NgaClient.ets:390-401`），业务层据此决定是否降级。
+7. **附件上传响应是 JS 对象字面量**：`uploadAttachment` 需把单引号转双引号、补全属性名引号后才可 `JSON.parse`（`api/ThreadApi.ets:446-456`）；`error_code != 0` 视为附件过大被拒。
 
 ## 常见问题
 
@@ -304,7 +304,7 @@ A: 查看日志中 `[NGA][REQ]` tag，确认请求 URL、方法和 body。`[NGA]
 A: `ngaThrottler` 限制了每个域名的并发数（默认 6）与最小间隔（默认 150 ms），多个并发请求会排队等待。另外域名故障转移机制会遍历所有备用域名，全部超时后返回最后一次的错误。
 
 **Q: 为什么 `ngaGetHtmlText` 不轮换域名而 `ngaRequest` 轮换？**
-A: 两者共用 `executeWithRetry`，差异在调用方传入的 `baseUrl`：`ngaRequest` 传空串触发轮换，`ngaGetHtmlText` 传 `DOMAINS[activeDomainIndex]` 固定域名（`NgaClient.ets:240, 312-315`）。HTML 接口与 JSON 接口的会话语义不同，强行轮换会破坏 `ngaGetHtmlText` 的既有行为。
+A: 两者共用 `executeWithRetry`，差异在调用方传入的 `baseUrl`：`ngaRequest` 传空串触发轮换，`ngaGetHtmlText` 传 `DOMAINS[activeDomainIndex]` 固定域名（`NgaClient.ets:213, 312-315`）。HTML 接口与 JSON 接口的会话语义不同，强行轮换会破坏 `ngaGetHtmlText` 的既有行为。
 
 **Q: 业务函数到底在哪个文件？**
 A: 统一从 `'../service/NgaApi'` 导入即可，barrel 会转发。若需定位实现：登录/会话在 `api/AuthApi`，板块/搜索/主题在 `api/ForumApi`，帖子/回帖/上传在 `api/ThreadApi`，详见上文「业务接口（按域）」表。

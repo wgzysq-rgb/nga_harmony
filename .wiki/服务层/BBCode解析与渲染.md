@@ -148,10 +148,10 @@ return s
 
 ### 性能优化 — 节点分组
 
-`splitIntoGroups`（`BBCodeContentView.ets:226-249`）将连续的行内节点合并为一个 `NodeGroup`，块级节点独立成组。顶层渲染时（`RenderChildren`，`BBCodeContentView.ets:254-274`）优先使用 `aboutToAppear` 中缓存的 `cachedGroups`（`BBCodeContentView.ets:46`），避免重复分组。
+`splitIntoGroups`（`BBCodeContentView.ets:215-238`）将连续的行内节点合并为一个 `NodeGroup`，块级节点独立成组。顶层渲染时（`RenderChildren`，`BBCodeContentView.ets:243-263`）优先使用 `aboutToAppear` 中缓存的 `cachedGroups`（`BBCodeContentView.ets:46`），避免重复分组。
 
 ```typescript
-// BBCodeContentView.ets:226-249 — 行内节点分组（逻辑同旧版，节点判定外迁）
+// BBCodeContentView.ets:215-238 — 行内节点分组（逻辑同旧版，节点判定外迁）
 private splitIntoGroups(nodes: BBNode[]): NodeGroup[] {
   while (i < nodes.length && isInlineNode(nodes[i].type)) {
     inlineNodes.push(nodes[i])  // 合并连续行内节点
@@ -197,7 +197,7 @@ export function splitQuoteChildren(children: BBNode[]): QuoteSplit {
 }
 ```
 
-渲染时 `RenderQuote`（`BBCodeContentView.ets:545-565`）按 `quoteDepth` 取 `QUOTE_BORDER_COLORS[Math.min(depth, len-1)]`（即 `AppColors.quoteBorders`，3 种颜色循环）标识嵌套层级。
+渲染时 `RenderQuote`（`BBCodeContentView.ets:535-554`）按 `quoteDepth` 取 `QUOTE_BORDER_COLORS[Math.min(depth, len-1)]`（即 `AppColors.quoteBorders`，3 种颜色循环）标识嵌套层级。
 
 ## HTML 实体解码（_shared）
 
