@@ -55,6 +55,15 @@ let activeDomainIndex: number = 0;
 const DOMAIN = 0x0000;
 const TAG = 'NgaClient';
 
+/**
+ * 是否输出调试日志。
+ * - true：输出 [NGA][REQ]/[NGA][RES] 请求详情、响应体、上传日志
+ * - false（默认）：仅保留 hilog.error 关键错误，关闭高频 console 输出
+ *
+ * 调试时临时改为 true 即可查看网络请求详情。
+ */
+const VERBOSE_LOG: boolean = false;
+
 // ============== 工具函数 ==============
 
 // 编解码工具（stringToUint8Array/uint8ArrayToBase64/decodeGb18030/emojiToHtmlEntity/
@@ -111,6 +120,9 @@ async function encryptPassword(password: string): Promise<string> {
 const LOG_CHUNK_SIZE: number = 1500;
 
 function logChunks(prefix: string, text: string): void {
+  if (!VERBOSE_LOG) {
+    return;
+  }
   if (text.length === 0) {
     return;
   }
@@ -130,9 +142,11 @@ function logChunks(prefix: string, text: string): void {
 
 function httpReq(url: string, method: http.RequestMethod,
   header: Record<string, string>, body?: string): Promise<HttpResponse> {
-  console.info('[NGA][REQ]', method, url);
-  if (body && body.length > 0) {
-    logChunks('[NGA][REQ] body:', body);
+  if (VERBOSE_LOG) {
+    console.info('[NGA][REQ]', method, url);
+    if (body && body.length > 0) {
+      logChunks('[NGA][REQ] body:', body);
+    }
   }
   return new Promise<HttpResponse>((resolve, reject) => {
     const httpRequest = http.createHttp();
@@ -149,11 +163,15 @@ function httpReq(url: string, method: http.RequestMethod,
     httpRequest.request(url, options, (err, response) => {
       httpRequest.destroy();
       if (err) {
-        console.info('[NGA][REQ] fail:', url, err.message);
+        if (VERBOSE_LOG) {
+          console.info('[NGA][REQ] fail:', url, err.message);
+        }
         reject(new Error(`HTTP请求失败: ${err.message}`));
         return;
       }
-      console.info('[NGA][RES]', response.responseCode, url);
+      if (VERBOSE_LOG) {
+        console.info('[NGA][RES]', response.responseCode, url);
+      }
       resolve({
         status: response.responseCode,
         body: response.result as ArrayBuffer,
@@ -675,7 +693,9 @@ export async function ngaUploadFile(
     headers['Cookie'] = 'ngaPassportUid=' + cookies.uid + '; ngaPassportCid=' + cookies.cid
   }
 
-  console.info('[NGA][UPLOAD]', url, 'size:', String(imageData.byteLength))
+  if (VERBOSE_LOG) {
+    console.info('[NGA][UPLOAD]', url, 'size:', String(imageData.byteLength))
+  }
   return new Promise<string>((resolve, reject) => {
     const httpRequest = http.createHttp()
     httpRequest.request(url, {
@@ -688,12 +708,16 @@ export async function ngaUploadFile(
     }, (err, resp) => {
       httpRequest.destroy()
       if (err) {
-        console.info('[NGA][UPLOAD] fail:', err.message)
+        if (VERBOSE_LOG) {
+          console.info('[NGA][UPLOAD] fail:', err.message)
+        }
         reject(new Error('上传失败: ' + err.message))
         return
       }
       const respText: string = decodeGb18030(resp.result as ArrayBuffer)
-      console.info('[NGA][UPLOAD] resp', String(resp.responseCode), respText.slice(0, 200))
+      if (VERBOSE_LOG) {
+        console.info('[NGA][UPLOAD] resp', String(resp.responseCode), respText.slice(0, 200))
+      }
       if (resp.responseCode !== 200) {
         reject(new Error('上传HTTP ' + String(resp.responseCode)))
         return
