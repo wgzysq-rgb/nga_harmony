@@ -46,7 +46,6 @@ export DEVECO_SDK_HOME="C:/Program Files/Huawei/DevEco Studio/sdk"
 
 ArkTS 语法编译约束 @.claude/rules/ArkTS-syntax.md
 HarmonyOS API 及动画规范 @.claude/rules/HarmonyOS-development.md
-HDC 命令行自动化测试规范 @.claude/rules/hdc-cli-automation.md
 
 ## Store 开发检查清单
 
