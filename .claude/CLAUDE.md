@@ -2,45 +2,22 @@
 
 NGA 论坛客户端，stage 模型，API 6.1.0(23)，单 entry 模块。
 
-## 构建命令
+## 构建与部署
 
-该工程依赖 DevEco Studio 内置工具链（非独立 CLI），需要在 DevEco Studio 所在机器上运行。
+工程依赖 DevEco Studio 内置工具链，项目根目录**无 `hvigorw` Wrapper**，须从安装目录调用。
 
-**环境变量：**
-```bash
-export DEVECO_SDK_HOME="C:/Program Files/Huawei/DevEco Studio/sdk"
-```
+构建、模拟器拉起、安装部署的完整流程见 skill：**`harmonyos-build-deploy`**（`.claude/skills/harmonyos-build-deploy/`）。
 
-**命令（路径是 DevEco Studio 安装目录，需按实际调整）：**
-- 构建 HAP（调试）:
-  ```
-  "/c/Program Files/Huawei/DevEco Studio/tools/hvigor/bin/hvigorw.bat" \
-    assembleHap --mode module -p module=entry@default -p buildMode=debug --no-daemon
-  ```
-- 构建 HAP（发布）:
-  ```
-  hvigorw assembleHap --mode module -p module=entry@default -p buildMode=release
-  ```
-- 清理: `hvigorw clean`
-- **注意** 项目根目录无 `hvigorw` Wrapper 脚本，必须从 DevEco Studio 安装路径调用。常用别名：
-  ```bash
-  alias hvigorw="/c/Program\ Files/Huawei/DevEco\ Studio/tools/hvigor/bin/hvigorw.bat"
-  ```
+核心要点：
+- 环境变量：`export DEVECO_SDK_HOME="C:/Program Files/Huawei/DevEco Studio/sdk"`
+- Git Bash 路径保护：`export MSYS_NO_PATHCONV=1`
+- 别名：`alias hvigorw="/c/Program Files/Huawei/DevEco Studio/tools/hvigor/bin/hvigorw.bat"`
+- 调试构建：`hvigorw assembleHap --mode module -p module=entry@default -p buildMode=debug --no-daemon`
+- 发布构建：将 `buildMode` 改为 `release`；清理：`hvigorw clean`
 
 ## 项目结构
 
-`entry/src/main/ets/` 目录组织：
-
-| 目录 | 文件数 | 职责 |
-|------|--------|------|
-| `pages/` | 24 | 页面级组件 |
-| `common/` | 31 | 可复用 UI 组件、工具类、常量 |
-| `store/` | 14 | 全局状态管理 |
-| `service/` | 8 | 网络请求、外部服务调用 |
-| `model/` | 11 | 数据模型定义 |
-| `parser/` | 10 | BBCode 等富文本解析 |
-| `entryability/` | 1 | 应用生命周期入口 |
-| `entrybackupability/` | 1 | 备份恢复能力 |
+详见 `.wiki/入门指南.md` 及各模块 Wiki：页面模块、公共组件模块、状态管理层、服务层、数据模型、解析器模块、应用生命周期。
 
 ## 规则索引
 
