@@ -2,7 +2,7 @@
 # 如需适配本机环境，修改此文件中的变量即可
 
 # DevEco Studio 安装目录
-DEVECO_STUDIO_HOME="/c/Program Files/Huawei/DevEco Studio"
+DEVECO_STUDIO_HOME="C:/Program Files/Huawei/DevEco Studio"
 
 # 工具路径
 HVIGORW="${DEVECO_STUDIO_HOME}/tools/hvigor/bin/hvigorw.bat"
