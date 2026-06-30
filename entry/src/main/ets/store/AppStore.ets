@@ -153,7 +153,14 @@ class AppStoreClass {
   setDomainIndex(index: number): void { this.settingsStore.setDomainIndex(index) }
   setTheme(theme: string): void { this.settingsStore.setTheme(theme) }
   setAutoCheckin(enabled: boolean): void { this.settingsStore.setAutoCheckin(enabled) }
-  autoCheckinIfNeeded(): void { this.settingsStore.autoCheckinIfNeeded() }
+  /** 若自动签到实际成功，则显示全局成功提示。 */
+  autoCheckinIfNeeded(): void {
+    this.settingsStore.autoCheckinIfNeeded().then((checked: boolean): void => {
+      if (checked) {
+        this.showToast('自动签到成功')
+      }
+    }).catch((): void => {})
+  }
   setSmartGrip(enabled: boolean): void { this.settingsStore.setSmartGrip(enabled) }
   setShowSignature(enabled: boolean): void { this.settingsStore.setShowSignature(enabled) }
 
