@@ -18,7 +18,7 @@ export class AiProviderProfile {
   id: string = ''
   /** 用户命名的方案名称 */
   name: string = ''
-  /** OpenAI 兼容 API 端点地址（如 https://api.deepseek.com/v1） */
+  /** OpenAI 兼容 API 端点地址（如 https://api.deepseek.com） */
   endpoint: string = ''
   /** API 密钥（不记录到日志） */
   apiKey: string = ''

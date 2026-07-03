@@ -3,7 +3,7 @@
  *
  * 管理自定义 AI 提供方配置：创建、编辑、删除、测试连接。
  * 采用内联可展开卡片模式，新建/编辑在同一页面内完成，
- * 无需切换模式。仅新建时显示平台预设芯片辅助填写。
+ * 无需切换模式。新建时先选择平台预设或自定义端点。
  */
 
 import { appStore } from '../../store/AppStore'
@@ -299,7 +299,7 @@ export struct AiSettingsPanel {
           this.editNameInput = preset.name
           this.editEndpointInput = preset.endpoint
           this.editApiKeyInput = ''
-          this.editModelInput = ''
+          this.editModelInput = preset.defaultModelName
           this.testResultMessage = ''
           this.testSuccess = false
           this.fetchedModels = []
@@ -312,19 +312,79 @@ export struct AiSettingsPanel {
     this.providerPickerController.open()
   }
 
-  /** 新建时切换预设平台 */
-  private applyPreset(preset: AiProviderPreset): void {
-    this.editNameInput = preset.name
-    this.editEndpointInput = preset.endpoint
-    this.editApiKeyInput = ''
-    this.editModelInput = ''
-    this.testResultMessage = ''
-    this.testSuccess = false
-    this.fetchedModels = []
-    this.invalidatePendingRequests()
+  // ============== Model List ==============
+
+  /**
+   * 规格化端点地址用于匹配预设。
+   *
+   * @param endpoint - 用户输入或预设端点
+   * @returns 规格化后的端点地址
+   */
+  private normalizeEndpoint(endpoint: string): string {
+    return endpoint.trim()
+      .replace(/\/chat\/completions\/?$/, '')
+      .replace(/\/+$/, '')
+      .toLowerCase()
   }
 
-  // ============== Model List ==============
+  /**
+   * 按当前服务地址匹配平台预设。
+   *
+   * @param endpoint - 服务地址
+   * @returns 匹配的平台预设
+   */
+  private findPresetByEndpoint(endpoint: string): AiProviderPreset | null {
+    const normalized: string = this.normalizeEndpoint(endpoint)
+    if (normalized.length === 0) {
+      return null
+    }
+    for (let i = 0; i < PROVIDER_PRESETS.length; i++) {
+      if (PROVIDER_PRESETS[i].endpoint.length > 0 &&
+        this.normalizeEndpoint(PROVIDER_PRESETS[i].endpoint) === normalized) {
+        return PROVIDER_PRESETS[i]
+      }
+    }
+    return null
+  }
+
+  /**
+   * 获取模型输入框占位提示。
+   *
+   * @returns 当前平台默认模型或通用提示
+   */
+  private getModelPlaceholder(): string {
+    const preset: AiProviderPreset | null = this.findPresetByEndpoint(this.editEndpointInput)
+    if (preset && preset.defaultModelName.length > 0) {
+      return preset.defaultModelName
+    }
+    return '请输入模型名称'
+  }
+
+  /**
+   * 获取端点输入框占位提示。
+   *
+   * @returns 当前平台端点或通用 OpenAI 兼容端点示例
+   */
+  private getEndpointPlaceholder(): string {
+    const preset: AiProviderPreset | null = this.findPresetByEndpoint(this.editEndpointInput)
+    if (preset && preset.endpoint.length > 0) {
+      return preset.endpoint
+    }
+    return 'https://api.example.com/v1'
+  }
+
+  /**
+   * 判断当前端点是否支持获取模型列表。
+   *
+   * @returns 是否支持获取模型列表
+   */
+  private supportsCurrentModelList(): boolean {
+    const preset: AiProviderPreset | null = this.findPresetByEndpoint(this.editEndpointInput)
+    if (!preset) {
+      return true
+    }
+    return preset.supportsModelList
+  }
 
   /**
    * 解析当前编辑场景下的 API Key。
@@ -343,6 +403,10 @@ export struct AiSettingsPanel {
     }
     if (!this.editEndpointInput || this.editEndpointInput.trim().length === 0) {
       appStore.showToast('请先填写服务地址')
+      return
+    }
+    if (!this.supportsCurrentModelList()) {
+      appStore.showToast('该平台未提供可直接调用的模型列表接口，请手动输入模型名称')
       return
     }
 
@@ -691,9 +755,11 @@ export struct AiSettingsPanel {
         .width('100%')
         .margin({ bottom: 4 })
 
-      TextInput({ placeholder: 'https://api.deepseek.com/v1', text: this.editEndpointInput })
+      TextInput({ placeholder: this.getEndpointPlaceholder(), text: this.editEndpointInput })
         .onChange((v: string) => {
           this.editEndpointInput = v
+          this.fetchedModels = []
+          this.invalidatePendingRequests()
         })
         .width('100%')
         .height(40)
@@ -765,7 +831,7 @@ export struct AiSettingsPanel {
           .width('100%')
           .margin({ bottom: 4 })
 
-        TextInput({ placeholder: 'deepseek-chat', text: this.editModelInput })
+        TextInput({ placeholder: this.getModelPlaceholder(), text: this.editModelInput })
           .onChange((v: string) => {
             this.editModelInput = v
           })
@@ -778,20 +844,34 @@ export struct AiSettingsPanel {
       }
       .layoutWeight(1)
 
-      Text(this.fetchingModels ? '获取中...' : '获取模型列表')
-        .fontSize(12)
-        .fontColor(this.fetchingModels ? AppColors.textTertiary : AppColors.primary)
-        .padding({ left: 10, right: 10, top: 8, bottom: 8 })
-        .margin({ left: 8, top: 18 })
-        .border({
-          width: 1,
-          color: this.fetchingModels ? AppColors.textTertiary : AppColors.primary,
-          style: BorderStyle.Solid
-        })
-        .borderRadius(6)
-        .onClick(() => {
-          this.fetchModels()
-        })
+      if (this.supportsCurrentModelList()) {
+        Text(this.fetchingModels ? '获取中...' : '获取模型列表')
+          .fontSize(12)
+          .fontColor(this.fetchingModels ? AppColors.textTertiary : AppColors.primary)
+          .padding({ left: 10, right: 10, top: 8, bottom: 8 })
+          .margin({ left: 8, top: 18 })
+          .border({
+            width: 1,
+            color: this.fetchingModels ? AppColors.textTertiary : AppColors.primary,
+            style: BorderStyle.Solid
+          })
+          .borderRadius(6)
+          .onClick(() => {
+            this.fetchModels()
+          })
+      } else {
+        Text('手动输入')
+          .fontSize(12)
+          .fontColor(AppColors.textTertiary)
+          .padding({ left: 10, right: 10, top: 8, bottom: 8 })
+          .margin({ left: 8, top: 18 })
+          .border({
+            width: 1,
+            color: AppColors.textTertiary,
+            style: BorderStyle.Solid
+          })
+          .borderRadius(6)
+      }
     }
     .width('100%')
     .margin({ bottom: 4 })
@@ -853,7 +933,7 @@ export struct AiSettingsPanel {
     .padding({ left: 16, right: 16, top: 8, bottom: 16 })
   }
 
-  /** 新建方案卡片（含预设芯片） */
+  /** 新建方案卡片 */
   @Builder
   NewProfileCard() {
     Column() {
@@ -897,9 +977,6 @@ export struct AiSettingsPanel {
 
       // 展开体
       Column() {
-        // 预设芯片 — 仅在新建时出现
-        this.PresetChips()
-
         this.ProfileFormFields()
       }
       .width('100%')
@@ -909,26 +986,6 @@ export struct AiSettingsPanel {
     .backgroundColor(AppColors.bgTertiary)
     .borderRadius(12)
     .margin({ top: 8 })
-  }
-
-  @Builder
-  PresetChips() {
-    Row() {
-      ForEach(PROVIDER_PRESETS, (preset: AiProviderPreset) => {
-        Text(preset.name)
-          .fontSize(11)
-          .fontColor(AppColors.primary)
-          .padding({ left: 8, right: 8, top: 3, bottom: 3 })
-          .backgroundColor(AppColors.primaryLight)
-          .borderRadius(10)
-          .margin({ right: 6 })
-          .onClick(() => {
-            this.applyPreset(preset)
-          })
-      }, (preset: AiProviderPreset): string => preset.id)
-    }
-    .width('100%')
-    .margin({ bottom: 12 })
   }
 
   @Builder
