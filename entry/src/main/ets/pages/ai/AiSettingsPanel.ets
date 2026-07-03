@@ -28,6 +28,7 @@ export struct AiSettingsPanel {
   @State editApiKeyInput: string = ''
   @State editModelInput: string = ''
   @State testResultMessage: string = ''
+  @State testSuccess: boolean = false
   @State testing: boolean = false
   @State fetchingModels: boolean = false
   @State fetchedModels: string[] = []
@@ -84,6 +85,7 @@ export struct AiSettingsPanel {
   private doExpandCard(profileId: string): void {
     this.expandedProfileId = profileId
     this.testResultMessage = ''
+    this.testSuccess = false
     this.fetchedModels = []
 
     if (profileId === NEW_ID) {
@@ -165,6 +167,7 @@ export struct AiSettingsPanel {
     this.editApiKeyInput = ''
     this.editModelInput = ''
     this.testResultMessage = ''
+    this.testSuccess = false
     this.fetchedModels = []
   }
 
@@ -212,12 +215,18 @@ export struct AiSettingsPanel {
       appStore.showToast('已添加并切换到 ' + profile.name)
       appStore.setActiveAiConfig(appStore.settings.aiProfiles.length - 1)
     } else {
-      profile.id = this.expandedProfileId
-      if (this.editApiKeyInput.length > 0) {
-        profile.apiKey = this.editApiKeyInput
+      // 从旧配置继承高级参数，避免编辑保存后丢失 temperature 等字段
+      const old: AiProviderProfile | null = this.findProfile(this.expandedProfileId)
+      if (old) {
+        profile.id = old.id
+        profile.streaming = old.streaming
+        profile.temperature = old.temperature
+        profile.maxTokens = old.maxTokens
+        profile.privacyConfirmed = old.privacyConfirmed
+        profile.apiKey = this.editApiKeyInput.length > 0 ? this.editApiKeyInput : old.apiKey
       } else {
-        const old: AiProviderProfile | null = this.findProfile(this.expandedProfileId)
-        profile.apiKey = old ? old.apiKey : ''
+        profile.id = this.expandedProfileId
+        profile.apiKey = this.editApiKeyInput
       }
       appStore.updateAiProfile(profile)
       appStore.showToast('配置已更新')
@@ -279,6 +288,7 @@ export struct AiSettingsPanel {
           this.editApiKeyInput = ''
           this.editModelInput = ''
           this.testResultMessage = ''
+          this.testSuccess = false
           this.fetchedModels = []
           this.expandedProfileId = NEW_ID
         }
@@ -295,10 +305,32 @@ export struct AiSettingsPanel {
     this.editEndpointInput = preset.endpoint
     this.editModelInput = ''
     this.testResultMessage = ''
+    this.testSuccess = false
     this.fetchedModels = []
   }
 
   // ============== Model List ==============
+
+  /**
+   * 解析当前编辑场景下的 API Key。
+   *
+   * 优先使用编辑缓冲区中的 key，若为空且正在编辑已有配置，
+   * 则从已保存的配置中回退。
+   *
+   * @returns 有效的 API Key 字符串
+   */
+  private resolveApiKey(): string {
+    if (this.editApiKeyInput.length > 0) {
+      return this.editApiKeyInput
+    }
+    if (!this.isNew() && this.expandedProfileId.length > 0) {
+      const saved: AiProviderProfile | null = this.findProfile(this.expandedProfileId)
+      if (saved) {
+        return saved.apiKey
+      }
+    }
+    return ''
+  }
 
   async fetchModels(): Promise<void> {
     if (this.fetchingModels) {
@@ -314,12 +346,7 @@ export struct AiSettingsPanel {
 
     const tempProfile: AiProviderProfile = new AiProviderProfile()
     tempProfile.endpoint = this.editEndpointInput.trim()
-    let apiKey: string = this.editApiKeyInput
-    if (apiKey.length === 0 && !this.isNew() && this.expandedProfileId.length > 0) {
-      const saved: AiProviderProfile | null = this.findProfile(this.expandedProfileId)
-      apiKey = saved ? saved.apiKey : ''
-    }
-    tempProfile.apiKey = apiKey
+    tempProfile.apiKey = this.resolveApiKey()
 
     try {
       const models: string[] = await listModels(tempProfile)
@@ -345,18 +372,13 @@ export struct AiSettingsPanel {
     if (this.testing) {
       return
     }
-    if (!this.editEndpointInput || !this.editModelInput) {
+    if (!this.editEndpointInput || this.editEndpointInput.trim().length === 0 ||
+        !this.editModelInput || this.editModelInput.trim().length === 0) {
       appStore.showToast('请先填写服务地址和模型名称')
       return
     }
 
-    // 若用户未重新输入 Key，从已保存的 profile 中回退
-    let apiKey: string = this.editApiKeyInput
-    if (apiKey.length === 0 && !this.isNew() && this.expandedProfileId.length > 0) {
-      const saved: AiProviderProfile | null = this.findProfile(this.expandedProfileId)
-      apiKey = saved ? saved.apiKey : ''
-    }
-
+    const apiKey: string = this.resolveApiKey()
     if (apiKey.length === 0) {
       appStore.showToast('请先填写 API 密钥')
       return
@@ -373,11 +395,14 @@ export struct AiSettingsPanel {
     try {
       const result: AiTestResult = await testConnection(tempProfile)
       if (result.success) {
+        this.testSuccess = true
         this.testResultMessage = '连接成功 · 耗时 ' + result.durationMs + 'ms\n' + result.message
       } else {
+        this.testSuccess = false
         this.testResultMessage = '连接失败 · ' + result.errorMessage
       }
     } catch (e) {
+      this.testSuccess = false
       const err: Error = e as Error
       this.testResultMessage = '连接失败 · ' + (err.message || '未知错误')
     } finally {
@@ -496,7 +521,6 @@ export struct AiSettingsPanel {
           .checked(this.isActiveProfile(profile.id))
           .onChange((checked: boolean) => {
             if (checked) {
-              const idx: number = -1
               // 在 profiles 数组中查找索引
               for (let i = 0; i < this.profiles.length; i++) {
                 if (this.profiles[i].id === profile.id) {
@@ -543,7 +567,7 @@ export struct AiSettingsPanel {
       // 删除按钮
       Text('删除')
         .fontSize(12)
-        .fontColor('#E45D4C')
+        .fontColor(AppColors.destructive)
         .padding({ left: 6, right: 6, top: 4, bottom: 4 })
         .onClick(() => {
           this.deleteProfile(profile.id)
@@ -553,190 +577,202 @@ export struct AiSettingsPanel {
     .padding({ left: 12, right: 8, top: 12, bottom: 12 })
   }
 
+  /**
+   * 公共表单字段 — 方案名称、服务地址、API 密钥、测试连接、
+   * 模型名称、获取模型列表、模型标签云及保存/取消按钮。
+   *
+   * 由 ProfileCardBody 和 NewProfileCard 共享，
+   * 避免两处各维护一份相同的表单代码。
+   */
+  @Builder
+  ProfileFormFields() {
+    // 方案名称
+    Column() {
+      Text('方案名称')
+        .fontSize(13)
+        .fontColor(AppColors.textSecondary)
+        .width('100%')
+        .margin({ bottom: 4 })
+
+      TextInput({ placeholder: '为这个方案起个名字', text: this.editNameInput })
+        .onChange((v: string) => {
+          this.editNameInput = v
+        })
+        .width('100%')
+        .height(40)
+        .backgroundColor(AppColors.bgSecondary)
+        .borderRadius(8)
+        .fontSize(14)
+        .padding({ left: 12, right: 12 })
+    }
+    .width('100%')
+    .margin({ bottom: 10 })
+
+    // 服务地址
+    Column() {
+      Text('服务地址')
+        .fontSize(13)
+        .fontColor(AppColors.textSecondary)
+        .width('100%')
+        .margin({ bottom: 4 })
+
+      TextInput({ placeholder: 'https://api.deepseek.com/v1', text: this.editEndpointInput })
+        .onChange((v: string) => {
+          this.editEndpointInput = v
+        })
+        .width('100%')
+        .height(40)
+        .backgroundColor(AppColors.bgSecondary)
+        .borderRadius(8)
+        .fontSize(14)
+        .padding({ left: 12, right: 12 })
+    }
+    .width('100%')
+    .margin({ bottom: 10 })
+
+    // API 密钥 + 测试按钮
+    Row() {
+      Column() {
+        Text('API 密钥')
+          .fontSize(13)
+          .fontColor(AppColors.textSecondary)
+          .width('100%')
+          .margin({ bottom: 4 })
+
+        TextInput({ placeholder: 'sk-...', text: this.editApiKeyInput })
+          .type(InputType.Password)
+          .onChange((v: string) => {
+            this.editApiKeyInput = v
+          })
+          .width('100%')
+          .height(40)
+          .backgroundColor(AppColors.bgSecondary)
+          .borderRadius(8)
+          .fontSize(14)
+          .padding({ left: 12, right: 12 })
+      }
+      .layoutWeight(1)
+
+      Text(this.testing ? '测试中...' : '测试连接')
+        .fontSize(12)
+        .fontColor(this.testing ? AppColors.textTertiary : AppColors.primary)
+        .padding({ left: 10, right: 10, top: 8, bottom: 8 })
+        .margin({ left: 8, top: 18 })
+        .border({
+          width: 1,
+          color: this.testing ? AppColors.textTertiary : AppColors.primary,
+          style: BorderStyle.Solid
+        })
+        .borderRadius(6)
+        .onClick(() => {
+          this.doTestConnection()
+        })
+    }
+    .width('100%')
+    .margin({ bottom: 4 })
+
+    // 测试结果
+    if (this.testResultMessage.length > 0) {
+      Text(this.testResultMessage)
+        .fontSize(12)
+        .fontColor(this.testSuccess ? AppColors.success : AppColors.destructive)
+        .margin({ bottom: 10 })
+        .width('100%')
+        .lineHeight(18)
+    }
+
+    // 模型名称 + 获取模型列表
+    Row() {
+      Column() {
+        Text('模型名称')
+          .fontSize(13)
+          .fontColor(AppColors.textSecondary)
+          .width('100%')
+          .margin({ bottom: 4 })
+
+        TextInput({ placeholder: 'deepseek-chat', text: this.editModelInput })
+          .onChange((v: string) => {
+            this.editModelInput = v
+          })
+          .width('100%')
+          .height(40)
+          .backgroundColor(AppColors.bgSecondary)
+          .borderRadius(8)
+          .fontSize(14)
+          .padding({ left: 12, right: 12 })
+      }
+      .layoutWeight(1)
+
+      Text(this.fetchingModels ? '获取中...' : '获取模型列表')
+        .fontSize(12)
+        .fontColor(this.fetchingModels ? AppColors.textTertiary : AppColors.primary)
+        .padding({ left: 10, right: 10, top: 8, bottom: 8 })
+        .margin({ left: 8, top: 18 })
+        .border({
+          width: 1,
+          color: this.fetchingModels ? AppColors.textTertiary : AppColors.primary,
+          style: BorderStyle.Solid
+        })
+        .borderRadius(6)
+        .onClick(() => {
+          this.fetchModels()
+        })
+    }
+    .width('100%')
+    .margin({ bottom: 4 })
+
+    // 模型标签云
+    if (this.fetchedModels.length > 0) {
+      Row() {
+        ForEach(this.fetchedModels, (model: string) => {
+          Text(model)
+            .fontSize(12)
+            .fontColor(this.editModelInput === model ? AppColors.white : AppColors.primary)
+            .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+            .backgroundColor(this.editModelInput === model ? AppColors.primary : AppColors.primaryLight)
+            .borderRadius(12)
+            .margin({ right: 6, bottom: 4 })
+            .onClick(() => {
+              this.selectModel(model)
+            })
+        }, (model: string): string => model)
+      }
+      .width('100%')
+      .margin({ bottom: 12 })
+    }
+
+    // 操作按钮
+    Row() {
+      Text('取消')
+        .fontSize(14)
+        .fontColor(AppColors.textSecondary)
+        .layoutWeight(1)
+        .height(38)
+        .textAlign(TextAlign.Center)
+        .onClick(() => {
+          this.collapseCard()
+        })
+
+      Text('保存')
+        .fontSize(14)
+        .fontColor(AppColors.white)
+        .layoutWeight(1)
+        .height(38)
+        .textAlign(TextAlign.Center)
+        .backgroundColor(AppColors.primary)
+        .borderRadius(10)
+        .onClick(() => {
+          this.saveProfile()
+        })
+    }
+    .width('100%')
+    .margin({ top: 4 })
+  }
+
   @Builder
   ProfileCardBody() {
     Column() {
-      // 方案名称
-      Column() {
-        Text('方案名称')
-          .fontSize(13)
-          .fontColor(AppColors.textSecondary)
-          .width('100%')
-          .margin({ bottom: 4 })
-
-        TextInput({ placeholder: '为这个方案起个名字', text: this.editNameInput })
-          .onChange((v: string) => {
-            this.editNameInput = v
-          })
-          .width('100%')
-          .height(40)
-          .backgroundColor(AppColors.bgSecondary)
-          .borderRadius(8)
-          .fontSize(14)
-          .padding({ left: 12, right: 12 })
-      }
-      .width('100%')
-      .margin({ bottom: 10 })
-
-      // 服务地址
-      Column() {
-        Text('服务地址')
-          .fontSize(13)
-          .fontColor(AppColors.textSecondary)
-          .width('100%')
-          .margin({ bottom: 4 })
-
-        TextInput({ placeholder: 'https://api.deepseek.com/v1', text: this.editEndpointInput })
-          .onChange((v: string) => {
-            this.editEndpointInput = v
-          })
-          .width('100%')
-          .height(40)
-          .backgroundColor(AppColors.bgSecondary)
-          .borderRadius(8)
-          .fontSize(14)
-          .padding({ left: 12, right: 12 })
-      }
-      .width('100%')
-      .margin({ bottom: 10 })
-
-      // API 密钥 + 测试按钮
-      Row() {
-        Column() {
-          Text('API 密钥')
-            .fontSize(13)
-            .fontColor(AppColors.textSecondary)
-            .width('100%')
-            .margin({ bottom: 4 })
-
-          TextInput({ placeholder: 'sk-...', text: this.editApiKeyInput })
-            .type(InputType.Password)
-            .onChange((v: string) => {
-              this.editApiKeyInput = v
-            })
-            .width('100%')
-            .height(40)
-            .backgroundColor(AppColors.bgSecondary)
-            .borderRadius(8)
-            .fontSize(14)
-            .padding({ left: 12, right: 12 })
-        }
-        .layoutWeight(1)
-
-        Text(this.testing ? '测试中...' : '测试连接')
-          .fontSize(12)
-          .fontColor(this.testing ? AppColors.textTertiary : AppColors.primary)
-          .padding({ left: 10, right: 10, top: 8, bottom: 8 })
-          .margin({ left: 8, top: 18 })
-          .border({
-            width: 1,
-            color: this.testing ? AppColors.textTertiary : AppColors.primary,
-            style: BorderStyle.Solid
-          })
-          .borderRadius(6)
-          .onClick(() => {
-            this.doTestConnection()
-          })
-      }
-      .width('100%')
-      .margin({ bottom: 4 })
-
-      // 测试结果
-      if (this.testResultMessage.length > 0) {
-        Text(this.testResultMessage)
-          .fontSize(12)
-          .fontColor(this.testResultMessage.indexOf('失败') >= 0 ? AppColors.destructive : AppColors.success)
-          .margin({ bottom: 10 })
-          .width('100%')
-          .lineHeight(18)
-      }
-
-      // 模型名称 + 获取模型列表
-      Row() {
-        Column() {
-          Text('模型名称')
-            .fontSize(13)
-            .fontColor(AppColors.textSecondary)
-            .width('100%')
-            .margin({ bottom: 4 })
-
-          TextInput({ placeholder: 'deepseek-chat', text: this.editModelInput })
-            .onChange((v: string) => {
-              this.editModelInput = v
-            })
-            .width('100%')
-            .height(40)
-            .backgroundColor(AppColors.bgSecondary)
-            .borderRadius(8)
-            .fontSize(14)
-            .padding({ left: 12, right: 12 })
-        }
-        .layoutWeight(1)
-
-        Text(this.fetchingModels ? '获取中...' : '获取模型列表')
-          .fontSize(12)
-          .fontColor(this.fetchingModels ? AppColors.textTertiary : AppColors.primary)
-          .padding({ left: 10, right: 10, top: 8, bottom: 8 })
-          .margin({ left: 8, top: 18 })
-          .border({
-            width: 1,
-            color: this.fetchingModels ? AppColors.textTertiary : AppColors.primary,
-            style: BorderStyle.Solid
-          })
-          .borderRadius(6)
-          .onClick(() => {
-            this.fetchModels()
-          })
-      }
-      .width('100%')
-      .margin({ bottom: 4 })
-
-      // 模型标签云
-      if (this.fetchedModels.length > 0) {
-        Row() {
-          ForEach(this.fetchedModels, (model: string) => {
-            Text(model)
-              .fontSize(12)
-              .fontColor(this.editModelInput === model ? AppColors.white : AppColors.primary)
-              .padding({ left: 10, right: 10, top: 4, bottom: 4 })
-              .backgroundColor(this.editModelInput === model ? AppColors.primary : AppColors.primaryLight)
-              .borderRadius(12)
-              .margin({ right: 6, bottom: 4 })
-              .onClick(() => {
-                this.selectModel(model)
-              })
-          }, (model: string): string => model)
-        }
-        .width('100%')
-        .margin({ bottom: 12 })
-      }
-
-      // 操作按钮
-      Row() {
-        Text('取消')
-          .fontSize(14)
-          .fontColor(AppColors.textSecondary)
-          .layoutWeight(1)
-          .height(38)
-          .textAlign(TextAlign.Center)
-          .onClick(() => {
-            this.collapseCard()
-          })
-
-        Text('保存')
-          .fontSize(14)
-          .fontColor(AppColors.white)
-          .layoutWeight(1)
-          .height(38)
-          .textAlign(TextAlign.Center)
-          .backgroundColor(AppColors.primary)
-          .borderRadius(10)
-          .onClick(() => {
-            this.saveProfile()
-          })
-      }
-      .width('100%')
-      .margin({ top: 4 })
+      this.ProfileFormFields()
     }
     .width('100%')
     .padding({ left: 16, right: 16, top: 8, bottom: 16 })
@@ -776,7 +812,7 @@ export struct AiSettingsPanel {
           .fontColor(AppColors.textTertiary)
           .padding({ left: 6, right: 6, top: 4, bottom: 4 })
           .onClick(() => {
-            this.doCollapse()
+            this.collapseCard()
           })
       }
       .width('100%')
@@ -789,184 +825,7 @@ export struct AiSettingsPanel {
         // 预设芯片 — 仅在新建时出现
         this.PresetChips()
 
-        // 表单字段（复用 ProfileCardBody 的结构）
-        Column() {
-          Text('方案名称')
-            .fontSize(13)
-            .fontColor(AppColors.textSecondary)
-            .width('100%')
-            .margin({ bottom: 4 })
-
-          TextInput({ placeholder: '为这个方案起个名字', text: this.editNameInput })
-            .onChange((v: string) => {
-              this.editNameInput = v
-            })
-            .width('100%')
-            .height(40)
-            .backgroundColor(AppColors.bgSecondary)
-            .borderRadius(8)
-            .fontSize(14)
-            .padding({ left: 12, right: 12 })
-        }
-        .width('100%')
-        .margin({ bottom: 10 })
-
-        Column() {
-          Text('服务地址')
-            .fontSize(13)
-            .fontColor(AppColors.textSecondary)
-            .width('100%')
-            .margin({ bottom: 4 })
-
-          TextInput({ placeholder: 'https://api.deepseek.com/v1', text: this.editEndpointInput })
-            .onChange((v: string) => {
-              this.editEndpointInput = v
-            })
-            .width('100%')
-            .height(40)
-            .backgroundColor(AppColors.bgSecondary)
-            .borderRadius(8)
-            .fontSize(14)
-            .padding({ left: 12, right: 12 })
-        }
-        .width('100%')
-        .margin({ bottom: 10 })
-
-        // API 密钥 + 测试
-        Row() {
-          Column() {
-            Text('API 密钥')
-              .fontSize(13)
-              .fontColor(AppColors.textSecondary)
-              .width('100%')
-              .margin({ bottom: 4 })
-
-            TextInput({ placeholder: 'sk-...', text: this.editApiKeyInput })
-              .type(InputType.Password)
-              .onChange((v: string) => {
-                this.editApiKeyInput = v
-              })
-              .width('100%')
-              .height(40)
-              .backgroundColor(AppColors.bgSecondary)
-              .borderRadius(8)
-              .fontSize(14)
-              .padding({ left: 12, right: 12 })
-          }
-          .layoutWeight(1)
-
-          Text(this.testing ? '测试中...' : '测试连接')
-            .fontSize(12)
-            .fontColor(this.testing ? AppColors.textTertiary : AppColors.primary)
-            .padding({ left: 10, right: 10, top: 8, bottom: 8 })
-            .margin({ left: 8, top: 18 })
-            .border({
-              width: 1,
-              color: this.testing ? AppColors.textTertiary : AppColors.primary,
-              style: BorderStyle.Solid
-            })
-            .borderRadius(6)
-            .onClick(() => {
-              this.doTestConnection()
-            })
-        }
-        .width('100%')
-        .margin({ bottom: 4 })
-
-        if (this.testResultMessage.length > 0) {
-          Text(this.testResultMessage)
-            .fontSize(12)
-            .fontColor(this.testResultMessage.indexOf('失败') >= 0 ? AppColors.destructive : AppColors.success)
-            .margin({ bottom: 10 })
-            .width('100%')
-            .lineHeight(18)
-        }
-
-        // 模型名 + 获取模型
-        Row() {
-          Column() {
-            Text('模型名称')
-              .fontSize(13)
-              .fontColor(AppColors.textSecondary)
-              .width('100%')
-              .margin({ bottom: 4 })
-
-            TextInput({ placeholder: 'deepseek-chat', text: this.editModelInput })
-              .onChange((v: string) => {
-                this.editModelInput = v
-              })
-              .width('100%')
-              .height(40)
-              .backgroundColor(AppColors.bgSecondary)
-              .borderRadius(8)
-              .fontSize(14)
-              .padding({ left: 12, right: 12 })
-          }
-          .layoutWeight(1)
-
-          Text(this.fetchingModels ? '获取中...' : '获取模型列表')
-            .fontSize(12)
-            .fontColor(this.fetchingModels ? AppColors.textTertiary : AppColors.primary)
-            .padding({ left: 10, right: 10, top: 8, bottom: 8 })
-            .margin({ left: 8, top: 18 })
-            .border({
-              width: 1,
-              color: this.fetchingModels ? AppColors.textTertiary : AppColors.primary,
-              style: BorderStyle.Solid
-            })
-            .borderRadius(6)
-            .onClick(() => {
-              this.fetchModels()
-            })
-        }
-        .width('100%')
-        .margin({ bottom: 4 })
-
-        if (this.fetchedModels.length > 0) {
-          Row() {
-            ForEach(this.fetchedModels, (model: string) => {
-              Text(model)
-                .fontSize(12)
-                .fontColor(this.editModelInput === model ? AppColors.white : AppColors.primary)
-                .padding({ left: 10, right: 10, top: 4, bottom: 4 })
-                .backgroundColor(this.editModelInput === model ? AppColors.primary : AppColors.primaryLight)
-                .borderRadius(12)
-                .margin({ right: 6, bottom: 4 })
-                .onClick(() => {
-                  this.selectModel(model)
-                })
-            }, (model: string): string => model)
-          }
-          .width('100%')
-          .margin({ bottom: 12 })
-        }
-
-        // 保存按钮
-        Row() {
-          Text('取消')
-            .fontSize(14)
-            .fontColor(AppColors.textSecondary)
-            .layoutWeight(1)
-            .height(38)
-            .textAlign(TextAlign.Center)
-            .onClick(() => {
-              this.collapseCard()
-            })
-
-          Text('保存')
-            .fontSize(14)
-            .fontColor(AppColors.white)
-            .layoutWeight(1)
-            .height(38)
-            .textAlign(TextAlign.Center)
-            .backgroundColor(AppColors.primary)
-            .borderRadius(10)
-            .onClick(() => {
-              this.saveProfile()
-            })
-        }
-        .width('100%')
-        .margin({ top: 4 })
+        this.ProfileFormFields()
       }
       .width('100%')
       .padding({ left: 16, right: 16, top: 8, bottom: 16 })

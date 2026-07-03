@@ -392,7 +392,7 @@ export struct SettingsPanel {
             // ---- Block 2: AI 配置 / 智感握姿 / 语音朗读 ----
             Column() {
               SettingPickerRow({
-                iconRes: $r('app.media.icon_ai'), iconColor: IconColors.ai, label: 'AI 配置',
+                iconRes: $r('app.media.icon_ai_settings'), iconColor: IconColors.ai, label: 'AI 配置',
                 badgeText: this.aiProviderBadge,
                 onAction: () => {
                   routerStore.navigateActivity(Screen.aiSettings())
