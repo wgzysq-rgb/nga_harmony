@@ -409,6 +409,10 @@ export struct AiSettingsPanel {
       appStore.showToast('该平台未提供可直接调用的模型列表接口，请手动输入模型名称')
       return
     }
+    if (!this.resolveApiKey()) {
+      appStore.showToast('请先填写 API 密钥')
+      return
+    }
 
     const requestId: number = this.fetchModelsRequestId + 1
     const profileId: string = this.expandedProfileId
@@ -717,8 +721,8 @@ export struct AiSettingsPanel {
   }
 
   /**
-   * 公共表单字段 — 方案名称、服务地址、API 密钥、测试连接、
-   * 模型名称、获取模型列表、模型标签云及保存/取消按钮。
+   * 公共表单字段 — 按操作顺序排列：方案名称、服务地址、API 密钥、
+   * 模型名称（获取/手动输入）、联通测试及保存/取消按钮。
    *
    * 由 ProfileCardBody 和 NewProfileCard 共享，
    * 避免两处各维护一份相同的表单代码。
@@ -771,56 +775,28 @@ export struct AiSettingsPanel {
     .width('100%')
     .margin({ bottom: 10 })
 
-    // API 密钥 + 测试按钮
-    Row() {
-      Column() {
-        Text('API 密钥')
-          .fontSize(13)
-          .fontColor(AppColors.textSecondary)
-          .width('100%')
-          .margin({ bottom: 4 })
+    // API 密钥
+    Column() {
+      Text('API 密钥')
+        .fontSize(13)
+        .fontColor(AppColors.textSecondary)
+        .width('100%')
+        .margin({ bottom: 4 })
 
-        TextInput({ placeholder: 'sk-...', text: this.editApiKeyInput })
-          .type(InputType.Password)
-          .onChange((v: string) => {
-            this.editApiKeyInput = v
-          })
-          .width('100%')
-          .height(40)
-          .backgroundColor(AppColors.bgSecondary)
-          .borderRadius(8)
-          .fontSize(14)
-          .padding({ left: 12, right: 12 })
-      }
-      .layoutWeight(1)
-
-      Text(this.testing ? '测试中...' : '测试连接')
-        .fontSize(12)
-        .fontColor(this.testing ? AppColors.textTertiary : AppColors.primary)
-        .padding({ left: 10, right: 10, top: 8, bottom: 8 })
-        .margin({ left: 8, top: 18 })
-        .border({
-          width: 1,
-          color: this.testing ? AppColors.textTertiary : AppColors.primary,
-          style: BorderStyle.Solid
+      TextInput({ placeholder: 'sk-...', text: this.editApiKeyInput })
+        .type(InputType.Password)
+        .onChange((v: string) => {
+          this.editApiKeyInput = v
         })
-        .borderRadius(6)
-        .onClick(() => {
-          this.doTestConnection()
-        })
+        .width('100%')
+        .height(40)
+        .backgroundColor(AppColors.bgSecondary)
+        .borderRadius(8)
+        .fontSize(14)
+        .padding({ left: 12, right: 12 })
     }
     .width('100%')
-    .margin({ bottom: 4 })
-
-    // 测试结果
-    if (this.testResultMessage.length > 0) {
-      Text(this.testResultMessage)
-        .fontSize(12)
-        .fontColor(this.testSuccess ? AppColors.success : AppColors.destructive)
-        .margin({ bottom: 10 })
-        .width('100%')
-        .lineHeight(18)
-    }
+    .margin({ bottom: 10 })
 
     // 模型名称 + 获取模型列表
     Row() {
@@ -894,6 +870,35 @@ export struct AiSettingsPanel {
       }
       .width('100%')
       .margin({ bottom: 12 })
+    }
+
+    // 测试连接
+    Row() {
+      Text(this.testing ? '测试中...' : '测试连接')
+        .fontSize(13)
+        .fontColor(this.testing ? AppColors.textTertiary : AppColors.primary)
+        .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+        .border({
+          width: 1,
+          color: this.testing ? AppColors.textTertiary : AppColors.primary,
+          style: BorderStyle.Solid
+        })
+        .borderRadius(8)
+        .onClick(() => {
+          this.doTestConnection()
+        })
+    }
+    .width('100%')
+    .margin({ bottom: 6 })
+
+    // 测试结果
+    if (this.testResultMessage.length > 0) {
+      Text(this.testResultMessage)
+        .fontSize(12)
+        .fontColor(this.testSuccess ? AppColors.success : AppColors.destructive)
+        .margin({ bottom: 10 })
+        .width('100%')
+        .lineHeight(18)
     }
 
     // 操作按钮
