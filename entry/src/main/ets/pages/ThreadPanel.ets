@@ -653,13 +653,23 @@ export struct ThreadPanel {
                     appStore.showToast('该楼层没有可总结的内容')
                     return
                   }
+                  let prompt: string = ''
+                  prompt += '【帖子信息】\n'
+                  prompt += '标题：' + this.threadSubject + '\n'
+                  prompt += '楼层：#' + p.lou.toString() + '  作者：' + p.author + '\n\n'
+                  prompt += '【正文内容】\n'
+                  prompt += plainText
+                  prompt += '\n\n'
+                  prompt += '【总结指令】请对以上帖子正文内容进行深度总结归纳：\n'
+                  prompt += '1. 核心观点：提取帖子的主要论点和立场\n'
+                  prompt += '2. 关键信息：列出重要的事实、数据或论据\n'
+                  prompt += '3. 逻辑脉络：梳理帖子的行文结构和论证逻辑\n'
+                  prompt += '4. 一句话总结：用精炼的语言概括帖子的核心内容'
                   this.getUIContext().getRouter().pushUrl({
-                    url: 'pages/PostSummaryPage',
+                    url: 'pages/ai/AiChatPage',
                     params: {
-                      postContent: plainText,
-                      authorName: p.author,
-                      lou: p.lou,
-                      threadSubject: this.threadSubject
+                      initialPrompt: prompt,
+                      title: 'AI 帖子总结'
                     }
                   })
                 },

@@ -7,7 +7,7 @@ import { Avatar } from './Avatar'
 import { MakeNoteDialog } from '../dialogs/Dialogs'
 
 import { getUserActivityAnalysis } from '../../service/NgaApi'
-import type { UserActivityAnalysis } from '../../model/NgaApiResults'
+import type { UserActivityAnalysis, ForumStat } from '../../model/NgaApiResults'
 import { getActiveAiValidationMessage } from '../../service/ai/ActiveAiService'
 
 @Component
@@ -36,20 +36,51 @@ export struct ProfileCardPopup {
         this.targetUid
       )
       if (result && (result.topicCount > 0 || result.replyCount > 0)) {
-        const json: string = JSON.stringify({
-          topicCount: result.topicCount,
-          replyCount: result.replyCount,
-          forumList: result.forumList,
-          hourDistribution: result.hourDistribution,
-          topicSubjects: result.topicSubjects,
-          replySnippets: result.replySnippets
-        })
+        const userName: string = this.profile?.userName ?? ''
+        let prompt: string = ''
+        prompt += userName + '(UID:' + this.targetUid + ') 的账号分析：\n'
+        prompt += '共 ' + result.topicCount.toString() + ' 个主题，' +
+          result.replyCount.toString() + ' 条回复\n\n'
+        prompt += '活跃版面：\n'
+        for (let i: number = 0; i < result.forumList.length; i++) {
+          const f: ForumStat = result.forumList[i]
+          prompt += '  ' + f.name + ': ' + (f.topicCount + f.replyCount).toString() + ' 帖\n'
+        }
+        prompt += '\n发帖时段：\n'
+        const hd: number[] = result.hourDistribution
+        let dawnSum: number = 0
+        let morningSum: number = 0
+        let afternoonSum: number = 0
+        let nightSum: number = 0
+        for (let i: number = 0; i <= 5; i++) { dawnSum += (hd.length > i ? hd[i] : 0) || 0 }
+        for (let i: number = 6; i <= 11; i++) { morningSum += (hd.length > i ? hd[i] : 0) || 0 }
+        for (let i: number = 12; i <= 17; i++) { afternoonSum += (hd.length > i ? hd[i] : 0) || 0 }
+        for (let i: number = 18; i <= 23; i++) { nightSum += (hd.length > i ? hd[i] : 0) || 0 }
+        prompt += '  凌晨: ' + dawnSum.toString() + ' 帖\n'
+        prompt += '  上午: ' + morningSum.toString() + ' 帖\n'
+        prompt += '  下午: ' + afternoonSum.toString() + ' 帖\n'
+        prompt += '  晚上: ' + nightSum.toString() + ' 帖\n'
+        if (result.topicSubjects.length > 0) {
+          prompt += '\n发表的主题：\n'
+          for (let i: number = 0; i < result.topicSubjects.length; i++) {
+            prompt += '  ' + (i + 1).toString() + '. ' + result.topicSubjects[i] + '\n'
+          }
+        }
+        if (result.replySnippets.length > 0) {
+          prompt += '\n回复内容：\n'
+          for (let i: number = 0; i < result.replySnippets.length; i++) {
+            prompt += '  ' + (i + 1).toString() + '. ' + result.replySnippets[i] + '\n'
+          }
+        }
+        prompt += '\n\n【分析指令】请根据以上用户的论坛活跃版面、发表主题和回复内容，分析总结以下内容：\n'
+        prompt += '1. 用户画像：推断该用户的身份、兴趣领域、在论坛中的角色\n'
+        prompt += '2. 政治光谱：根据其讨论话题和立场倾向，判断其政治倾向\n'
+        prompt += '3. 整体点评：以辛辣尖锐的语言风格对其用户画像进行一句话锐评\n'
         this.getUIContext().getRouter().pushUrl({
-          url: 'pages/AgentAnalysisPage',
+          url: 'pages/ai/AiChatPage',
           params: {
-            analysisData: json,
-            profileName: this.profile?.userName ?? '',
-            targetUid: this.targetUid
+            initialPrompt: prompt,
+            title: 'AI 成分分析'
           }
         })
       } else {

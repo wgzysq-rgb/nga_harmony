@@ -3,7 +3,6 @@
     "pages/Index",
     "pages/LoginPage",
     "pages/MainPage",
-    "pages/AgentAnalysisPage",
-    "pages/PostSummaryPage"
+    "pages/ai/AiChatPage"
   ]
 }
