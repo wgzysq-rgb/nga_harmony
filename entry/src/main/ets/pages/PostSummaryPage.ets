@@ -5,6 +5,7 @@ import { AppColors } from '../common/constants/Constants'
 import { ToastComponent } from '../common/components/Toast'
 import { ChatMessage } from '../service/ai/OpenAiCompatibleClient'
 import { chatCompleteWithActiveAiStream, formatAiCompletionError } from '../service/ai/ActiveAiService'
+import { MdContentView } from '../common/components/MdContentView'
 
 @Entry
 @Component
@@ -200,11 +201,7 @@ struct PostSummaryPage {
                 }
 
                 if (this.aiResultText.length > 0) {
-                  Text(this.aiResultText)
-                    .fontSize(14)
-                    .fontColor(AppColors.textPrimary)
-                    .width('100%')
-                    .lineHeight(22)
+                  MdContentView({ text: this.aiResultText })
 
                   Row() {
                     Text('复制结果')
