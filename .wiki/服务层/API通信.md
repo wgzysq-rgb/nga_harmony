@@ -4,35 +4,40 @@
 
 API 通信层分为两层架构：`NgaClient` 负责 HTTP 传输、编码解码与域名故障转移，`NgaApi` 作为 barrel 聚合入口，把具体业务接口按域拆分至 `service/api/` 下 7 个子文件。这种设计将传输容错逻辑集中一处，避免各业务接口重复实现。
 
-经过模块化重构（P0-1 / P1-5 / P2-4），`service/` 目录的职责边界更清晰：
+经过模块化重构（P0-1 / P1-5 / P2-4 / P2-5），`service/` 目录的职责边界更清晰：
 
 - **传输层 `NgaClient.ets`**：只关心 HTTP 收发、GB18030 解码、域名轮换重试、限流；不再承担编解码工具实现。
 - **编解码工具 `common/utils/`**：`CodecUtils`（UTF-8/Base64/GB18030/GBK 百分号编码/表单与 multipart 构造）、`UrlUtils`（主机名提取、URL 拼接）、`CookieUtils`（set-cookie 解析）——均为无副作用纯函数。
 - **业务接口 `service/api/*.ets`**：7 个业务域子文件，每个子文件直接 `import { ngaClient } from '../NgaClient'`。
 - **barrel 聚合 `NgaApi.ets`**：仅 `export * from './api/XxxApi'`，让 24 个引用方继续从 `'../service/NgaApi'` 导入而零改动（详见 [ADR 003](../架构决策/003-barrel-re-export模式.md)）。
 - **领域数据类**：`ApiResult` / `PostInfo` / `ThreadResult` 等已从 `NgaApi.ets` 迁出至 `model/` 层。
+- **退出登录编排 `LogoutOrchestrator.ets`**：集中编排"服务端登出 → 本地清理 → 导航跳转"完整流程，服务端登出失败不阻塞本地清理。
+- **AI 服务模块 `service/ai/`**：OpenAI 兼容自定义 AI 对话能力（详见下文 [AI 服务模块](#ai-服务模块)）。
 
 `service/` 目录的文件结构：
 
 ```mermaid
-graph TB
-    subgraph "service/ (barrel + 传输层 + 业务域)"
+graph LR
+    subgraph "service/ (barrel + 传输 + 业务域 + 编排)"
         NGA["NgaApi.ets<br/>barrel 聚合入口"]
-        API["api/<br/>7 业务域子文件"]
-        NGC["NgaClient.ets<br/>HTTP 传输/容错/限流"]
+        API["api/<br/>7 业务域"]
+        NGC["NgaClient.ets<br/>HTTP 传输/容错"]
+        AI["ai/<br/>OpenAI 兼容"]
+        LOG["LogoutOrchestrator<br/>退出编排"]
     end
 
     subgraph "基础设施 (common/ 与 parser/)"
-        CODEC["utils/CodecUtils<br/>编解码纯函数"]
-        URL["utils/UrlUtils<br/>URL 拼接"]
-        COOKIE["CookieUtils<br/>set-cookie 解析"]
-        TH["concurrency/Throttler<br/>令牌桶限流"]
-        SANI["parser/NgaJsonSanitizer<br/>JSON 预清洗"]
+        CODEC["CodecUtils<br/>编解码"]
+        URL["UrlUtils<br/>URL"]
+        COOKIE["CookieUtils<br/>cookie"]
+        TH["Throttler<br/>限流"]
+        SANI["NgaJsonSanitizer<br/>JSON 预清洗"]
     end
 
     subgraph "model/ 与 parser/task/"
         MOD["model/<br/>领域数据类"]
         HP["HtmlParseTask<br/>后台解析"]
+        AIMD["model/AiConfig<br/>AI 配置"]
     end
 
     NGA -->|"export *"| API
@@ -44,6 +49,8 @@ graph TB
     NGC --> SANI
     API --> MOD
     API --> HP
+    AI --> AIMD
+    LOG --> API
 ```
 
 > `api/` 下 7 个业务域子文件：`AuthApi`（登录/会话/凭据）、`UserApi`（用户资料/成分）、`ForumApi`（板块/搜索/主题）、`ThreadApi`（帖子/回帖/上传）、`FavoriteApi`（收藏/投票/签到）、`MessageApi`（通知/私信）、`MiscApi`（域名切换）。各子文件均 `import { ngaClient } from '../NgaClient'`，`NgaApi.ets` 仅以 `export *` 聚合它们。
@@ -160,7 +167,7 @@ JSON 解析失败时（`NgaClient.ets:390-401`）返回带 `__parseError` 标记
 | `InjectResult` | ApiResult | `token`, `user` | `model/NgaApiResults.ets:114-117` |
 | `UploadAttachmentResult` | ApiResult | `url`, `attachments`, `attachmentsCheck` | `model/NgaApiResults.ets:122-126` |
 
-帖子相关结果类单独放在 `model/ThreadResult.ets`：`ThreadResult`（`ThreadResult.ets:21-26`，含 `threadInfo`/`forumName`/`pagination`/`posts`）、`ThreadPagination`（`ThreadResult.ets:12-16`）、`PostAuthResult`（`ThreadResult.ets:31-35`）、`PostReplyResult`（`ThreadResult.ets:40-43`）。
+帖子相关结果类单独放在 `model/ThreadResult.ets`：`ThreadResult`（`ThreadResult.ets:26-31`，含 `threadInfo`/`forumName`/`pagination`/`posts`）、`ThreadPaging`（`ThreadResult.ets:17-21`，业务封装用 class 版本）、`PostAuthResult`（`ThreadResult.ets:36-40`）、`PostReplyResult`（`ThreadResult.ets:45-48`）。
 
 ### 业务接口（按域）
 
@@ -273,10 +280,10 @@ function parseHtmlTask(html: string): Object {
 | `ApiResult` | `model/NgaApiResults.ets:14-17` | ok, error |
 | `PostInfo` | `model/PostInfo.ets:26-55` | tid, pid, lou, author, content, attachs, comments |
 | `PostAttachInfo` | `model/PostInfo.ets:9-21` | aid, attachurl, url_utf8_org_name, name, ext, thumb |
-| `ThreadResult` | `model/ThreadResult.ets:21-26` | threadInfo, forumName, pagination, posts |
-| `ThreadPagination` | `model/ThreadResult.ets:12-16` | page, totalPages, totalRows |
-| `PostAuthResult` | `model/ThreadResult.ets:31-35` | auth, attachUrl, if_moderator |
-| `PostReplyResult` | `model/ThreadResult.ets:40-43` | tid, pid |
+| `ThreadResult` | `model/ThreadResult.ets:26-31` | threadInfo, forumName, pagination, posts |
+| `ThreadPaging` | `model/ThreadResult.ets:17-21` | page, totalPages, totalRows |
+| `PostAuthResult` | `model/ThreadResult.ets:36-40` | auth, attachUrl, if_moderator |
+| `PostReplyResult` | `model/ThreadResult.ets:45-48` | tid, pid |
 | `UploadAttachmentResult` | `model/NgaApiResults.ets:122-126` | url, attachments, attachmentsCheck |
 | `TopicListInfo` | `model/Topic.ets` | threads, totalPages, forumName |
 | `Category` | `model/Forum.ets` | fid, name, children |
@@ -304,10 +311,81 @@ A: 查看日志中 `[NGA][REQ]` tag，确认请求 URL、方法和 body。`[NGA]
 A: `ngaThrottler` 限制了每个域名的并发数（默认 6）与最小间隔（默认 150 ms），多个并发请求会排队等待。另外域名故障转移机制会遍历所有备用域名，全部超时后返回最后一次的错误。
 
 **Q: 为什么 `ngaGetHtmlText` 不轮换域名而 `ngaRequest` 轮换？**
-A: 两者共用 `executeWithRetry`，差异在调用方传入的 `baseUrl`：`ngaRequest` 传空串触发轮换，`ngaGetHtmlText` 传 `DOMAINS[activeDomainIndex]` 固定域名（`NgaClient.ets:213, 312-315`）。HTML 接口与 JSON 接口的会话语义不同，强行轮换会破坏 `ngaGetHtmlText` 的既有行为。
+A: 两者共用 `executeWithRetry`，差异在调用方传入的 `baseUrl`：`ngaRequest` 传空串触发轮换，`ngaGetHtmlText` 传 `DOMAINS[activeDomainIndex]` 固定域名（`NgaClient.ets:213`，参见 `:330-335` 中 `ngaGetHtmlText` 的注释）。HTML 接口与 JSON 接口的会话语义不同，强行轮换会破坏 `ngaGetHtmlText` 的既有行为。
 
 **Q: 业务函数到底在哪个文件？**
 A: 统一从 `'../service/NgaApi'` 导入即可，barrel 会转发。若需定位实现：登录/会话在 `api/AuthApi`，板块/搜索/主题在 `api/ForumApi`，帖子/回帖/上传在 `api/ThreadApi`，详见上文「业务接口（按域）」表。
+
+## AI 服务模块
+
+`service/ai/` 提供基于 OpenAI 兼容协议的自定义 AI 对话能力。用户可通过 `pages/ai/AiSettingsPanel.ets` 配置多个第三方 AI 服务商，在 `pages/ai/AiChatPage.ets` 中进行流式对话。
+
+### 分层结构
+
+| 层 | 文件 | 职责 |
+|---|------|------|
+| **数据模型** | `model/AiConfig.ets` | `AiProviderProfile`（端点/密钥/模型/温度/流式开关）、`AiTestResult` |
+| **预设** | `ai/AiModelPresets.ets` | 7 个流行服务商预设（DeepSeek、智谱、豆包、MiniMax、Kimi、OpenAI、自定义） |
+| **传输** | `ai/OpenAiCompatibleClient.ets` | OpenAI 兼容 API 客户端：`chatComplete`（普通）、`chatCompleteStream`（流式）、`testConnection`、`listModels。SSE 流经 `ChatStreamParser` 解析，`dataReceive`/`dataEnd` 事件驱动 |
+| **门面** | `ai/ActiveAiService.ets` | 当前激活配置校验 + 调用 + 错误格式化门面。`chatCompleteWithActiveAiStream` 检测 `profile.streaming`，关闭流式时自动降级为一次性请求 |
+| **错误翻译** | `ai/AiErrorTranslator.ets` | HTTP 状态码 → 中文提示映射（401→密钥无效、403→无权限、404→地址/模型不存在、429→额度用尽等），附带修复操作建议 |
+| **设置域** | `store/settings/domain/AiSettings.ets` | `aiProfiles` / `activeAiProfileId` 增删改查及激活切换，遵循 SettingsContext 注入模式 |
+
+### 流式对话流程
+
+```mermaid
+sequenceDiagram
+    participant User as "用户"
+    participant Page as "AiChatPage"
+    participant Service as "ActiveAiService"
+    participant Client as "OpenAiCompatibleClient"
+    participant Provider as "AI Provider"
+
+    User->>Page: 输入消息
+    Page->>Service: chatCompleteWithActiveAiStream(messages, onDelta)
+    Service->>Service: getActiveAiProfile()
+    Service->>Service: getActiveAiValidationMessage()
+    alt 配置无效
+        Service-->>Page: throw Error
+        Page->>User: 显示错误文案（经 formatAiCompletionError）
+    else streaming 关闭
+        Service->>Client: chatComplete(profile, messages)
+        Client->>Provider: POST /chat/completions
+        Provider-->>Client: JSON 响应
+        Client-->>Service: 完整回复文本
+        Service-->>Page: onDelta(fullText) → resolve(fullText)
+    else streaming 开启
+        Service->>Client: chatCompleteStream(profile, messages, callback)
+        Client->>Provider: POST /chat/completions (stream: true)
+        loop 流式响应
+            Provider-->>Client: data: {...}
+            Client->>Client: ChatStreamParser.append(text, onDelta)
+            Client->>Page: onDelta(chunk)<br/>→ 累加到 streamingText
+        end
+        Provider-->>Client: [DONE]
+        Client->>Client: ChatStreamParser.finish(onDelta)
+        Client-->>Service: 完整文本
+        Service-->>Page: resolve(fullText)
+    end
+    Page->>User: 渲染完整 Markdown 回复
+```
+
+### Markdown 渲染管线
+
+| 组件 | 文件 | 职责 |
+|------|------|------|
+| 解析器 | `parser/md/MdParser.ets` | 原始 Markdown → `MdNode[]` AST，两步法：块级解析（标题/段落/列表/代码块等）+ 内联解析（粗体/斜体/链接等） |
+| 模型 | `model/MdNode.ets` | `MdNodeType` 枚举（11 种节点类型）+ `MdNode` 类（id/type/text/children/level/href/language），全局自增 ID 确保 ForEach key 唯一 |
+| 渲染 | `common/components/MdContentView.ets` | `MdNode[]` → ArkUI 组件树。每次 `@Prop text` 更新时全量重解析并刷新 UI |
+
+### 边缘情况
+
+1. **流式中断**：网络断开时 `dataEnd` 事件仍会触发，`ChatStreamParser.finish` 返回当前已积累文本而非抛异常
+2. **配置不完整**：`getActiveAiValidationMessage` 在端点/模型名/API Key 为空时返回具体提示文案，指导用户补全
+3. **HTTP 状态码**：非 200 响应以状态码数字抛异常，`formatAiCompletionError` 和 `translateError` 映射为用户友好信息
+4. **空响应**：`parseChatResponse` / `parseStreamDelta` 返回空串时，`chatComplete` 和 `chatCompleteStream` 抛 "AI 响应为空或格式不兼容"
+5. **格式不兼容**：响应 JSON 缺少 `choices[0].message.content` 或流式 `delta` 结构时静默返回空串，最终由调用方判空处理
+6. **MdContentView 流式优化**：使用 `@State parsedNodes` + `ForEach` 直接读取，避免 `@Builder` 参数间接传入导致响应式断连
 
 ## 关联文档
 
