@@ -49,6 +49,9 @@ export const KEY_FAV_VERSION: string = 'favVersion'
 /** 个人主页缓存版本号（变更时 +1 触发 @Watch） */
 export const KEY_PROFILE_VERSION: string = 'profileVersion'
 
+/** AI 配置版本号（变更时 +1 触发 @Watch） */
+export const KEY_AI_CONFIG_VERSION: string = 'aiConfigVersion'
+
 /** 网络变更版本号（wifi/cellular 切换时 +1，触发图片重载） */
 export const KEY_NETWORK_CHANGE_VERSION: string = 'networkChangeVersion'
 

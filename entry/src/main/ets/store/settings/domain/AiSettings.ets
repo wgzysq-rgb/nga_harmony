@@ -8,6 +8,8 @@
 import { SettingsContext } from '../SettingsContext'
 import { SettingsState } from '../SettingsState'
 import type { AiProviderProfile } from '../../../model/AiConfig'
+import { KEY_AI_CONFIG_VERSION } from '../../../common/constants/AppStorageKeys'
+import { bumpAppStorageVersion } from '../../../common/utils/AppStorageVersion'
 
 /** 生成简单唯一 ID */
 function generateId(): string {
@@ -20,8 +22,14 @@ function generateId(): string {
  * 管理自定义 AI 提供方配置的增删改查及激活切换。
  */
 export class AiSettings {
+  /** 设置域上下文。 */
   private ctx: SettingsContext
 
+  /**
+   * 创建 AI 设置域子 store。
+   *
+   * @param ctx - 设置域共享上下文
+   */
   constructor(ctx: SettingsContext) {
     this.ctx = ctx
   }
@@ -35,6 +43,7 @@ export class AiSettings {
     profile.id = generateId()
     this.ctx.state.aiProfiles = [...this.ctx.state.aiProfiles, profile]
     this.ctx.persist()
+    this.notifyAiConfigChanged()
   }
 
   /**
@@ -53,61 +62,56 @@ export class AiSettings {
     }
     this.ctx.state.aiProfiles = newList
     this.ctx.persist()
+    this.notifyAiConfigChanged()
   }
 
   /**
    * 删除指定 ID 的 AI 提供方配置。
    *
-   * 若删除的是当前激活配置，自动回退到系统默认（index=-1）。
+   * 若删除的是当前激活配置，自动切换到剩余配置的第一项。
    *
    * @param id - 待删除的配置 ID
    */
   deleteProfile(id: string): void {
     const newList: AiProviderProfile[] = []
-    let deletedIndex: number = -1
-    let currentIndex: number = 0
     for (let i = 0; i < this.ctx.state.aiProfiles.length; i++) {
-      if (this.ctx.state.aiProfiles[i].id === id) {
-        deletedIndex = i
-      } else {
+      if (this.ctx.state.aiProfiles[i].id !== id) {
         newList.push(this.ctx.state.aiProfiles[i])
-        currentIndex++
       }
     }
     this.ctx.state.aiProfiles = newList
 
-    // 若删除了当前激活配置，回退到系统默认
-    if (deletedIndex === this.ctx.state.activeAiConfigIndex) {
-      this.ctx.state.activeAiConfigIndex = -1
-    } else if (deletedIndex < this.ctx.state.activeAiConfigIndex) {
-      // 删除项在激活项之前，索引需要前移
-      this.ctx.state.activeAiConfigIndex = this.ctx.state.activeAiConfigIndex - 1
+    if (this.ctx.state.activeAiProfileId === id || !this.hasProfile(this.ctx.state.activeAiProfileId)) {
+      this.ctx.state.activeAiProfileId = newList.length > 0 ? newList[0].id : ''
     }
 
     this.ctx.persist()
+    this.notifyAiConfigChanged()
   }
 
   /**
    * 设置当前激活的 AI 配置。
    *
-   * @param index - 配置在列表中的索引（-1 表示系统默认 AI）
+   * @param id - 配置 ID
    */
-  setActiveConfig(index: number): void {
-    this.ctx.state.activeAiConfigIndex = index
+  setActiveProfile(id: string): void {
+    this.ctx.state.activeAiProfileId = this.hasProfile(id) ? id : ''
     this.ctx.persist()
+    this.notifyAiConfigChanged()
   }
 
   /**
    * 获取当前激活的 AI 配置。
    *
-   * @returns 激活的配置，若为系统默认则返回 null
+   * @returns 激活的配置，若未选择或配置已不存在则返回 null
    */
   getActiveProfile(): AiProviderProfile | null {
-    const idx: number = this.ctx.state.activeAiConfigIndex
-    if (idx < 0 || idx >= this.ctx.state.aiProfiles.length) {
-      return null
+    for (let i = 0; i < this.ctx.state.aiProfiles.length; i++) {
+      if (this.ctx.state.aiProfiles[i].id === this.ctx.state.activeAiProfileId) {
+        return this.ctx.state.aiProfiles[i]
+      }
     }
-    return this.ctx.state.aiProfiles[idx]
+    return null
   }
 
   /** 从持久化对象加载 AI 设置 */
@@ -115,13 +119,37 @@ export class AiSettings {
     if (saved.aiProfiles) {
       this.ctx.state.aiProfiles = saved.aiProfiles
     }
-    if (saved.activeAiConfigIndex !== undefined) {
-      this.ctx.state.activeAiConfigIndex = saved.activeAiConfigIndex
+    if (saved.activeAiProfileId !== undefined) {
+      this.ctx.state.activeAiProfileId = this.hasProfile(saved.activeAiProfileId) ? saved.activeAiProfileId : ''
     }
   }
 
   /** 重置 AI 设置为默认，保留已配置的 profiles 由 SettingsState 重建时清空 */
   reset(): void {
-    // 内部状态由 SettingsState 构造函数重建，此处无需额外操作
+  }
+
+  /**
+   * 判断指定配置是否存在。
+   *
+   * @param id - 配置 ID
+   * @returns 配置是否存在
+   */
+  private hasProfile(id: string): boolean {
+    if (id.length === 0) {
+      return false
+    }
+    for (let i = 0; i < this.ctx.state.aiProfiles.length; i++) {
+      if (this.ctx.state.aiProfiles[i].id === id) {
+        return true
+      }
+    }
+    return false
+  }
+
+  /**
+   * 通知依赖 AI 配置摘要的页面刷新。
+   */
+  private notifyAiConfigChanged(): void {
+    bumpAppStorageVersion(KEY_AI_CONFIG_VERSION)
   }
 }

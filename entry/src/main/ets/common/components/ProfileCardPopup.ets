@@ -5,10 +5,10 @@ import { AppColors } from '../constants/Constants'
 import { formatTime, fmtNum, escHtml, unescapeHtml } from '../utils/Utils'
 import { Avatar } from './Avatar'
 import { MakeNoteDialog } from '../dialogs/Dialogs'
-import { deviceInfo } from '@kit.BasicServicesKit'
 
 import { getUserActivityAnalysis } from '../../service/NgaApi'
 import type { UserActivityAnalysis } from '../../model/NgaApiResults'
+import { getActiveAiValidationMessage } from '../../service/ai/ActiveAiService'
 
 @Component
 export struct ProfileCardPopup {
@@ -21,16 +21,13 @@ export struct ProfileCardPopup {
   onClose: () => void = () => {}
   noteDialogController?: CustomDialogController
   @State isAnalyzing: boolean = false
-  private isEmulator: boolean = deviceInfo.productModel === 'emulator'
 
   private async startAnalysis(): Promise<void> {
     if (this.isAnalyzing) return
-    if (this.isEmulator) {
-      const hasCustomAi: boolean = appStore.settings.activeAiConfigIndex >= 0
-      if (!hasCustomAi) {
-        appStore.showToast('模拟器上请先在设置中配置自定义 AI 方案')
-        return
-      }
+    const aiValidationMessage: string = getActiveAiValidationMessage()
+    if (aiValidationMessage.length > 0) {
+      appStore.showToast(aiValidationMessage)
+      return
     }
     this.isAnalyzing = true
     try {

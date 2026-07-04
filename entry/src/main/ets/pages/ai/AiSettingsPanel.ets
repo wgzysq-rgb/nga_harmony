@@ -195,11 +195,7 @@ export struct AiSettingsPanel {
   }
 
   private isActiveProfile(id: string): boolean {
-    const idx: number = appStore.settings.activeAiConfigIndex
-    if (idx < 0 || idx >= this.profiles.length) {
-      return false
-    }
-    return this.profiles[idx].id === id
+    return appStore.settings.activeAiProfileId === id
   }
 
   saveProfile(): void {
@@ -224,8 +220,8 @@ export struct AiSettingsPanel {
     if (this.expandedProfileId === NEW_ID) {
       profile.apiKey = this.editApiKeyInput.trim()
       appStore.addAiProfile(profile)
+      appStore.setActiveAiProfile(profile.id)
       appStore.showToast('已添加并切换到 ' + profile.name)
-      appStore.setActiveAiConfig(appStore.settings.aiProfiles.length - 1)
     } else {
       // 从旧配置继承高级参数，避免编辑保存后丢失 temperature 等字段
       const old: AiProviderProfile | null = this.findProfile(this.expandedProfileId)
@@ -256,7 +252,7 @@ export struct AiSettingsPanel {
       builder: ConfirmDialog({
         title: '删除 AI 配置',
         message: this.isActiveProfile(id)
-          ? '你将删除当前正在使用的配置「' + name + '」。\n删除后系统会自动切换为系统默认 AI，AI 功能仍可正常使用。'
+          ? '你将删除当前正在使用的配置「' + name + '」。\n删除后会自动切换到剩余配置；若没有其他配置，AI 功能需要重新添加配置后使用。'
           : '确定要删除配置「' + name + '」吗？\n删除后该配置将从列表中移除。',
         confirmLabel: '删除',
         destructive: true,
@@ -563,9 +559,6 @@ export struct AiSettingsPanel {
 
         Scroll() {
           Column() {
-            // 系统默认行
-            this.SystemDefaultRow()
-
             // 配置卡片列表
             if (this.profiles.length === 0 && !this.isNew()) {
               this.EmptyHint()
@@ -602,42 +595,6 @@ export struct AiSettingsPanel {
   // ============== @Builder Sub-Components ==============
 
   @Builder
-  SystemDefaultRow() {
-    Row() {
-      Radio({ value: 'system', group: 'aiProvider' })
-        .checked(appStore.settings.activeAiConfigIndex < 0)
-        .onChange((checked: boolean) => {
-          if (checked) {
-            appStore.setActiveAiConfig(-1)
-            this.syncProfiles()
-          }
-        })
-        .width(20)
-        .height(20)
-
-      Column() {
-        Text('系统默认 AI')
-          .fontSize(16)
-          .fontColor(AppColors.textPrimary)
-          .fontWeight(FontWeight.Medium)
-
-        Text('鸿蒙原生 AI 能力')
-          .fontSize(12)
-          .fontColor(AppColors.textTertiary)
-          .margin({ top: 2 })
-      }
-      .alignItems(HorizontalAlign.Start)
-      .layoutWeight(1)
-      .margin({ left: 12 })
-    }
-    .width('92%')
-    .padding({ left: 16, right: 16, top: 14, bottom: 14 })
-    .backgroundColor(AppColors.bgTertiary)
-    .borderRadius(12)
-    .margin({ top: 12 })
-  }
-
-  @Builder
   ProfileCard(profile: AiProviderProfile) {
     Column() {
       // 头部
@@ -664,14 +621,8 @@ export struct AiSettingsPanel {
           .checked(this.isActiveProfile(profile.id))
           .onChange((checked: boolean) => {
             if (checked) {
-              // 在 profiles 数组中查找索引
-              for (let i = 0; i < this.profiles.length; i++) {
-                if (this.profiles[i].id === profile.id) {
-                  appStore.setActiveAiConfig(i)
-                  this.syncProfiles()
-                  break
-                }
-              }
+              appStore.setActiveAiProfile(profile.id)
+              this.syncProfiles()
             }
           })
           .width(20)

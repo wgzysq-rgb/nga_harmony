@@ -181,5 +181,6 @@ export class SettingsStore extends BaseStore<SettingsState> {
   addAiProfile(profile: AiProviderProfile): void { this.aiSettings.addProfile(profile) }
   updateAiProfile(profile: AiProviderProfile): void { this.aiSettings.updateProfile(profile) }
   deleteAiProfile(id: string): void { this.aiSettings.deleteProfile(id) }
-  setActiveAiConfig(index: number): void { this.aiSettings.setActiveConfig(index) }
+  setActiveAiProfile(id: string): void { this.aiSettings.setActiveProfile(id) }
+  getActiveAiProfile(): AiProviderProfile | null { return this.aiSettings.getActiveProfile() }
 }

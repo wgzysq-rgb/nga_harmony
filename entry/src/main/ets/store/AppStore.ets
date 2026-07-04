@@ -195,7 +195,8 @@ class AppStoreClass {
   addAiProfile(profile: AiProviderProfile): void { this.settingsStore.addAiProfile(profile) }
   updateAiProfile(profile: AiProviderProfile): void { this.settingsStore.updateAiProfile(profile) }
   deleteAiProfile(id: string): void { this.settingsStore.deleteAiProfile(id) }
-  setActiveAiConfig(index: number): void { this.settingsStore.setActiveAiConfig(index) }
+  setActiveAiProfile(id: string): void { this.settingsStore.setActiveAiProfile(id) }
+  getActiveAiProfile(): AiProviderProfile | null { return this.settingsStore.getActiveAiProfile() }
 
   // ---------- Facade: Categories ----------
 

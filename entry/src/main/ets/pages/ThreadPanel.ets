@@ -1,7 +1,7 @@
 import { display } from '@kit.ArkUI'
 import { common, Context } from '@kit.AbilityKit'
 import { motion } from '@kit.MultimodalAwarenessKit'
-import { BusinessError, deviceInfo } from '@kit.BasicServicesKit'
+import { BusinessError } from '@kit.BasicServicesKit'
 import { taskpool } from '@kit.ArkTS'
 
 import { appStore } from '../store/AppStore'
@@ -27,6 +27,7 @@ import { openImageViewer as sharedOpenImageViewer, handleForumLink } from '../co
 import { ThreadPaginationManager } from '../common/managers/ThreadPaginationManager'
 import type { ThreadInfo } from '../model/Thread'
 import { Logger, DOMAIN_UI } from '../common/utils/Logger'
+import { getActiveAiValidationMessage } from '../service/ai/ActiveAiService'
 
 const logger = new Logger(DOMAIN_UI, 'ThreadPanel')
 
@@ -642,9 +643,9 @@ export struct ThreadPanel {
                   }
                 },
                 onSummarize: (p: PostInfo): void => {
-                  const hasCustomAi: boolean = appStore.settings.activeAiConfigIndex >= 0
-                  if (deviceInfo.productModel === 'emulator' && !hasCustomAi) {
-                    appStore.showToast('模拟器上请先在设置中配置自定义 AI 方案')
+                  const aiValidationMessage: string = getActiveAiValidationMessage()
+                  if (aiValidationMessage.length > 0) {
+                    appStore.showToast(aiValidationMessage)
                     return
                   }
                   const plainText: string = bbNodesToPlainText(getCachedBBNodes(p.content))

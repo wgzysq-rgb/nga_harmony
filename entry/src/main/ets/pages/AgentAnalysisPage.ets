@@ -5,9 +5,8 @@ import { AppColors } from '../common/constants/Constants'
 import { UserActivityAnalysis, ForumStat } from '../model/NgaApiResults'
 import { ToastComponent } from '../common/components/Toast'
 import { Logger, DOMAIN_UI } from '../common/utils/Logger'
-import type { AiProviderProfile } from '../model/AiConfig'
-import { ChatMessage, chatComplete } from '../service/ai/OpenAiCompatibleClient'
-import { translateError } from '../service/ai/AiErrorTranslator'
+import { ChatMessage } from '../service/ai/OpenAiCompatibleClient'
+import { chatCompleteWithActiveAi, formatAiCompletionError } from '../service/ai/ActiveAiService'
 
 const logger = new Logger(DOMAIN_UI, 'AgentAnalysis')
 
@@ -17,9 +16,9 @@ struct AgentAnalysisPage {
   @State analysisData: UserActivityAnalysis = new UserActivityAnalysis()
   @State profileName: string = ''
   @State targetUid: string = ''
-  @State customAiText: string = ''
-  @State customAiLoading: boolean = false
-  @State customAiError: string = ''
+  @State aiResultText: string = ''
+  @State aiLoading: boolean = false
+  @State aiError: string = ''
 
   aboutToAppear(): void {
     const params: Record<string, Object> = this.getUIContext().getRouter().getParams() as Record<string, Object>
@@ -124,22 +123,21 @@ struct AgentAnalysisPage {
                   this.copyToClipboard(this.buildSummaryText())
                 })
 
-              Text(this.customAiLoading ? 'AI 分析中...' : 'AI 分析')
+              Text(this.aiLoading ? 'AI 分析中...' : 'AI 分析')
                 .fontSize(14).fontColor(AppColors.white)
                 .backgroundColor(AppColors.primary)
                 .borderRadius(12)
                 .padding({ left: 20, right: 20, top: 9, bottom: 9 })
                 .margin({ left: 12 })
                 .onClick(() => {
-                  if (!this.customAiLoading) {
-                    this.startCustomAiAnalysis()
+                  if (!this.aiLoading) {
+                    this.startAiAnalysis()
                   }
                 })
             }
             .margin({ top: 14, bottom: 12 })
 
-            // 自定义 AI 结果展示区
-            if (this.customAiText.length > 0 || this.customAiError.length > 0 || this.customAiLoading) {
+            if (this.aiResultText.length > 0 || this.aiError.length > 0 || this.aiLoading) {
               Column() {
                 Text('AI 分析结果')
                   .fontSize(13)
@@ -147,7 +145,7 @@ struct AgentAnalysisPage {
                   .fontWeight(FontWeight.Medium)
                   .margin({ bottom: 6 })
 
-                if (this.customAiLoading) {
+                if (this.aiLoading) {
                   Row() {
                     LoadingProgress()
                       .width(20).height(20)
@@ -159,8 +157,8 @@ struct AgentAnalysisPage {
                   .margin({ top: 12, bottom: 12 })
                 }
 
-                if (this.customAiText.length > 0) {
-                  Text(this.customAiText)
+                if (this.aiResultText.length > 0) {
+                  Text(this.aiResultText)
                     .fontSize(14)
                     .fontColor(AppColors.textPrimary)
                     .width('100%')
@@ -171,14 +169,14 @@ struct AgentAnalysisPage {
                       .fontSize(13)
                       .fontColor(AppColors.primary)
                       .onClick(() => {
-                        this.copyToClipboard(this.customAiText)
+                        this.copyToClipboard(this.aiResultText)
                       })
                   }
                   .margin({ top: 8 })
                 }
 
-                if (this.customAiError.length > 0) {
-                  Text(this.customAiError)
+                if (this.aiError.length > 0) {
+                  Text(this.aiError)
                     .fontSize(13)
                     .fontColor(AppColors.destructive)
                     .width('100%')
@@ -315,23 +313,10 @@ struct AgentAnalysisPage {
     return text
   }
 
-  private async startCustomAiAnalysis(): Promise<void> {
-    const idx: number = appStore.settings.activeAiConfigIndex
-    const profiles: AiProviderProfile[] = appStore.settings.aiProfiles
-    if (idx < 0 || idx >= profiles.length) {
-      appStore.showToast('请先在设置中选择 AI 方案')
-      return
-    }
-
-    const profile: AiProviderProfile = profiles[idx]
-    if (!profile.apiKey || profile.apiKey.length === 0) {
-      appStore.showToast('请先在 AI 配置中填写 API 密钥')
-      return
-    }
-
-    this.customAiText = ''
-    this.customAiError = ''
-    this.customAiLoading = true
+  private async startAiAnalysis(): Promise<void> {
+    this.aiResultText = ''
+    this.aiError = ''
+    this.aiLoading = true
 
     try {
       const prompt: string = this.buildSummaryText()
@@ -339,19 +324,13 @@ struct AgentAnalysisPage {
       const userMsg: ChatMessage = new ChatMessage('user', prompt)
       messages[0] = userMsg
 
-      const result: string = await chatComplete(profile, messages)
-      this.customAiText = result
+      const result: string = await chatCompleteWithActiveAi(messages)
+      this.aiResultText = result
     } catch (err) {
       const e: Error = err as Error
-      const code: number = parseInt(e.message)
-      if (!isNaN(code)) {
-        const info = translateError(code, e.message)
-        this.customAiError = info.userMessage + '\n' + info.suggestion
-      } else {
-        this.customAiError = 'AI 调用失败：' + (e.message || '未知错误')
-      }
+      this.aiError = formatAiCompletionError(e)
     } finally {
-      this.customAiLoading = false
+      this.aiLoading = false
     }
   }
 

@@ -20,12 +20,13 @@ import type { AiProviderProfile } from '../model/AiConfig'
 export struct SettingsPanel {
   @StorageProp('themeName') themeName: string = 'light'
   @StorageProp('statusBarHeight') statusBarHeight: number = 0
+  @StorageProp('aiConfigVersion') @Watch('onAiConfigVersionChange') aiConfigVersion: number = 0
   @State cacheSizeText: string = ''
   @State clearingCache: boolean = false
   @State imageStrategyBadge: string = '始终加载'
   @State threadNavBadge: string = '无缝加载'
   @State prefetchPageBadge: string = '3 页'
-  @State aiProviderBadge: string = '系统默认 AI'
+  @State aiProviderBadge: string = '未配置 AI'
 
   clearCacheDialogController?: CustomDialogController = new CustomDialogController({
     builder: ConfirmDialog({
@@ -78,6 +79,10 @@ export struct SettingsPanel {
     this.threadNavDialogController = undefined
     this.prefetchPageDialogController = undefined
     this.exportCredentialDialogController = undefined
+  }
+
+  private onAiConfigVersionChange(): void {
+    this.updateAiBadge()
   }
 
   private formatSize(bytes: number): string {
@@ -312,12 +317,13 @@ export struct SettingsPanel {
   }
 
   private updateAiBadge(): void {
-    const idx: number = appStore.settings.activeAiConfigIndex
-    const profiles: AiProviderProfile[] = appStore.settings.aiProfiles
-    if (idx < 0 || idx >= profiles.length) {
-      this.aiProviderBadge = '系统默认 AI'
+    const profile: AiProviderProfile | null = appStore.getActiveAiProfile()
+    if (profile) {
+      this.aiProviderBadge = profile.name
+    } else if (appStore.settings.aiProfiles.length > 0) {
+      this.aiProviderBadge = '未选择 AI'
     } else {
-      this.aiProviderBadge = profiles[idx].name
+      this.aiProviderBadge = '未配置 AI'
     }
   }
 

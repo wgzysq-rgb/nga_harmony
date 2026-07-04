@@ -1,11 +1,8 @@
 /**
  * AI 配置数据模型。
  *
- * 定义自定义 AI 提供方配置的数据结构及 AI 调用模式。
+ * 定义自定义 AI 提供方配置的数据结构。
  */
-
-/** AI 调用模式 */
-export type AiCallMode = 'system' | 'custom'
 
 /**
  * 自定义 AI 提供方配置。

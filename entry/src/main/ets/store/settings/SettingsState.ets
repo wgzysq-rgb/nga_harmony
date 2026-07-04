@@ -42,6 +42,6 @@ export class SettingsState {
   videoMuted: boolean = false
   /** 自定义 AI 提供方配置列表 */
   aiProfiles: AiProviderProfile[] = []
-  /** 当前激活的 AI 配置索引（-1 表示使用系统默认 AI） */
-  activeAiConfigIndex: number = -1
+  /** 当前激活的自定义 AI 配置 ID */
+  activeAiProfileId: string = ''
 }
