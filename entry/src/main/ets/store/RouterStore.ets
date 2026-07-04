@@ -200,6 +200,14 @@ export class Screen {
 export class NavEntry {
   id: number = 0
   screen: Screen = new Screen()
+  /**
+   * 返回拦截回调。
+   *
+   * 当此条目位于活动栈顶且用户触发返回操作时调用。
+   * 返回 true 表示已处理并阻止返回（例如弹出确认弹窗），
+   * 返回 false / undefined 表示允许正常返回。
+   */
+  preBack?: () => boolean
 
   constructor(id: number, screen: Screen) {
     this.id = id
@@ -262,8 +270,18 @@ export class RouterStoreClass {
     }
   }
 
+  /**
+   * 返回上一页/上一级。
+   *
+   * 若栈顶条目标记了 preBack 拦截回调且返回 true，
+   * 则阻止退出，由回调自行处理（例如弹出未保存确认弹窗）。
+   */
   back(): void {
     if (this.activityStack.length > 0) {
+      const top: NavEntry = this.activityStack[this.activityStack.length - 1]
+      if (top.preBack && top.preBack()) {
+        return
+      }
       this.activityStack = this.activityStack.slice(0, -1)
       return
     }

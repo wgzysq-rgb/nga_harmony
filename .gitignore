@@ -12,3 +12,4 @@
 /.appanalyzer
 **/language-server.log
 /java
+.zcode/

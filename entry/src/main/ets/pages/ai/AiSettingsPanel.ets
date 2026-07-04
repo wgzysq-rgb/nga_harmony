@@ -7,6 +7,7 @@
  */
 
 import { appStore } from '../../store/AppStore'
+import { routerStore } from '../../store/RouterStore'
 import { AppColors } from '../../common/constants/Constants'
 import { PanelNavBar } from '../../common/components/PanelNavBar'
 import { ConfirmDialog, ActionSheetDialog } from '../../common/dialogs/Dialogs'
@@ -47,6 +48,13 @@ export struct AiSettingsPanel {
   @State expandedScenario: string = ''
   /** 当前编辑的场景 prompt 文本缓冲。 */
   @State editScenarioPromptInput: string = ''
+  /**
+   * 场景 Prompt 版本号，用于强制刷新自定义状态徽章。
+   *
+   * TextArea onChange 和「恢复默认」触发时 bump，
+   * 确保 ScenarioBadge 中的 isScenarioCustom 能读到最新持久化状态。
+   */
+  @State scenarioPromptVersion: number = 0
   /** 是否展开数据预览。 */
   @State showDataPreview: boolean = false
   /** 测试连接结果文案。 */
@@ -76,13 +84,33 @@ export struct AiSettingsPanel {
   /** 放弃修改确认弹窗控制器。 */
   discardConfirmController?: CustomDialogController
 
-  /** 页面出现时同步配置列表。 */
+  /** 页面出现时同步配置列表并注册返回拦截。 */
   aboutToAppear(): void {
     this.syncProfiles()
+    const entry = routerStore.topActivity
+    if (entry) {
+      entry.preBack = (): boolean => {
+        if (this.hasUnsavedEdit()) {
+          this.showDiscardConfirm((): void => {
+            this.doCollapse()
+            if (entry) {
+              entry.preBack = undefined
+            }
+            routerStore.back()
+          })
+          return true
+        }
+        return false
+      }
+    }
   }
 
-  /** 页面消失时释放弹窗控制器引用。 */
+  /** 页面消失时释放弹窗控制器引用并注销返回拦截。 */
   aboutToDisappear(): void {
+    const entry = routerStore.topActivity
+    if (entry) {
+      entry.preBack = undefined
+    }
     this.deleteConfirmController = undefined
     this.providerPickerController = undefined
     this.discardConfirmController = undefined
@@ -429,6 +457,22 @@ export struct AiSettingsPanel {
   }
 
   /**
+   * 获取 API Key 输入框占位提示。
+   *
+   * 根据已匹配的平台预设返回对应格式的占位符，
+   * 未匹配时返回通用提示。
+   *
+   * @returns 当前平台的 API Key 格式提示
+   */
+  private getApiKeyPlaceholder(): string {
+    const preset: AiProviderPreset | null = this.findPresetByEndpoint(this.editEndpointInput)
+    if (preset && preset.apiKeyPlaceholder.length > 0) {
+      return preset.apiKeyPlaceholder
+    }
+    return '请输入 API Key'
+  }
+
+  /**
    * 判断当前端点是否支持获取模型列表。
    *
    * @returns 是否支持获取模型列表
@@ -617,8 +661,20 @@ export struct AiSettingsPanel {
 	  build() {
 	    Stack() {
 	      Column() {
-	        PanelNavBar({ title: 'AI 配置' })
-	          .width('100%')
+		        PanelNavBar({
+		          title: 'AI 配置',
+		          onBack: (): void => {
+		            if (this.hasUnsavedEdit()) {
+		              this.showDiscardConfirm((): void => {
+		                this.doCollapse()
+		                routerStore.back()
+		              })
+		              return
+		            }
+		            routerStore.back()
+		          }
+		        })
+		          .width('100%')
 
 	        Scroll() {
 	          Column() {
@@ -793,13 +849,13 @@ export struct AiSettingsPanel {
    */
   @Builder
   ScenarioBadge(scenario: string) {
-    Text(this.isScenarioCustom(scenario) ? '自定义' : '默认')
+    Text(this.scenarioPromptVersion > -1 && this.isScenarioCustom(scenario) ? '自定义' : '默认')
       .fontSize(11)
-      .fontColor(this.isScenarioCustom(scenario) ? AppColors.primary : AppColors.textTertiary)
+      .fontColor(this.scenarioPromptVersion > -1 && this.isScenarioCustom(scenario) ? AppColors.primary : AppColors.textTertiary)
       .padding({ left: 8, right: 8, top: 2, bottom: 2 })
       .border({
         width: 1,
-        color: this.isScenarioCustom(scenario) ? AppColors.primary : AppColors.textTertiary,
+        color: this.scenarioPromptVersion > -1 && this.isScenarioCustom(scenario) ? AppColors.primary : AppColors.textTertiary,
         style: BorderStyle.Solid
       })
       .borderRadius(10)
@@ -808,12 +864,19 @@ export struct AiSettingsPanel {
   /**
    * 判断指定场景是否已自定义。
    *
+   * 与 DEFAULT_SYSTEM_PROMPTS 比对，内容相同时不视为自定义，
+   * 防止 TextArea onChange 回写默认文本导致场景被误判。
+   *
    * @param scenario - 场景标识
    * @returns 是否已自定义
    */
   private isScenarioCustom(scenario: string): boolean {
-    const prompt: string = (appStore.settings.scenarioSystemPrompts[scenario] ?? '').trim()
-    return prompt.length > 0
+    const custom: string = (appStore.settings.scenarioSystemPrompts[scenario] ?? '').trim()
+    if (custom.length === 0) {
+      return false
+    }
+    const defaultPrompt: string = DEFAULT_SYSTEM_PROMPTS[scenario] ?? ''
+    return custom !== defaultPrompt.trim()
   }
 
   /**
@@ -849,6 +912,7 @@ export struct AiSettingsPanel {
         .onChange((value: string): void => {
           this.editScenarioPromptInput = value
           appStore.setScenarioPrompt(scenario, value)
+          this.scenarioPromptVersion++
         })
         .width('100%')
         .height(150)
@@ -859,7 +923,7 @@ export struct AiSettingsPanel {
 
       // Reset button + info
       Row() {
-        if (this.isScenarioCustom(scenario)) {
+        if (this.scenarioPromptVersion > -1 && this.isScenarioCustom(scenario)) {
           Text('↺ 恢复默认')
             .fontSize(12)
             .fontColor(AppColors.textTertiary)
@@ -867,6 +931,7 @@ export struct AiSettingsPanel {
             .onClick(() => {
               appStore.resetScenarioPrompt(scenario)
               this.editScenarioPromptInput = appStore.getScenarioPrompt(scenario)
+              this.scenarioPromptVersion++
             })
         }
 
@@ -1090,7 +1155,7 @@ export struct AiSettingsPanel {
         .width('100%')
         .margin({ bottom: 4 })
 
-      TextInput({ placeholder: 'sk-...', text: this.editApiKeyInput })
+      TextInput({ placeholder: this.getApiKeyPlaceholder(), text: this.editApiKeyInput })
         .type(InputType.Password)
         .onChange((v: string) => {
           this.editApiKeyInput = v

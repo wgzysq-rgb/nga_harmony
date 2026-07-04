@@ -179,13 +179,27 @@ export class AiSettings {
   /**
    * 设置指定场景的自定义 system prompt。
    *
+   * 若文本与内置默认值完全相同则不写入持久化，
+   * 避免 TextArea onChange 回写默认文本导致误标为"自定义"。
+   *
    * @param scenario - 场景标识
    * @param prompt - 用户自定义 prompt 文本
    */
   setScenarioPrompt(scenario: string, prompt: string): void {
+    const trimmed: string = prompt.trim()
+
+    // 与默认值相同时不写入持久化，避免 TextArea onChange 回写默认值导致误标
+    const defaultPrompt: string = DEFAULT_SYSTEM_PROMPTS[scenario] ?? ''
+    if (trimmed === defaultPrompt.trim()) {
+      // 若之前有持久化记录则清理
+      if (this.ctx.state.scenarioSystemPrompts[scenario] !== undefined) {
+        this.resetScenarioPrompt(scenario)
+      }
+      return
+    }
+
     const src: Record<string, string> = this.ctx.state.scenarioSystemPrompts
     const newPrompts: Record<string, string> = {}
-    const trimmed: string = prompt.trim()
     const keys: string[] = Object.keys(src)
     for (let i = 0; i < keys.length; i++) {
       // 只拷贝非当前场景的旧条目
