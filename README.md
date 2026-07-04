@@ -12,6 +12,20 @@
 
 ---
 
+> ## ⚠️ 安装须知
+>
+> **HarmonyOS 不能直接安装 .hap 文件包**。你需要使用签名工具对 HAP 进行签名后才能安装到手机上。
+>
+> 推荐使用 **小白调试助手（Auto-Installer）**：
+> - 📖 [使用教程视频（B站）](https://www.bilibili.com/video/BV1K6daBrENN)
+> - ⬇️ [下载地址（GitHub Releases）](https://github.com/likuai2010/auto-installer/releases/tag/3.1.0)
+>
+> 该工具支持 Windows / macOS / Linux，可自动完成签名并安装，无需 DevEco Studio。
+>
+> 从本仓库 Releases 下载的 HAP 均为**未签名包**，请使用上述工具自行签名后安装。
+
+---
+
 ## 简介
 
 **NGA OH** 是基于 **HarmonyOS** 原生框架 **ArkUI (ArkTS)** 构建的 [NGA 玩家社区](https://nga.cn) 客户端。致力于在鸿蒙生态中提供流畅、原生的 NGA 论坛浏览与交互体验。
