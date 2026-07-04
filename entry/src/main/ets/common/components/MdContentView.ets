@@ -67,7 +67,7 @@ export struct MdContentView {
       // ⚠️ ForEach 必须直接读 @State，不能包在 @Builder 参数里！详见文件头注释。
       ForEach(this.parsedNodes, (node: MdNode) => {
         this.RenderBlock(node)
-      }, (node: MdNode) => 'b_' + node.id.toString())
+      }, (node: MdNode) => this.renderKey(node, 'b'))
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -123,7 +123,7 @@ export struct MdContentView {
     Text() {
       ForEach(node.children, (child: MdNode) => {
         this.RenderSpanLeaf(child)
-      }, (child: MdNode) => 'p_' + child.id.toString())
+      }, (child: MdNode) => this.renderKey(child, 'p'))
     }
     .fontSize(15)
     .fontColor(AppColors.textPrimary)
@@ -179,7 +179,7 @@ export struct MdContentView {
         .width('100%')
         .padding({ top: 2, bottom: 2 })
         .alignItems(VerticalAlign.Top)
-      }, (item: MdNode) => 'uli_' + item.id.toString())
+      }, (item: MdNode) => this.renderKey(item, 'uli'))
     }
     .width('100%')
     .padding({ left: 8 })
@@ -206,7 +206,7 @@ export struct MdContentView {
         .width('100%')
         .padding({ top: 2, bottom: 2 })
         .alignItems(VerticalAlign.Top)
-      }, (item: MdNode) => 'ol_' + item.id.toString())
+      }, (item: MdNode) => this.renderKey(item, 'ol'))
     }
     .width('100%')
     .padding({ left: 8 })
@@ -270,6 +270,20 @@ export struct MdContentView {
       result += this.collectPlainText(node.children[i])
     }
     return result
+  }
+
+  /**
+   * 返回 ArkUI ForEach 使用的渲染 key。
+   *
+   * @param node - Markdown AST 节点
+   * @param fallbackPrefix - 无稳定 key 时使用的前缀
+   * @returns 渲染 key
+   */
+  private renderKey(node: MdNode, fallbackPrefix: string): string {
+    if (node.key.length > 0) {
+      return node.key
+    }
+    return fallbackPrefix + '_' + node.id.toString()
   }
 
   /**

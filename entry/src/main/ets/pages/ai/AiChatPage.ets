@@ -1,8 +1,12 @@
 import { ChatMessage } from '../../service/ai/OpenAiCompatibleClient'
 import { chatCompleteWithActiveAiStream, formatAiCompletionError } from '../../service/ai/ActiveAiService'
 import { MdContentView } from '../../common/components/MdContentView'
+import { MdStreamingContentView } from '../../common/components/MdStreamingContentView'
 import { PanelNavBar } from '../../common/components/PanelNavBar'
 import { AppColors } from '../../common/constants/Constants'
+
+/** 流式输出刷新间隔毫秒数。 */
+const STREAM_FLUSH_INTERVAL_MS: number = 80
 
 /**
  * 聊天气泡。
@@ -50,6 +54,10 @@ struct AiChatPage {
   @State private title: string = 'AI 对话'
   /** 初始 prompt */
   private initialPrompt: string = ''
+  /** 流式输出完整缓冲，普通字段更新不会触发 ArkUI 重建。 */
+  private streamBuffer: string = ''
+  /** 流式输出刷新定时器句柄。 */
+  private streamFlushTimer: number = -1
 
   /** 滚动控制器 */
   private scroller: Scroller = new Scroller()
@@ -69,6 +77,10 @@ struct AiChatPage {
     }
   }
 
+  aboutToDisappear(): void {
+    this.clearStreamingFlushTimer()
+  }
+
   /**
    * 发送一条用户消息并获取 AI 回复。
    *
@@ -83,7 +95,7 @@ struct AiChatPage {
     this.bubbles.push(userBubble)
     this.inputText = ''
     this.isSending = true
-    this.streamingText = ''
+    this.resetStreamingState()
 
     // 构建对话历史（不含正在生成的 AI 回复）
     const history: ChatMessage[] = this.buildHistory()
@@ -91,12 +103,12 @@ struct AiChatPage {
     this.scrollToBottom()
 
     try {
-      await chatCompleteWithActiveAiStream(history, (chunk: string): void => {
-        this.streamingText += chunk
-        this.scrollToBottom()
+      const finalText: string = await chatCompleteWithActiveAiStream(history, (chunk: string): void => {
+        this.appendStreamingChunk(chunk)
       })
+      this.flushStreamingText()
       // 流式完成 — 添加完整的 AI 气泡
-      const aiBubble: ChatBubble = new ChatBubble('assistant', this.streamingText, false)
+      const aiBubble: ChatBubble = new ChatBubble('assistant', finalText, false)
       this.bubbles.push(aiBubble)
     } catch (err) {
       const e: Error = err as Error
@@ -105,9 +117,66 @@ struct AiChatPage {
       this.bubbles.push(aiBubble)
     }
 
-    this.streamingText = ''
+    this.resetStreamingState()
     this.isSending = false
     this.scrollToBottom()
+  }
+
+  /**
+   * 追加 AI 流式文本增量并安排一次低频 UI 刷新。
+   *
+   * @param chunk - 本次收到的文本增量
+   */
+  private appendStreamingChunk(chunk: string): void {
+    if (chunk.length === 0) {
+      return
+    }
+    this.streamBuffer += chunk
+    this.scheduleStreamingFlush()
+  }
+
+  /**
+   * 安排流式文本刷新，避免每个网络 chunk 都触发 ArkUI 重建。
+   */
+  private scheduleStreamingFlush(): void {
+    if (this.streamFlushTimer >= 0) {
+      return
+    }
+    this.streamFlushTimer = setTimeout((): void => {
+      this.streamFlushTimer = -1
+      this.flushStreamingText()
+    }, STREAM_FLUSH_INTERVAL_MS)
+  }
+
+  /**
+   * 将普通字段缓冲同步到响应式状态。
+   */
+  private flushStreamingText(): void {
+    if (this.streamingText === this.streamBuffer) {
+      return
+    }
+    this.streamingText = this.streamBuffer
+    this.scrollToBottom()
+  }
+
+  /**
+   * 清理尚未执行的流式刷新定时器。
+   */
+  private clearStreamingFlushTimer(): void {
+    if (this.streamFlushTimer < 0) {
+      return
+    }
+    clearTimeout(this.streamFlushTimer)
+    this.streamFlushTimer = -1
+  }
+
+  /**
+   * 重置流式输出状态与缓冲。
+   */
+  private resetStreamingState(): void {
+    this.clearStreamingFlushTimer()
+    this.streamBuffer = ''
+    this.streamingText = ''
   }
 
   /**
@@ -153,7 +222,7 @@ struct AiChatPage {
           if (this.isSending && this.streamingText.length > 0) {
             Row() {
               Column() {
-                MdContentView({ text: this.streamingText })
+                MdStreamingContentView({ text: this.streamingText })
                 Row() {
                   LoadingProgress()
                     .width(16).height(16)

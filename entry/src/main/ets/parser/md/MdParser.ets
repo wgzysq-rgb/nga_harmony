@@ -94,6 +94,7 @@ function parseBlocks(lines: string[]): MdNode[] {
       const codeNode: MdNode = new MdNode(MdNodeType.CODE_BLOCK)
       codeNode.text = fenceResult.content
       codeNode.language = lang.length > 0 ? lang : ''
+      assignStableKeys(codeNode, buildStableKey('code', i))
       result.push(codeNode)
       i = fenceResult.nextLine
       continue
@@ -107,6 +108,7 @@ function parseBlocks(lines: string[]): MdNode[] {
       const headingNode: MdNode = new MdNode(MdNodeType.HEADING)
       headingNode.level = level
       headingNode.children = parseInline(headingText)
+      assignStableKeys(headingNode, buildStableKey('heading', i))
       result.push(headingNode)
       i++
       continue
@@ -115,6 +117,7 @@ function parseBlocks(lines: string[]): MdNode[] {
     // 分隔线
     if (HR_RE.test(line)) {
       const hrNode: MdNode = new MdNode(MdNodeType.THEMATIC_BREAK)
+      assignStableKeys(hrNode, buildStableKey('hr', i))
       result.push(hrNode)
       i++
       continue
@@ -124,6 +127,7 @@ function parseBlocks(lines: string[]): MdNode[] {
     const ulMatch = UL_ITEM_RE.exec(line)
     if (ulMatch !== null) {
       const listResult: ListResult = consumeList(lines, i, MdNodeType.UNORDERED_LIST)
+      assignStableKeys(listResult.node, buildStableKey('ul', i))
       result.push(listResult.node)
       i = listResult.nextLine
       continue
@@ -133,6 +137,7 @@ function parseBlocks(lines: string[]): MdNode[] {
     const olMatch = OL_ITEM_RE.exec(line)
     if (olMatch !== null) {
       const listResult: ListResult = consumeList(lines, i, MdNodeType.ORDERED_LIST)
+      assignStableKeys(listResult.node, buildStableKey('ol', i))
       result.push(listResult.node)
       i = listResult.nextLine
       continue
@@ -142,6 +147,7 @@ function parseBlocks(lines: string[]): MdNode[] {
     const bqMatch = BLOCKQUOTE_RE.exec(line)
     if (bqMatch !== null) {
       const bqResult: BlockquoteResult = consumeBlockquote(lines, i)
+      assignStableKeys(bqResult.node, buildStableKey('bq', i))
       result.push(bqResult.node)
       i = bqResult.nextLine
       continue
@@ -151,6 +157,7 @@ function parseBlocks(lines: string[]): MdNode[] {
     const paraResult: ParaResult = consumeParagraph(lines, i)
     const paraNode: MdNode = new MdNode(MdNodeType.PARAGRAPH)
     paraNode.children = parseInline(paraResult.text)
+    assignStableKeys(paraNode, buildStableKey('para', i))
     result.push(paraNode)
     i = paraResult.nextLine
   }
@@ -600,5 +607,29 @@ function compressSingleTextChild(node: MdNode): void {
   if (node.children.length === 1 && node.children[0].type === MdNodeType.TEXT) {
     node.text = node.children[0].text
     node.children = []
+  }
+}
+
+/**
+ * 构建基于块类型和起始行号的稳定 key。
+ *
+ * @param prefix - 块类型前缀
+ * @param lineIndex - 块起始行号
+ * @returns 稳定 key
+ */
+function buildStableKey(prefix: string, lineIndex: number): string {
+  return prefix + '_' + lineIndex.toString()
+}
+
+/**
+ * 为节点及其子节点递归分配稳定 key。
+ *
+ * @param node - 待分配 key 的节点
+ * @param key - 当前节点 key
+ */
+function assignStableKeys(node: MdNode, key: string): void {
+  node.key = key
+  for (let i: number = 0; i < node.children.length; i++) {
+    assignStableKeys(node.children[i], key + '_' + i.toString())
   }
 }

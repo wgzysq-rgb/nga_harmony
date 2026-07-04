@@ -47,6 +47,8 @@ let mdNodeIdCounter: number = 0
 export class MdNode {
   /** 全局自增唯一 ID，用作 ForEach key */
   id: number = 0
+  /** 稳定渲染 key，用于在重复解析相同前缀时复用 ArkUI 节点 */
+  key: string = ''
   /** 节点类型 */
   type: MdNodeType = MdNodeType.TEXT
   /** 文本内容 */
