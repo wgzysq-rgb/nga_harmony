@@ -145,11 +145,48 @@ struct AiChatPage {
             this.RenderBubble(bubble)
           }, (bubble: ChatBubble, index: number) => 'cb_' + index.toString())
 
-          // 正在流式生成中的 AI 气泡
+          // 流式 AI 气泡 — MdContentView 直接读 @State，不通过 @Builder 参数！
           if (this.isSending && this.streamingText.length > 0) {
-            this.RenderStreamingBubble(this.streamingText)
+            Row() {
+              Column() {
+                MdContentView({ text: this.streamingText })
+                Row() {
+                  LoadingProgress()
+                    .width(16).height(16)
+                    .color(AppColors.primary)
+                }
+                .margin({ top: 6 })
+              }
+              .padding({ left: 14, right: 14, top: 10, bottom: 10 })
+              .backgroundColor(AppColors.bgSecondary)
+              .borderRadius({ topLeft: 4, topRight: 14, bottomLeft: 14, bottomRight: 14 })
+              .width('100%')
+              .constraintSize({ maxWidth: '85%' })
+            }
+            .width('100%')
+            .justifyContent(FlexAlign.Start)
+            .margin({ top: 6, bottom: 6 })
+            .alignItems(VerticalAlign.Top)
           } else if (this.isSending && this.streamingText.length === 0) {
-            this.RenderThinkingBubble()
+            Row() {
+              Column() {
+                Row() {
+                  LoadingProgress()
+                    .width(20).height(20)
+                    .color(AppColors.primary)
+                  Text('  AI 思考中...')
+                    .fontSize(14)
+                    .fontColor(AppColors.textSecondary)
+                }
+              }
+              .padding({ left: 14, right: 14, top: 10, bottom: 10 })
+              .backgroundColor(AppColors.bgSecondary)
+              .borderRadius({ topLeft: 4, topRight: 14, bottomLeft: 14, bottomRight: 14 })
+            }
+            .width('100%')
+            .justifyContent(FlexAlign.Start)
+            .margin({ top: 6, bottom: 6 })
+            .alignItems(VerticalAlign.Top)
           }
         }
         .width('100%')
@@ -203,57 +240,6 @@ struct AiChatPage {
     }
     .width('100%')
     .justifyContent(bubble.role === 'user' ? FlexAlign.End : FlexAlign.Start)
-    .margin({ top: 6, bottom: 6 })
-    .alignItems(VerticalAlign.Top)
-  }
-
-  /** 渲染正在流式生成中的 AI 气泡。 */
-  @Builder
-  RenderStreamingBubble(text: string) {
-    Row() {
-      Column() {
-        MdContentView({ text: text })
-        Row() {
-          LoadingProgress()
-            .width(16)
-            .height(16)
-            .color(AppColors.primary)
-        }
-        .margin({ top: 6 })
-      }
-      .padding({ left: 14, right: 14, top: 10, bottom: 10 })
-      .backgroundColor(AppColors.bgSecondary)
-      .borderRadius({ topLeft: 4, topRight: 14, bottomLeft: 14, bottomRight: 14 })
-      .width('100%')
-      .constraintSize({ maxWidth: '85%' })
-    }
-    .width('100%')
-    .justifyContent(FlexAlign.Start)
-    .margin({ top: 6, bottom: 6 })
-    .alignItems(VerticalAlign.Top)
-  }
-
-  /** 渲染等待 AI 响应的思考中气泡。 */
-  @Builder
-  RenderThinkingBubble() {
-    Row() {
-      Column() {
-        Row() {
-          LoadingProgress()
-            .width(20)
-            .height(20)
-            .color(AppColors.primary)
-          Text('  AI 思考中...')
-            .fontSize(14)
-            .fontColor(AppColors.textSecondary)
-        }
-      }
-      .padding({ left: 14, right: 14, top: 10, bottom: 10 })
-      .backgroundColor(AppColors.bgSecondary)
-      .borderRadius({ topLeft: 4, topRight: 14, bottomLeft: 14, bottomRight: 14 })
-    }
-    .width('100%')
-    .justifyContent(FlexAlign.Start)
     .margin({ top: 6, bottom: 6 })
     .alignItems(VerticalAlign.Top)
   }
