@@ -1,5 +1,7 @@
 import { AppColors } from '../constants/Constants'
 import { MdContentView } from './MdContentView'
+import { parseInline } from '../../parser/md/MdParser'
+import { MdNode, MdNodeType } from '../../model/MdNode'
 
 /** 流式 Markdown 拆分结果。 */
 class MarkdownStreamSplit {
@@ -30,12 +32,29 @@ export struct MdStreamingContentView {
   @State private tailText: string = ''
   /** 尾部文本是否处于未闭合代码块。 */
   @State private tailInCodeBlock: boolean = false
+  /** 流式游标可见状态。 */
+  @State private cursorVisible: boolean = true
+  /** 游标闪烁定时器句柄。 */
+  private cursorTimer: number = -1
 
   /**
-   * 组件出现时初始化拆分状态。
+   * 组件出现时初始化拆分状态并启动游标闪烁定时器。
    */
   aboutToAppear(): void {
     this.updateSplitState()
+    this.cursorTimer = setInterval((): void => {
+      this.cursorVisible = !this.cursorVisible
+    }, 530)
+  }
+
+  /**
+   * 组件销毁时清理游标定时器。
+   */
+  aboutToDisappear(): void {
+    if (this.cursorTimer >= 0) {
+      clearInterval(this.cursorTimer)
+      this.cursorTimer = -1
+    }
   }
 
   /**
@@ -82,30 +101,65 @@ export struct MdStreamingContentView {
   }
 
   /**
-   * 渲染普通尾段文本。
+   * 渲染普通尾段文本，支持内联格式（粗体/斜体/链接/代码等）与流式游标。
    */
   @Builder
   RenderTextTail() {
-    Text(this.tailText)
-      .fontSize(15)
-      .fontColor(AppColors.textPrimary)
-      .lineHeight(26)
-      .width('100%')
-      .margin({ top: 2, bottom: 6 })
+    Text() {
+      ForEach(parseInline(this.tailText), (child: MdNode, index: number) => {
+        if (child.type === MdNodeType.CODE_INLINE) {
+          Span(child.text)
+            .fontFamily('monospace')
+            .fontSize(13)
+            .fontColor(AppColors.warnText)
+            .textBackgroundStyle({ color: AppColors.bgSecondary })
+        } else if (child.type === MdNodeType.LINK) {
+          Span(child.text)
+            .fontColor(AppColors.primary)
+            .decoration({ type: TextDecorationType.Underline, color: AppColors.primary })
+            .onClick(() => {
+              if (child.href.length > 0) {
+                this.onLinkClick(child.href)
+              }
+            })
+        } else if (child.type === MdNodeType.BOLD) {
+          Span(child.text).fontWeight(FontWeight.Bold).fontColor(AppColors.textPrimary)
+        } else if (child.type === MdNodeType.ITALIC) {
+          Span(child.text).fontStyle(FontStyle.Italic).fontColor(AppColors.textPrimary)
+        } else if (child.type === MdNodeType.STRIKETHROUGH) {
+          Span(child.text).decoration({ type: TextDecorationType.LineThrough }).fontColor(AppColors.textPrimary)
+        } else {
+          Span(child.text).fontColor(AppColors.textPrimary)
+        }
+      }, (child: MdNode, index: number) => 'tail_' + index.toString())
+      if (this.cursorVisible) {
+        Span('▌').fontColor(AppColors.primary).fontSize(14)
+      }
+    }
+    .fontSize(15)
+    .fontColor(AppColors.textPrimary)
+    .lineHeight(26)
+    .width('100%')
+    .margin({ top: 2, bottom: 6 })
   }
 
   /**
-   * 渲染未闭合代码块尾段。
+   * 渲染未闭合代码块尾段，含流式游标。
    */
   @Builder
   RenderCodeTail() {
     Scroll() {
-      Text(this.tailText)
-        .fontSize(13)
-        .fontColor(AppColors.textPrimary)
-        .fontFamily('monospace')
-        .lineHeight(20)
-        .padding(12)
+      Text() {
+        Span(this.tailText)
+          .fontSize(13)
+          .fontColor(AppColors.textPrimary)
+        if (this.cursorVisible) {
+          Span('▌').fontColor(AppColors.primary).fontSize(13)
+        }
+      }
+      .fontFamily('monospace')
+      .lineHeight(20)
+      .padding(12)
     }
     .width('100%')
     .scrollable(ScrollDirection.Horizontal)

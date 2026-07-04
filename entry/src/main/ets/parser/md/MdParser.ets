@@ -43,6 +43,9 @@ const HR_RE: RegExp = /^[-*_]{3,}\s*$/
 /** 行首转义正则：`\*` / `\-` 等 */
 const ESCAPE_RE: RegExp = /\\([*_~`#[\]()\-+.!|])/g
 
+/** 块级稳定 key 的序列号计数器，每次 parseMd 调用时重置。 */
+let keySerialMap: Record<string, number> = {}
+
 /**
  * 解析 Markdown 文本为 AST 节点数组。
  *
@@ -55,6 +58,7 @@ export function parseMd(text: string): MdNode[] {
   if (text.length === 0) {
     return []
   }
+  keySerialMap = {}
   const normalized: string = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
   const lines: string[] = normalized.split('\n')
   return parseBlocks(lines)
@@ -94,7 +98,7 @@ function parseBlocks(lines: string[]): MdNode[] {
       const codeNode: MdNode = new MdNode(MdNodeType.CODE_BLOCK)
       codeNode.text = fenceResult.content
       codeNode.language = lang.length > 0 ? lang : ''
-      assignStableKeys(codeNode, buildStableKey('code', i))
+      assignStableKeys(codeNode, buildStableKey('code', fenceResult.content))
       result.push(codeNode)
       i = fenceResult.nextLine
       continue
@@ -108,7 +112,7 @@ function parseBlocks(lines: string[]): MdNode[] {
       const headingNode: MdNode = new MdNode(MdNodeType.HEADING)
       headingNode.level = level
       headingNode.children = parseInline(headingText)
-      assignStableKeys(headingNode, buildStableKey('heading', i))
+      assignStableKeys(headingNode, buildStableKey('heading', headingText))
       result.push(headingNode)
       i++
       continue
@@ -117,7 +121,7 @@ function parseBlocks(lines: string[]): MdNode[] {
     // 分隔线
     if (HR_RE.test(line)) {
       const hrNode: MdNode = new MdNode(MdNodeType.THEMATIC_BREAK)
-      assignStableKeys(hrNode, buildStableKey('hr', i))
+      assignStableKeys(hrNode, buildStableKey('hr', ''))
       result.push(hrNode)
       i++
       continue
@@ -127,7 +131,11 @@ function parseBlocks(lines: string[]): MdNode[] {
     const ulMatch = UL_ITEM_RE.exec(line)
     if (ulMatch !== null) {
       const listResult: ListResult = consumeList(lines, i, MdNodeType.UNORDERED_LIST)
-      assignStableKeys(listResult.node, buildStableKey('ul', i))
+      let ulContent: string = ''
+      for (let j: number = i; j < listResult.nextLine; j++) {
+        ulContent += lines[j] + '\n'
+      }
+      assignStableKeys(listResult.node, buildStableKey('ul', ulContent))
       result.push(listResult.node)
       i = listResult.nextLine
       continue
@@ -137,7 +145,11 @@ function parseBlocks(lines: string[]): MdNode[] {
     const olMatch = OL_ITEM_RE.exec(line)
     if (olMatch !== null) {
       const listResult: ListResult = consumeList(lines, i, MdNodeType.ORDERED_LIST)
-      assignStableKeys(listResult.node, buildStableKey('ol', i))
+      let olContent: string = ''
+      for (let j: number = i; j < listResult.nextLine; j++) {
+        olContent += lines[j] + '\n'
+      }
+      assignStableKeys(listResult.node, buildStableKey('ol', olContent))
       result.push(listResult.node)
       i = listResult.nextLine
       continue
@@ -147,7 +159,11 @@ function parseBlocks(lines: string[]): MdNode[] {
     const bqMatch = BLOCKQUOTE_RE.exec(line)
     if (bqMatch !== null) {
       const bqResult: BlockquoteResult = consumeBlockquote(lines, i)
-      assignStableKeys(bqResult.node, buildStableKey('bq', i))
+      let bqContent: string = ''
+      for (let j: number = i; j < bqResult.nextLine; j++) {
+        bqContent += lines[j] + '\n'
+      }
+      assignStableKeys(bqResult.node, buildStableKey('bq', bqContent))
       result.push(bqResult.node)
       i = bqResult.nextLine
       continue
@@ -157,7 +173,7 @@ function parseBlocks(lines: string[]): MdNode[] {
     const paraResult: ParaResult = consumeParagraph(lines, i)
     const paraNode: MdNode = new MdNode(MdNodeType.PARAGRAPH)
     paraNode.children = parseInline(paraResult.text)
-    assignStableKeys(paraNode, buildStableKey('para', i))
+    assignStableKeys(paraNode, buildStableKey('para', paraResult.text))
     result.push(paraNode)
     i = paraResult.nextLine
   }
@@ -391,7 +407,7 @@ function isBlockStart(line: string): boolean {
  * @param text - 待解析的文本（不含块级标记）
  * @returns 内联 MdNode 数组
  */
-function parseInline(text: string): MdNode[] {
+export function parseInline(text: string): MdNode[] {
   const result: MdNode[] = []
   const len: number = text.length
 
@@ -611,14 +627,40 @@ function compressSingleTextChild(node: MdNode): void {
 }
 
 /**
- * 构建基于块类型和起始行号的稳定 key。
+ * 32-bit FNV-1a 哈希，输出 36 进制短字符串。
+ *
+ * 用于从块内容生成稳定的 ForEach key，避免行号漂移
+ * 导致组件实例全量重建。
+ *
+ * @param str - 待哈希字符串
+ * @returns 36 进制哈希字符串
+ */
+function hashString(str: string): string {
+  let hash: number = 0
+  for (let i: number = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i)
+    hash |= 0
+  }
+  return (hash >>> 0).toString(36)
+}
+
+/**
+ * 构建基于块类型和内容的稳定 key。
+ *
+ * 使用内容哈希作为主 key，块类型序列号作为后缀
+ * 防止相同内容块的 key 冲突。
  *
  * @param prefix - 块类型前缀
- * @param lineIndex - 块起始行号
+ * @param content - 块文本内容
  * @returns 稳定 key
  */
-function buildStableKey(prefix: string, lineIndex: number): string {
-  return prefix + '_' + lineIndex.toString()
+function buildStableKey(prefix: string, content: string): string {
+  const serial: number = (keySerialMap[prefix] ?? 0) + 1
+  keySerialMap[prefix] = serial
+  if (content.length > 0) {
+    return prefix + '_' + hashString(content) + '_' + serial.toString()
+  }
+  return prefix + '_' + serial.toString()
 }
 
 /**

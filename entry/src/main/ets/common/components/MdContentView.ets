@@ -1,6 +1,7 @@
 import { MdNode, MdNodeType } from '../../model/MdNode'
 import { parseMd } from '../../parser/md/MdParser'
 import { AppColors } from '../constants/Constants'
+import { MdNodeDataSource } from '../datasource/MdNodeDataSource'
 
 /**
  * Markdown 内容渲染组件。
@@ -50,24 +51,35 @@ export struct MdContentView {
 
   /** 解析后的 AST 节点缓存 */
   @State private parsedNodes: MdNode[] = []
+  /** LazyForEach 数据源（节点数 ≥ 20 时启用虚拟滚动） */
+  private dataSource: MdNodeDataSource = new MdNodeDataSource()
 
   /**
-   * 文本变化时重新解析 AST。
+   * 文本变化时重新解析 AST 并同步 LazyForEach 数据源。
    */
   private onTextChange(): void {
     this.parsedNodes = parseMd(this.text)
+    this.dataSource.replaceAll(this.parsedNodes)
   }
 
   aboutToAppear(): void {
     this.parsedNodes = parseMd(this.text)
+    this.dataSource.replaceAll(this.parsedNodes)
   }
 
   build() {
     Column() {
       // ⚠️ ForEach 必须直接读 @State，不能包在 @Builder 参数里！详见文件头注释。
-      ForEach(this.parsedNodes, (node: MdNode) => {
-        this.RenderBlock(node)
-      }, (node: MdNode) => this.renderKey(node, 'b'))
+      // 长内容（≥ 20 块）切换为 LazyForEach 虚拟滚动以减少组件实例数。
+      if (this.parsedNodes.length < 20) {
+        ForEach(this.parsedNodes, (node: MdNode) => {
+          this.RenderBlock(node)
+        }, (node: MdNode) => this.renderKey(node, 'b'))
+      } else {
+        LazyForEach(this.dataSource, (node: MdNode) => {
+          this.RenderBlock(node)
+        }, (node: MdNode) => this.renderKey(node, 'b'))
+      }
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -105,16 +117,20 @@ export struct MdContentView {
   // 各块级节点渲染
   // ============================================================
 
-  /** 渲染标题 (H1-H6)。递归拼接子节点文本，保留内联格式的视觉内容。 */
+  /** 渲染标题 (H1-H6)。通过 Span 级联保留内联格式。 */
   @Builder
   RenderHeading(node: MdNode) {
-    Text(this.collectPlainText(node))
-      .fontSize(this.headingFontSize(node.level))
-      .fontColor(AppColors.textPrimary)
-      .fontWeight(this.headingFontWeight(node.level))
-      .lineHeight(this.headingLineHeight(node.level))
-      .width('100%')
-      .margin({ top: node.level <= 2 ? 14 : 10, bottom: 4 })
+    Text() {
+      ForEach(node.children, (child: MdNode) => {
+        this.RenderSpanLeaf(child)
+      }, (child: MdNode) => this.renderKey(child, 'h'))
+    }
+    .fontSize(this.headingFontSize(node.level))
+    .fontColor(AppColors.textPrimary)
+    .fontWeight(this.headingFontWeight(node.level))
+    .lineHeight(this.headingLineHeight(node.level))
+    .width('100%')
+    .margin({ top: node.level <= 2 ? 14 : 10, bottom: 4 })
   }
 
   /** 渲染段落。通过 Span 级联支持粗体/斜体/代码/链接等内联格式。 */
@@ -160,7 +176,7 @@ export struct MdContentView {
     .alignItems(HorizontalAlign.Start)
   }
 
-  /** 渲染无序列表。 */
+  /** 渲染无序列表。列表项支持内联格式。 */
   @Builder
   RenderUnorderedList(node: MdNode) {
     Column() {
@@ -170,11 +186,15 @@ export struct MdContentView {
             .fontSize(15)
             .fontColor(AppColors.textPrimary)
             .margin({ right: 6 })
-          Text(this.collectPlainText(item))
-            .fontSize(15)
-            .fontColor(AppColors.textPrimary)
-            .lineHeight(26)
-            .layoutWeight(1)
+          Text() {
+            ForEach(item.children, (child: MdNode) => {
+              this.RenderSpanLeaf(child)
+            }, (child: MdNode) => this.renderKey(child, 'uli'))
+          }
+          .fontSize(15)
+          .fontColor(AppColors.textPrimary)
+          .lineHeight(26)
+          .layoutWeight(1)
         }
         .width('100%')
         .padding({ top: 2, bottom: 2 })
@@ -187,7 +207,7 @@ export struct MdContentView {
     .alignItems(HorizontalAlign.Start)
   }
 
-  /** 渲染有序列表。 */
+  /** 渲染有序列表。列表项支持内联格式。 */
   @Builder
   RenderOrderedList(node: MdNode) {
     Column() {
@@ -197,11 +217,15 @@ export struct MdContentView {
             .fontSize(15)
             .fontColor(AppColors.textPrimary)
             .margin({ right: 6 })
-          Text(this.collectPlainText(item))
-            .fontSize(15)
-            .fontColor(AppColors.textPrimary)
-            .lineHeight(26)
-            .layoutWeight(1)
+          Text() {
+            ForEach(item.children, (child: MdNode) => {
+              this.RenderSpanLeaf(child)
+            }, (child: MdNode) => this.renderKey(child, 'ol'))
+          }
+          .fontSize(15)
+          .fontColor(AppColors.textPrimary)
+          .lineHeight(26)
+          .layoutWeight(1)
         }
         .width('100%')
         .padding({ top: 2, bottom: 2 })
@@ -214,16 +238,20 @@ export struct MdContentView {
     .alignItems(HorizontalAlign.Start)
   }
 
-  /** 渲染引用块。 */
+  /** 渲染引用块。支持内联格式。 */
   @Builder
   RenderBlockquote(node: MdNode) {
     Column() {
-      Text(this.collectPlainText(node))
-        .fontSize(14)
-        .fontColor(AppColors.textSecondary)
-        .fontStyle(FontStyle.Italic)
-        .lineHeight(24)
-        .width('100%')
+      Text() {
+        ForEach(node.children, (child: MdNode) => {
+          this.RenderSpanLeaf(child)
+        }, (child: MdNode) => this.renderKey(child, 'bq'))
+      }
+      .fontSize(14)
+      .fontColor(AppColors.textSecondary)
+      .fontStyle(FontStyle.Italic)
+      .lineHeight(24)
+      .width('100%')
     }
     .width('100%')
     .padding({ left: 12, top: 6, bottom: 6 })
@@ -249,28 +277,6 @@ export struct MdContentView {
   // ============================================================
   // 内联处理
   // ============================================================
-
-  /**
-   * 递归收集节点树中的纯文本内容。
-   *
-   * 遍历整棵子树，将所有叶子节点的文本按序拼接。
-   * 用于标题、列表项、引用块等块级元素的文本渲染。
-   *
-   * @param node - 根节点
-   * @returns 拼接后的纯文本
-   */
-  private collectPlainText(node: MdNode): string {
-    // 叶子节点：有 text 且无子节点 → 直接返回
-    if (node.children.length === 0) {
-      return node.text
-    }
-    // 容器节点：递归收集子节点文本
-    let result: string = ''
-    for (let i: number = 0; i < node.children.length; i++) {
-      result += this.collectPlainText(node.children[i])
-    }
-    return result
-  }
 
   /**
    * 返回 ArkUI ForEach 使用的渲染 key。

@@ -5,8 +5,12 @@ import { MdStreamingContentView } from '../../common/components/MdStreamingConte
 import { PanelNavBar } from '../../common/components/PanelNavBar'
 import { AppColors } from '../../common/constants/Constants'
 
-/** 流式输出刷新间隔毫秒数。 */
-const STREAM_FLUSH_INTERVAL_MS: number = 80
+/** 流式输出默认刷新间隔毫秒数 */
+const DEFAULT_FLUSH_INTERVAL_MS: number = 80
+/** 流式输出最小刷新间隔毫秒数（最快刷新频率） */
+const MIN_FLUSH_INTERVAL_MS: number = 30
+/** 流式输出最大刷新间隔毫秒数（最慢刷新频率） */
+const MAX_FLUSH_INTERVAL_MS: number = 200
 
 /**
  * 聊天气泡。
@@ -57,6 +61,10 @@ struct AiChatPage {
   private streamBuffer: string = ''
   /** 流式输出刷新定时器句柄。 */
   private streamFlushTimer: number = -1
+  /** 上一次收到 chunk 的时间戳（毫秒），用于自适应频率调整。 */
+  private lastChunkTimeMs: number = 0
+  /** 当前自适应刷新间隔。 */
+  private adaptiveFlushMs: number = DEFAULT_FLUSH_INTERVAL_MS
 
   /** 滚动控制器 */
   private scroller: Scroller = new Scroller()
@@ -99,7 +107,10 @@ struct AiChatPage {
     // 构建对话历史（不含正在生成的 AI 回复）
     const history: ChatMessage[] = this.buildHistory()
 
-    this.scrollToBottom()
+    // 延迟到下一帧渲染完成后滚动，避免在旧内容上滚动
+    setTimeout((): void => {
+      this.scrollToBottom()
+    }, 0)
 
     try {
       const finalText: string = await chatCompleteWithActiveAiStream(history, (chunk: string): void => {
@@ -118,11 +129,14 @@ struct AiChatPage {
 
     this.resetStreamingState()
     this.isSending = false
-    this.scrollToBottom()
+    // 延迟到下一帧渲染完成后滚动，确保新气泡已布局
+    setTimeout((): void => {
+      this.scrollToBottom()
+    }, 0)
   }
 
   /**
-   * 追加 AI 流式文本增量并安排一次低频 UI 刷新。
+   * 追加 AI 流式文本增量并安排一次自适应低频 UI 刷新。
    *
    * @param chunk - 本次收到的文本增量
    */
@@ -131,6 +145,21 @@ struct AiChatPage {
       return
     }
     this.streamBuffer += chunk
+
+    // 自适应调整刷新间隔：chunk 密集到达时缩短间隔以提升流畅度
+    const now: number = Date.now()
+    if (this.lastChunkTimeMs > 0) {
+      const gap: number = now - this.lastChunkTimeMs
+      if (gap < 30) {
+        // chunk 快速连续到达 → 加速刷新
+        this.adaptiveFlushMs = Math.max(MIN_FLUSH_INTERVAL_MS, this.adaptiveFlushMs - 5)
+      } else if (gap > 200) {
+        // chunk 稀疏到达 → 降低刷新频率节省资源
+        this.adaptiveFlushMs = Math.min(MAX_FLUSH_INTERVAL_MS, this.adaptiveFlushMs + 10)
+      }
+    }
+    this.lastChunkTimeMs = now
+
     this.scheduleStreamingFlush()
   }
 
@@ -144,7 +173,7 @@ struct AiChatPage {
     this.streamFlushTimer = setTimeout((): void => {
       this.streamFlushTimer = -1
       this.flushStreamingText()
-    }, STREAM_FLUSH_INTERVAL_MS)
+    }, this.adaptiveFlushMs)
   }
 
   /**
@@ -155,7 +184,10 @@ struct AiChatPage {
       return
     }
     this.streamingText = this.streamBuffer
-    this.scrollToBottom()
+    // 延迟到下一帧渲染完成后滚动，确保新的流式内容已布局
+    setTimeout((): void => {
+      this.scrollToBottom()
+    }, 0)
   }
 
   /**
@@ -176,6 +208,8 @@ struct AiChatPage {
     this.clearStreamingFlushTimer()
     this.streamBuffer = ''
     this.streamingText = ''
+    this.lastChunkTimeMs = 0
+    this.adaptiveFlushMs = DEFAULT_FLUSH_INTERVAL_MS
   }
 
   /**
@@ -217,17 +251,11 @@ struct AiChatPage {
             this.RenderBubble(bubble)
           }, (bubble: ChatBubble, index: number) => 'cb_' + index.toString())
 
-          // 流式 AI 气泡 — MdContentView 直接读 @State，不通过 @Builder 参数！
+	          // 流式 AI 气泡 — 游标已指示生成中，无需额外的 LoadingProgress
           if (this.isSending && this.streamingText.length > 0) {
             Row() {
               Column() {
                 MdStreamingContentView({ text: this.streamingText })
-                Row() {
-                  LoadingProgress()
-                    .width(16).height(16)
-                    .color(AppColors.primary)
-                }
-                .margin({ top: 6 })
               }
               .padding({ left: 14, right: 14, top: 10, bottom: 10 })
               .backgroundColor(AppColors.bgSecondary)
