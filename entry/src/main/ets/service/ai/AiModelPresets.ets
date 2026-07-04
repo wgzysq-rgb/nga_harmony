@@ -1,8 +1,8 @@
 /**
- * AI 提供方和模型预设数据。
+ * AI 提供方预设数据。
  *
- * 提供流行 AI 服务商的端点地址预设及常用模型列表，
- * 降低用户手动输入端点地址的门槛。
+ * 提供流行 AI 服务商的端点地址和默认模型，
+ * 降低用户手动输入配置的门槛。
  */
 
 /** AI 服务商预设 */
@@ -47,29 +47,6 @@ export class AiProviderPreset {
   }
 }
 
-/** AI 模型预设 */
-export class AiModelPreset {
-  /** 模型名称 */
-  modelName: string
-  /** 用途说明 */
-  description: string
-  /** 所属服务商 ID */
-  providerId: string
-
-  /**
-   * 创建 AI 模型预设。
-   *
-   * @param modelName - 模型名称
-   * @param description - 用途说明
-   * @param providerId - 所属服务商 ID
-   */
-  constructor(modelName: string, description: string, providerId: string) {
-    this.modelName = modelName
-    this.description = description
-    this.providerId = providerId
-  }
-}
-
 /** 预设 AI 服务商列表 */
 export const PROVIDER_PRESETS: AiProviderPreset[] = [
   new AiProviderPreset('deepseek', 'DeepSeek', 'https://api.deepseek.com', 'deepseek-v4-flash', true, '国产高性价比大模型'),
@@ -80,35 +57,3 @@ export const PROVIDER_PRESETS: AiProviderPreset[] = [
   new AiProviderPreset('openai', 'OpenAI', 'https://api.openai.com/v1', 'gpt-4o-mini', true, '全球领先的大模型'),
   new AiProviderPreset('custom', '自定义', '', '', true, '手动输入端点地址')
 ]
-
-/** 预设模型列表 */
-export const MODEL_PRESETS: AiModelPreset[] = [
-  new AiModelPreset('deepseek-v4-flash', '快速通用 - 日常任务首选', 'deepseek'),
-  new AiModelPreset('deepseek-v4-pro', '旗舰推理 - 复杂分析场景', 'deepseek'),
-  new AiModelPreset('glm-5.2', '旗舰通用 - 适合复杂分析', 'zhipu'),
-  new AiModelPreset('glm-5.1', '稳定通用 - 日常任务', 'zhipu'),
-  new AiModelPreset('doubao-seed-2-1-pro-260628', '旗舰通用 - 复杂分析与推理', 'doubao'),
-  new AiModelPreset('doubao-seed-2-1-turbo-260628', '快速通用 - 日常任务', 'doubao'),
-  new AiModelPreset('MiniMax-M3', '长上下文 - Agent 与代码任务', 'minimax'),
-  new AiModelPreset('MiniMax-M2.7', '高性能 - 长上下文任务', 'minimax'),
-  new AiModelPreset('kimi-k2.6', '长文本 - 中文优化', 'moonshot'),
-  new AiModelPreset('kimi-k2.7-code', '代码与 Agent 任务', 'moonshot'),
-  new AiModelPreset('gpt-4o', '通用多模态 - 支持图片理解', 'openai'),
-  new AiModelPreset('gpt-4o-mini', '轻量快速 - 日常任务首选', 'openai')
-]
-
-/**
- * 根据服务商 ID 获取对应的模型预设列表。
- *
- * @param providerId - 服务商标识
- * @returns 该服务商的模型预设列表
- */
-export function getModelsByProvider(providerId: string): AiModelPreset[] {
-  const result: AiModelPreset[] = []
-  for (let i = 0; i < MODEL_PRESETS.length; i++) {
-    if (MODEL_PRESETS[i].providerId === providerId) {
-      result.push(MODEL_PRESETS[i])
-    }
-  }
-  return result
-}

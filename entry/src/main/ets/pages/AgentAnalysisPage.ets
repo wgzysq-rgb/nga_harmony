@@ -4,11 +4,8 @@ import { appStore } from '../store/AppStore'
 import { AppColors } from '../common/constants/Constants'
 import { UserActivityAnalysis, ForumStat } from '../model/NgaApiResults'
 import { ToastComponent } from '../common/components/Toast'
-import { Logger, DOMAIN_UI } from '../common/utils/Logger'
 import { ChatMessage } from '../service/ai/OpenAiCompatibleClient'
 import { chatCompleteWithActiveAi, formatAiCompletionError } from '../service/ai/ActiveAiService'
-
-const logger = new Logger(DOMAIN_UI, 'AgentAnalysis')
 
 @Entry
 @Component

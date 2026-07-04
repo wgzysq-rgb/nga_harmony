@@ -3,8 +3,6 @@
  *
  * 支持向 OpenAI 兼容端点发送对话补全请求，
  * 提供测试连接、获取模型列表功能。
- * 流式输出通过接收完整响应后逐字推送给 UI 模拟实现，
- * 兼顾鸿蒙 http 模块限制与用户流式视觉体验。
  */
 
 import { http } from '@kit.NetworkKit'
@@ -21,9 +19,17 @@ const CONNECT_TIMEOUT: number = 15000
 
 /** 对话消息 */
 export class ChatMessage {
+  /** 消息角色 */
   role: string
+  /** 消息内容 */
   content: string
 
+  /**
+   * 创建对话消息。
+   *
+   * @param role - 消息角色
+   * @param content - 消息内容
+   */
   constructor(role: string, content: string) {
     this.role = role
     this.content = content
@@ -67,74 +73,6 @@ export async function chatComplete(
       throw new Error('AI 响应为空或格式不兼容')
     }
     return content
-  } finally {
-    httpRequest.destroy()
-  }
-}
-
-/**
- * 发送聊天补全请求并以流式方式逐字回调。
- *
- * 因鸿蒙 http 模块不支持 SSE 增量读取，先获取完整响应，
- * 再逐字通过 onChunk 回调输出，模拟流式体验。
- *
- * @param profile - AI 提供方配置
- * @param messages - 消息列表
- * @param onChunk - 每收到一个字符时调用
- * @param onError - 出错时调用
- * @returns 完整响应文本
- */
-export async function chatCompleteStreaming(
-  profile: AiProviderProfile,
-  messages: ChatMessage[],
-  onChunk: (text: string) => void,
-  onError?: (statusCode: number, message: string) => void
-): Promise<string> {
-  const url: string = buildChatUrl(profile.endpoint)
-  const body: string = buildRequestBody(profile, messages, false)
-
-  const httpRequest: http.HttpRequest = http.createHttp()
-  try {
-    const response: http.HttpResponse = await httpRequest.request(url, {
-      method: http.RequestMethod.POST,
-      header: buildHeaders(profile.apiKey),
-      extraData: body,
-      expectDataType: http.HttpDataType.STRING,
-      readTimeout: REQUEST_TIMEOUT,
-      connectTimeout: CONNECT_TIMEOUT
-    })
-
-    const statusCode: number = response.responseCode
-    const responseText: string = (response.result as string) ?? ''
-
-    if (statusCode !== 200) {
-      if (onError) {
-        onError(statusCode, responseText)
-      }
-      return ''
-    }
-
-    const fullContent: string = parseChatResponse(responseText)
-
-    // 逐字模拟流式输出
-    const chunkSize: number = 2
-    for (let i: number = 0; i < fullContent.length; i += chunkSize) {
-      const end: number = Math.min(i + chunkSize, fullContent.length)
-      const chunk: string = fullContent.substring(i, end)
-      onChunk(chunk)
-      // 可调整延迟控制流式速度
-    }
-
-    return fullContent
-  } catch (err) {
-    const e: Error = err as Error
-    const code: number = parseInt(e.message)
-    if (!isNaN(code) && onError) {
-      onError(code, e.message)
-    } else if (onError) {
-      onError(-1, e.message)
-    }
-    return ''
   } finally {
     httpRequest.destroy()
   }
@@ -199,7 +137,6 @@ export async function testConnection(profile: AiProviderProfile): Promise<AiTest
  * @returns 模型名称列表
  */
 export async function listModels(profile: AiProviderProfile): Promise<string[]> {
-  // 去除尾部的 /chat/completions 或 trailing slash
   let baseUrl: string = profile.endpoint
     .replace(/\/chat\/completions\/?$/, '')
     .replace(/\/+$/, '')
@@ -228,8 +165,6 @@ export async function listModels(profile: AiProviderProfile): Promise<string[]> 
     httpRequest.destroy()
   }
 }
-
-// ============== 内部辅助函数 ==============
 
 /**
  * 构造聊天补全请求 URL。

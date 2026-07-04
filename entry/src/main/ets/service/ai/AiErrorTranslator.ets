@@ -28,6 +28,13 @@ export class AiErrorInfo {
   /** 建议执行的操作 */
   action: AiErrorAction
 
+  /**
+   * 创建错误翻译结果。
+   *
+   * @param userMessage - 用户可读的错误描述
+   * @param suggestion - 修复建议
+   * @param action - 建议执行的操作
+   */
   constructor(userMessage: string, suggestion: string, action: AiErrorAction) {
     this.userMessage = userMessage
     this.suggestion = suggestion
@@ -43,7 +50,6 @@ export class AiErrorInfo {
  * @returns 翻译后的用户友好错误信息
  */
 export function translateError(statusCode: number, rawMessage?: string): AiErrorInfo {
-  // HTTP 401 — 认证失败
   if (statusCode === 401) {
     return new AiErrorInfo(
       'API 密钥无效或已过期',
@@ -51,7 +57,6 @@ export function translateError(statusCode: number, rawMessage?: string): AiError
       AiErrorAction.UPDATE_KEY
     )
   }
-  // HTTP 403 — 权限不足
   if (statusCode === 403) {
     return new AiErrorInfo(
       'API 密钥无权访问该资源',
@@ -59,7 +64,6 @@ export function translateError(statusCode: number, rawMessage?: string): AiError
       AiErrorAction.UPDATE_KEY
     )
   }
-  // HTTP 404 — 端点或模型不存在
   if (statusCode === 404) {
     return new AiErrorInfo(
       '服务地址或模型不存在',
@@ -67,7 +71,6 @@ export function translateError(statusCode: number, rawMessage?: string): AiError
       AiErrorAction.CHECK_ENDPOINT
     )
   }
-  // HTTP 429 — 速率限制/额度用完
   if (statusCode === 429) {
     return new AiErrorInfo(
       'API 请求额度已用尽或请求过于频繁',
@@ -75,7 +78,6 @@ export function translateError(statusCode: number, rawMessage?: string): AiError
       AiErrorAction.RETRY
     )
   }
-  // HTTP 400 — 请求参数错误（通常是模型名不对）
   if (statusCode === 400) {
     return new AiErrorInfo(
       '请求参数不正确',
@@ -83,7 +85,6 @@ export function translateError(statusCode: number, rawMessage?: string): AiError
       AiErrorAction.CHECK_MODEL
     )
   }
-  // HTTP 5xx — 服务端错误
   if (statusCode >= 500 && statusCode < 600) {
     return new AiErrorInfo(
       'AI 服务暂时不可用',
@@ -91,7 +92,6 @@ export function translateError(statusCode: number, rawMessage?: string): AiError
       AiErrorAction.RETRY
     )
   }
-  // 连接超时 / DNS 解析失败（负值网络错误码）
   if (statusCode < 0) {
     return new AiErrorInfo(
       '无法连接到 AI 服务',
@@ -99,7 +99,6 @@ export function translateError(statusCode: number, rawMessage?: string): AiError
       AiErrorAction.CHECK_NETWORK
     )
   }
-  // 默认
   return new AiErrorInfo(
     rawMessage ? `AI 调用失败：${rawMessage}` : 'AI 调用失败',
     '请检查配置或稍后重试',

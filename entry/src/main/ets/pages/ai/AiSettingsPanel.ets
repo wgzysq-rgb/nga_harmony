@@ -9,10 +9,12 @@
 import { appStore } from '../../store/AppStore'
 import { AppColors } from '../../common/constants/Constants'
 import { PanelNavBar } from '../../common/components/PanelNavBar'
-import { ConfirmDialog, ActionSheetDialog, ActionOption } from '../../common/dialogs/Dialogs'
-import { AiProviderProfile, AiTestResult } from '../../model/AiConfig'
+import { ConfirmDialog, ActionSheetDialog } from '../../common/dialogs/Dialogs'
+import { AiProviderProfile } from '../../model/AiConfig'
 import { PROVIDER_PRESETS } from '../../service/ai/AiModelPresets'
 import { testConnection, listModels } from '../../service/ai/OpenAiCompatibleClient'
+import type { ActionOption } from '../../common/dialogs/Dialogs'
+import type { AiTestResult } from '../../model/AiConfig'
 import type { AiProviderPreset } from '../../service/ai/AiModelPresets'
 
 /** 新建方案的哨兵 ID */
@@ -20,19 +22,31 @@ const NEW_ID: string = '__new__'
 
 @Component
 export struct AiSettingsPanel {
-  @StorageProp('statusBarHeight') statusBarHeight: number = 0
+  /** 配置列表快照。 */
   @State profiles: AiProviderProfile[] = []
+  /** 当前展开编辑的配置 ID。 */
   @State expandedProfileId: string = ''
+  /** 方案名称输入值。 */
   @State editNameInput: string = ''
+  /** 服务地址输入值。 */
   @State editEndpointInput: string = ''
+  /** API 密钥输入值。 */
   @State editApiKeyInput: string = ''
+  /** 模型名称输入值。 */
   @State editModelInput: string = ''
+  /** 测试连接结果文案。 */
   @State testResultMessage: string = ''
+  /** 测试连接是否成功。 */
   @State testSuccess: boolean = false
+  /** 是否正在测试连接。 */
   @State testing: boolean = false
+  /** 是否正在获取模型列表。 */
   @State fetchingModels: boolean = false
+  /** 端点返回的模型列表。 */
   @State fetchedModels: string[] = []
+  /** 获取模型列表请求序号。 */
   private fetchModelsRequestId: number = 0
+  /** 测试连接请求序号。 */
   private testConnectionRequestId: number = 0
 
   /** 是否正在新建方案 */
@@ -40,29 +54,29 @@ export struct AiSettingsPanel {
     return this.expandedProfileId === NEW_ID
   }
 
-  // ============== Dialog Controllers ==============
-
+  /** 删除确认弹窗控制器。 */
   deleteConfirmController?: CustomDialogController
+  /** 服务商预设选择弹窗控制器。 */
   providerPickerController?: CustomDialogController
+  /** 放弃修改确认弹窗控制器。 */
   discardConfirmController?: CustomDialogController
 
+  /** 页面出现时同步配置列表。 */
   aboutToAppear(): void {
     this.syncProfiles()
   }
 
+  /** 页面消失时释放弹窗控制器引用。 */
   aboutToDisappear(): void {
     this.deleteConfirmController = undefined
     this.providerPickerController = undefined
     this.discardConfirmController = undefined
   }
 
-  // ============== Data Sync ==============
-
+  /** 同步当前持久化配置列表到页面状态。 */
   private syncProfiles(): void {
     this.profiles = appStore.settings.aiProfiles
   }
-
-  // ============== Card Expand / Collapse ==============
 
   /**
    * 展开指定卡片。
@@ -84,6 +98,11 @@ export struct AiSettingsPanel {
     this.doExpandCard(profileId)
   }
 
+  /**
+   * 执行卡片展开并初始化表单缓存。
+   *
+   * @param profileId - 已有配置的 ID，或 NEW_ID 表示新建
+   */
   private doExpandCard(profileId: string): void {
     this.invalidatePendingRequests()
     this.expandedProfileId = profileId
@@ -118,6 +137,7 @@ export struct AiSettingsPanel {
     this.doCollapse()
   }
 
+  /** 执行卡片折叠并清空表单缓存。 */
   private doCollapse(): void {
     this.invalidatePendingRequests()
     this.expandedProfileId = ''
@@ -132,6 +152,11 @@ export struct AiSettingsPanel {
     this.testing = false
   }
 
+  /**
+   * 显示放弃修改确认弹窗。
+   *
+   * @param onConfirm - 用户确认放弃后的动作
+   */
   private showDiscardConfirm(onConfirm: () => void): void {
     this.discardConfirmController = new CustomDialogController({
       builder: ConfirmDialog({
@@ -173,6 +198,7 @@ export struct AiSettingsPanel {
       this.editModelInput !== profile.modelName
   }
 
+  /** 清空编辑表单缓存和异步结果。 */
   private clearEditBuffers(): void {
     this.editNameInput = ''
     this.editEndpointInput = ''
@@ -183,8 +209,12 @@ export struct AiSettingsPanel {
     this.fetchedModels = []
   }
 
-  // ============== Profile CRUD ==============
-
+  /**
+   * 按 ID 查找配置。
+   *
+   * @param id - 配置 ID
+   * @returns 找到的配置，未找到时返回 null
+   */
   private findProfile(id: string): AiProviderProfile | null {
     for (let i = 0; i < this.profiles.length; i++) {
       if (this.profiles[i].id === id) {
@@ -194,10 +224,17 @@ export struct AiSettingsPanel {
     return null
   }
 
+  /**
+   * 判断配置是否为当前激活项。
+   *
+   * @param id - 配置 ID
+   * @returns 是否为当前激活配置
+   */
   private isActiveProfile(id: string): boolean {
     return appStore.settings.activeAiProfileId === id
   }
 
+  /** 保存当前表单中的新建或编辑配置。 */
   saveProfile(): void {
     if (!this.editNameInput || this.editNameInput.trim().length === 0) {
       appStore.showToast('请输入方案名称')
@@ -223,7 +260,6 @@ export struct AiSettingsPanel {
       appStore.setActiveAiProfile(profile.id)
       appStore.showToast('已添加并切换到 ' + profile.name)
     } else {
-      // 从旧配置继承高级参数，避免编辑保存后丢失 temperature 等字段
       const old: AiProviderProfile | null = this.findProfile(this.expandedProfileId)
       if (old) {
         profile.id = old.id
@@ -244,6 +280,11 @@ export struct AiSettingsPanel {
     this.doCollapse()
   }
 
+  /**
+   * 删除指定 AI 配置。
+   *
+   * @param id - 配置 ID
+   */
   deleteProfile(id: string): void {
     const profile: AiProviderProfile | null = this.findProfile(id)
     const name: string = profile ? profile.name : '此配置'
@@ -272,8 +313,7 @@ export struct AiSettingsPanel {
     this.deleteConfirmController.open()
   }
 
-  // ============== Provider Preset Picker ==============
-
+  /** 显示服务商预设选择弹窗。 */
   showProviderPresetPicker(): void {
     const options: ActionOption[] = []
     for (let i = 0; i < PROVIDER_PRESETS.length; i++) {
@@ -307,8 +347,6 @@ export struct AiSettingsPanel {
     })
     this.providerPickerController.open()
   }
-
-  // ============== Model List ==============
 
   /**
    * 规格化端点地址用于匹配预设。
@@ -393,6 +431,7 @@ export struct AiSettingsPanel {
     return this.editApiKeyInput.trim()
   }
 
+  /** 从当前服务端点获取模型列表。 */
   async fetchModels(): Promise<void> {
     if (this.fetchingModels) {
       return
@@ -464,12 +503,16 @@ export struct AiSettingsPanel {
       this.resolveApiKey() === apiKey
   }
 
+  /**
+   * 选择模型列表中的模型名称。
+   *
+   * @param modelName - 模型名称
+   */
   selectModel(modelName: string): void {
     this.editModelInput = modelName
   }
 
-  // ============== Connection Test ==============
-
+  /** 测试当前表单中的 AI 连接配置。 */
   async doTestConnection(): Promise<void> {
     if (this.testing) {
       return
@@ -549,8 +592,7 @@ export struct AiSettingsPanel {
       this.editModelInput.trim() === modelName
   }
 
-  // ============== Build ==============
-
+  /** 构建 AI 配置页面。 */
   build() {
     Stack() {
       Column() {
@@ -559,7 +601,6 @@ export struct AiSettingsPanel {
 
         Scroll() {
           Column() {
-            // 配置卡片列表
             if (this.profiles.length === 0 && !this.isNew()) {
               this.EmptyHint()
             } else {
@@ -568,12 +609,10 @@ export struct AiSettingsPanel {
               }, (profile: AiProviderProfile): string => profile.id)
             }
 
-            // 新建卡片
             if (this.isNew()) {
               this.NewProfileCard()
             }
 
-            // 添加按钮
             this.AddButton()
           }
           .width('100%')
@@ -592,15 +631,16 @@ export struct AiSettingsPanel {
     .height('100%')
   }
 
-  // ============== @Builder Sub-Components ==============
-
+  /**
+   * 构建已有配置卡片。
+   *
+   * @param profile - AI 配置
+   */
   @Builder
   ProfileCard(profile: AiProviderProfile) {
     Column() {
-      // 头部
       this.ProfileCardHeader(profile)
 
-      // 展开体
       if (this.expandedProfileId === profile.id) {
         Divider().color(AppColors.separator).width('100%').margin({ bottom: 4 })
         this.ProfileCardBody()
@@ -612,10 +652,14 @@ export struct AiSettingsPanel {
     .margin({ top: 8 })
   }
 
+  /**
+   * 构建配置卡片头部。
+   *
+   * @param profile - AI 配置
+   */
   @Builder
   ProfileCardHeader(profile: AiProviderProfile) {
     Row() {
-      // Radio 区域 — 点击只切换激活，不展开卡片
       Row() {
         Radio({ value: profile.id, group: 'aiProvider' })
           .checked(this.isActiveProfile(profile.id))
@@ -632,7 +676,6 @@ export struct AiSettingsPanel {
       .height(48)
       .justifyContent(FlexAlign.Center)
 
-      // 信息区域 — 点击展开/折叠
       Column() {
         Text(profile.name)
           .fontSize(15)
@@ -658,7 +701,6 @@ export struct AiSettingsPanel {
         }
       })
 
-      // 删除按钮
       Text('删除')
         .fontSize(12)
         .fontColor(AppColors.destructive)
@@ -680,7 +722,6 @@ export struct AiSettingsPanel {
    */
   @Builder
   ProfileFormFields() {
-    // 方案名称
     Column() {
       Text('方案名称')
         .fontSize(13)
@@ -702,7 +743,6 @@ export struct AiSettingsPanel {
     .width('100%')
     .margin({ bottom: 10 })
 
-    // 服务地址
     Column() {
       Text('服务地址')
         .fontSize(13)
@@ -726,7 +766,6 @@ export struct AiSettingsPanel {
     .width('100%')
     .margin({ bottom: 10 })
 
-    // API 密钥
     Column() {
       Text('API 密钥')
         .fontSize(13)
@@ -749,7 +788,6 @@ export struct AiSettingsPanel {
     .width('100%')
     .margin({ bottom: 10 })
 
-    // 模型名称 + 获取模型列表
     Row() {
       Column() {
         Text('模型名称')
@@ -803,7 +841,6 @@ export struct AiSettingsPanel {
     .width('100%')
     .margin({ bottom: 4 })
 
-    // 模型标签云
     if (this.fetchedModels.length > 0) {
       Row() {
         ForEach(this.fetchedModels, (model: string) => {
@@ -823,7 +860,6 @@ export struct AiSettingsPanel {
       .margin({ bottom: 12 })
     }
 
-    // 测试连接
     Row() {
       Text(this.testing ? '测试中...' : '测试连接')
         .fontSize(13)
@@ -842,7 +878,6 @@ export struct AiSettingsPanel {
     .width('100%')
     .margin({ bottom: 6 })
 
-    // 测试结果
     if (this.testResultMessage.length > 0) {
       Text(this.testResultMessage)
         .fontSize(12)
@@ -852,7 +887,6 @@ export struct AiSettingsPanel {
         .lineHeight(18)
     }
 
-    // 操作按钮
     Row() {
       Text('取消')
         .fontSize(14)
@@ -880,6 +914,7 @@ export struct AiSettingsPanel {
     .margin({ top: 4 })
   }
 
+  /** 构建已存在配置的展开编辑区。 */
   @Builder
   ProfileCardBody() {
     Column() {
@@ -893,7 +928,6 @@ export struct AiSettingsPanel {
   @Builder
   NewProfileCard() {
     Column() {
-      // 头部
       Row() {
         Column() {
           Text(this.editNameInput.length > 0 ? this.editNameInput : '新建方案')
@@ -914,7 +948,6 @@ export struct AiSettingsPanel {
         .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
         .onClick(() => {
-          // 新建卡片也可以折叠
           this.collapseCard()
         })
 
@@ -931,7 +964,6 @@ export struct AiSettingsPanel {
 
       Divider().color(AppColors.separator).width('100%').margin({ bottom: 4 })
 
-      // 展开体
       Column() {
         this.ProfileFormFields()
       }
@@ -944,6 +976,7 @@ export struct AiSettingsPanel {
     .margin({ top: 8 })
   }
 
+  /** 构建添加 AI 服务按钮。 */
   @Builder
   AddButton() {
     Row() {
@@ -969,6 +1002,7 @@ export struct AiSettingsPanel {
     })
   }
 
+  /** 构建空状态提示。 */
   @Builder
   EmptyHint() {
     Column() {

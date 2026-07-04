@@ -7,7 +7,8 @@
 
 import { appStore } from '../../store/AppStore'
 import type { AiProviderProfile } from '../../model/AiConfig'
-import { ChatMessage, chatComplete } from './OpenAiCompatibleClient'
+import { chatComplete } from './OpenAiCompatibleClient'
+import type { ChatMessage } from './OpenAiCompatibleClient'
 import { translateError } from './AiErrorTranslator'
 
 /**
@@ -39,15 +40,6 @@ export function getActiveAiValidationMessage(): string {
     return '请先在 AI 配置中填写 API 密钥'
   }
   return ''
-}
-
-/**
- * 判断当前是否存在可调用的自定义 AI 配置。
- *
- * @returns 自定义 AI 是否可调用
- */
-export function hasUsableActiveAiProfile(): boolean {
-  return getActiveAiValidationMessage().length === 0
 }
 
 /**
