@@ -21,6 +21,7 @@ import {
   KEY_IMAGE_LOAD_STRATEGY,
   KEY_ENABLE_IMAGE_SIZE_PREFETCH,
   KEY_VIDEO_MUTED,
+  KEY_USE_INTERNAL_WEBVIEW,
 } from '../common/constants/AppStorageKeys'
 
 // 类型与构造器从新位置 re-export，保持调用方 `from './SettingsStore'` 零改动
@@ -117,6 +118,7 @@ export class SettingsStore extends BaseStore<SettingsState> {
     AppStorage.setOrCreate(KEY_IMAGE_LOAD_STRATEGY, this.state.imageLoadStrategy)
     AppStorage.setOrCreate(KEY_ENABLE_IMAGE_SIZE_PREFETCH, this.state.enableImageSizePrefetch)
     AppStorage.setOrCreate(KEY_VIDEO_MUTED, this.state.videoMuted)
+    AppStorage.setOrCreate(KEY_USE_INTERNAL_WEBVIEW, this.state.useInternalWebView)
   }
 
   // ============== Facade: 兼容转发 setter ==============
@@ -152,6 +154,14 @@ export class SettingsStore extends BaseStore<SettingsState> {
   setImageLoadStrategy(v: string): void { this.mediaSettings.setImageLoadStrategy(v) }
   setEnableImageSizePrefetch(enabled: boolean): void { this.mediaSettings.setEnableImageSizePrefetch(enabled) }
   setVideoMuted(enabled: boolean): void { this.mediaSettings.setVideoMuted(enabled) }
+
+  // --- Internal WebView ---
+  /** 设置是否在应用内 WebView 打开无关联链接 */
+  setUseInternalWebView(enabled: boolean): void {
+    this.state.useInternalWebView = enabled
+    AppStorage.setOrCreate(KEY_USE_INTERNAL_WEBVIEW, enabled)
+    this.persistSettings()
+  }
 
   // --- Reading ---
   setThreadNavMode(v: string): void { this.readingSettings.setThreadNavMode(v) }

@@ -1,12 +1,41 @@
-import { common, Context } from '@kit.AbilityKit'
+import { common, Context, bundleManager } from '@kit.AbilityKit'
 import { routerStore, Screen } from '../../store/RouterStore'
 import { floatingLayerStore, FloatingPage } from '../../store/FloatingLayerStore'
+import { KEY_USE_INTERNAL_WEBVIEW } from '../constants/AppStorageKeys'
 
 /** NGA 域名列表 */
 const NGA_DOMAINS: string[] = [
   'bbs.nga.cn',
   'ngabbs.com',
   'nga.178.com',
+]
+
+/**
+ * 已知支持外部 APP 拉起的域名列表。
+ * 匹配这些域名的 URL 会优先尝试 openLink 拉起外部 APP，不拦截进 WebView。
+ */
+const EXTERNAL_APP_DOMAINS: string[] = [
+  'bilibili.com',
+  'www.bilibili.com',
+  'b23.tv',
+  'douyin.com',
+  'www.douyin.com',
+  'youtube.com',
+  'www.youtube.com',
+  'm.youtube.com',
+  'zhihu.com',
+  'www.zhihu.com',
+  'weibo.com',
+  'www.weibo.com',
+  'm.weibo.cn',
+  'taobao.com',
+  'www.taobao.com',
+  'tmall.com',
+  'www.tmall.com',
+  'jd.com',
+  'www.jd.com',
+  'xiaohongshu.com',
+  'www.xiaohongshu.com',
 ]
 
 /**
@@ -62,6 +91,17 @@ function isNgaDomain(hostname: string): boolean {
   const lower: string = hostname.toLowerCase()
   for (let i = 0; i < NGA_DOMAINS.length; i++) {
     if (lower === NGA_DOMAINS[i] || lower.endsWith('.' + NGA_DOMAINS[i])) {
+      return true
+    }
+  }
+  return false
+}
+
+/** 判断主机名是否属于已知支持外部 APP 拉起的域名 */
+function isKnownExternalAppDomain(hostname: string): boolean {
+  const lower: string = hostname.toLowerCase()
+  for (let i = 0; i < EXTERNAL_APP_DOMAINS.length; i++) {
+    if (lower === EXTERNAL_APP_DOMAINS[i] || lower.endsWith('.' + EXTERNAL_APP_DOMAINS[i])) {
       return true
     }
   }
@@ -136,10 +176,36 @@ export function handleForumLink(
       // 其他 NGA 链接 → WebView 打开
       routerStore.navigateActivity(Screen.webview(href))
     } else {
-      // 非 NGA 链接 → 系统浏览器打开
+      // 非 NGA 链接 → 三段式路由
+      const hostname: string = extractHostname(href)
+
+      // 第一优先级：已知外部 APP 域名 → 直接拉起
+      if (isKnownExternalAppDomain(hostname)) {
+        try {
+          (context as common.UIAbilityContext).openLink(href)
+        } catch (e) {}
+        return
+      }
+
+      // 第二优先级：检查是否有其他 APP 能响应此链接
       try {
-        (context as common.UIAbilityContext).openLink(href)
-      } catch (e) {}
+        if (bundleManager.canOpenLink(href)) {
+          (context as common.UIAbilityContext).openLink(href)
+          return
+        }
+      } catch (e) {
+        // canOpenLink 可能因 querySchemes 未配置而抛异常，降级处理
+      }
+
+      // 第三优先级：无 APP 响应 → 按用户设置决策
+      const useInternalWebView: boolean = AppStorage.get<boolean>(KEY_USE_INTERNAL_WEBVIEW) ?? true
+      if (useInternalWebView) {
+        routerStore.navigateActivity(Screen.webview(href))
+      } else {
+        try {
+          (context as common.UIAbilityContext).openLink(href)
+        } catch (e) {}
+      }
     }
   }
 }

@@ -490,6 +490,16 @@ export struct SettingsPanel {
                   this.showPrefetchPagePicker()
                 }
               })
+
+              Divider().margin({ left: 60 }).color(AppColors.separator)
+
+              SettingToggleRow({
+                iconRes: $r('app.media.icon_globe'), iconColor: IconColors.globe, label: '内置网页浏览',
+                isOn: appStore.settings.useInternalWebView,
+                onChange: (v: boolean) => {
+                  appStore.setUseInternalWebView(v)
+                }
+              })
             }
             .width('92%')
             .backgroundColor(AppColors.bgTertiary)

@@ -173,6 +173,9 @@ class AppStoreClass {
   setImageLoadStrategy(v: string): void { this.settingsStore.setImageLoadStrategy(v) }
   setEnableImageSizePrefetch(enabled: boolean): void { this.settingsStore.setEnableImageSizePrefetch(enabled) }
   setVideoMuted(enabled: boolean): void { this.settingsStore.setVideoMuted(enabled) }
+
+  /** 设置是否在应用内 WebView 打开无关联链接 */
+  setUseInternalWebView(enabled: boolean): void { this.settingsStore.setUseInternalWebView(enabled) }
   setThreadNavMode(v: string): void { this.settingsStore.setThreadNavMode(v) }
   setPrefetchPageCount(v: number): void { this.settingsStore.setPrefetchPageCount(v) }
 

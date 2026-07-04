@@ -40,6 +40,8 @@ export class SettingsState {
   prefetchPageCount: number = 3
   /** 视频默认是否静音（全局开关，false=有声） */
   videoMuted: boolean = false
+  /** 无 APP 响应的 URL 是否在应用内 WebView 打开 */
+  useInternalWebView: boolean = true
   /** 自定义 AI 提供方配置列表 */
   aiProfiles: AiProviderProfile[] = []
   /** 当前激活的自定义 AI 配置 ID */
