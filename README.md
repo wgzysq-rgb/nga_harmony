@@ -35,7 +35,6 @@
 - **凭证导入/导出** — 支持从文件导入导出 NGA 登录凭证
 - **用户主页** — 声望、勋章、管理版块、发帖统计
 - **用户卡片** — 悬停/点击查看用户信息
-- **AI 用户分析** — 发帖回帖时段分布、版块偏好分析
 
 ### 互动功能
 - **发帖/回复** — BBCode 快捷工具栏，引用回复，附件上传，编辑回复
@@ -61,12 +60,20 @@
 - **WebView** — 内嵌网页浏览
 - **图片加载控制** — 可选择隐藏加载失败的图片
 
-### 高级功能
+### AI 功能
+- **通用 AI 对话** — ChatGPT 式流式聊天界面，支持多轮对话与中断
+- **帖子内容分析** — 一键将帖子内容送入 AI 对话，自动注入上下文
+- **用户行为分析** — 将用户发帖数据送入 AI 对话，分析时段分布、版块偏好
+- **多服务商支持** — 内置 DeepSeek、智谱 GLM、豆包、MiniMax、Kimi、OpenAI 6 个预设 + 自定义服务商
+- **AI 配置管理** — 创建/编辑/删除配置、测试连接、获取模型列表
+- **场景化提示词定制** — 为帖子总结、用户分析等场景自定义 system prompt
+- **流式 Markdown 渲染** — AI 输出的 Markdown 增量实时渲染
+
+### 其他高级功能
 - **全局搜索** — 帖子/主题搜索
 - **自动签到** — 每日自动完成论坛签到
 - **域名切换** — NGA 多域名自动切换与故障转移
 - **请求限流** — 按域名的请求频率控制
-- **AI 帖子总结** — 使用 HarmonyOS Agent 框架进行 AI 内容总结
 - **语音朗读** — 基于 Core Speech Kit 的帖子内容语音播报，超长文本自动分段接力播放
 
 ---
@@ -74,69 +81,123 @@
 ## 架构
 
 ```
-entry/src/main/ets/
-├── entryability/              # 应用入口 UIAbility
-├── entrybackupability/        # 备份恢复扩展能力
-├── common/                    # 公共 UI 组件与工具
-│   ├── BBCodeContentView      # BBCode 内容渲染组件
-│   ├── PostItem               # 帖子楼层组件
-│   ├── EmotionResources       # 表情资源管理
-│   ├── ProfileCardPopup       # 用户卡片弹出层
-│   ├── ReplyManager           # 回复管理（引用/编辑/新回复）
-│   ├── ReplyDialog            # 回复编辑器弹窗
-│   ├── ImageViewer            # 图片查看器
-│   ├── AudioPlayer            # 音频播放器
-│   ├── TtsPlayer              # 语音朗读（TTS 引擎管理）
-│   ├── LazyDataSource         # 懒加载数据源合集
-│   ├── Dialogs                # 通用弹窗（确认/备注/黑名单/关键词）
-│   ├── Constants              # 颜色/主题/字体/域名/断点常量
-│   ├── ShareUtils             # 分享工具
-│   └── ...                    # Avatar, NavBar, Toast, Utils 等
-├── model/                     # 数据模型与类型定义
-│   ├── Forum                  # 版块模型
-│   ├── Topic                  # 主题模型
-│   ├── Thread                 # 帖子详情模型
-│   ├── Post                   # 楼层/内容模型
-│   ├── User                   # 用户模型
-│   ├── Notification           # 通知模型
-│   ├── Message                # 私信模型
-│   └── BBCodeNode             # BBCode 解析节点类型
-├── pages/                     # 页面组件
-│   ├── Index                  # 启动/加载页
-│   ├── LoginPage              # 登录页（密码+Web+凭证导入）
-│   ├── MainPage               # 主页面（自适应三栏布局）
-│   ├── ThreadPanel            # 帖子详情
-│   ├── TopicListPanel         # 主题列表
-│   ├── ProfilePanel           # 用户主页
-│   ├── SearchPanel            # 搜索
-│   ├── SettingsPanel          # 设置
-│   ├── MessageListPanel       # 私信列表
-│   ├── NotificationPanel      # 通知中心
-│   ├── WebViewPanel           # 内嵌网页
-│   └── ...                    # 黑名单/关键词/备注/浏览历史等面板
-├── parser/                    # NGA API 响应解析器
-│   ├── ForumParser            # 版块列表解析
-│   ├── TopicParser            # 主题列表解析
-│   ├── ThreadParser           # 帖子内容解析
-│   ├── HtmlThreadParser       # HTML 帖子降级解析
-│   ├── NotificationParser     # 通知解析
-│   ├── MessageParser          # 私信解析
-│   └── JsonUtil               # JSON 预处理
-├── service/                   # 业务逻辑层
-│   ├── NgaClient              # HTTP 客户端（GB18030、RSA、域名故障转移、限流）
-│   ├── NgaApi                 # API 业务封装
-│   ├── BBCodeParser           # BBCode 解析器
-│   ├── BBCodeCache            # 解析缓存（LRU）
-│   ├── ContentParser          # BBCode→HTML 转换
-│   ├── SessionStore           # 会话管理
-│   └── Throttle               # 请求频率控制
-└── store/                     # 状态管理层
-    ├── AppStore               # 全局应用状态（主题/设置/收藏/缓存）
-    ├── RouterStore            # 导航路由状态
-    ├── FloatingLayerStore     # 弹窗/浮层管理
-    ├── BrowseHistoryStore     # 浏览历史（持久化）
-    ├── VoteRecordStore        # 投票记录缓存
-    └── PreferencesStore       # KV 键值持久化
+	entry/src/main/ets/
+	├── entryability/              # 应用入口 UIAbility
+	├── entrybackupability/        # 备份恢复扩展能力
+	├── common/                    # 公共 UI 组件与工具
+	│   ├── BBCodeContentView      # BBCode 内容渲染组件
+	│   ├── MdContentView          # Markdown 渲染组件
+	│   ├── MdStreamingContentView  # 流式 Markdown 渲染（增量追加）
+	│   ├── PostItem               # 帖子楼层组件
+	│   ├── EmotionResources       # 表情资源管理（6 套 NGA 表情包）
+	│   ├── ProfileCardPopup       # 用户卡片弹出层
+	│   ├── ReplyManager           # 回复管理（引用/编辑/新回复）
+	│   ├── ReplyDialog            # 回复编辑器弹窗（BBCode 工具栏+表情+匿名）
+	│   ├── ImageViewer            # 图片查看器（全屏手势缩放）
+	│   ├── AudioPlayer            # 音频播放器
+	│   ├── MutedVideo             # 静音视频播放组件
+	│   ├── TtsPlayer              # 语音朗读（TTS 引擎管理）
+	│   ├── PanelNavBar            # Panel 内嵌导航栏
+	│   ├── FloatingLayerComponent # 浮层管理器（图片/用户卡片/回复/确认弹窗）
+	│   ├── PageStateView          # 页面状态视图（加载/错误/空）
+	│   ├── LazyDataSource         # 懒加载数据源合集
+	│   ├── Dialogs                # 通用弹窗（确认/备注/黑名单/关键词）
+	│   ├── Constants              # 颜色/主题/字体/域名/断点常量
+	│   ├── ShareUtils             # 分享工具
+	│   ├── SettingRow             # 设置行组件
+	│   └── ...                    # Avatar, NavBar, Toast, Utils 等
+	├── model/                     # 数据模型与类型定义
+	│   ├── Forum                  # 版块模型
+	│   ├── Topic                  # 主题模型
+	│   ├── Thread                 # 帖子详情模型
+	│   ├── Post                   # 楼层/内容模型
+	│   ├── User                   # 用户模型
+	│   ├── Notification           # 通知模型
+	│   ├── Message                # 私信模型
+	│   ├── BBCodeNode             # BBCode 解析节点类型
+	│   ├── AiConfig               # AI 服务商配置模型
+	│   └── AiScenarioConfig       # AI 场景配置与 system prompt 模型
+	├── pages/                     # 页面组件
+	│   ├── Index                  # 启动/加载页
+	│   ├── LoginPage              # 登录页（密码+Web+凭证导入）
+	│   ├── MainPage               # 主页面（自适应三栏布局）
+	│   ├── ThreadPanel            # 帖子详情
+	│   ├── TopicListPanel         # 主题列表
+	│   ├── ProfilePanel           # 用户主页
+	│   ├── SearchPanel            # 搜索
+	│   ├── SettingsPanel          # 设置
+	│   ├── MessageListPanel       # 私信列表
+	│   ├── MessageDetailPanel     # 私信详情
+	│   ├── NotificationPanel      # 通知中心
+	│   ├── WebViewPanel           # 内嵌网页
+	│   ├── BlacklistPanel         # 黑名单管理
+	│   ├── NotesPanel             # 用户备注管理
+	│   ├── FilterKeywordsPanel    # 关键词屏蔽管理
+	│   ├── BrowseHistoryPanel     # 浏览历史
+	│   ├── TtsSettingsPanel       # 语音朗读设置
+	│   ├── CommunityPanel         # 社区版块列表
+	│   ├── ActivityRouter         # 活动列路由
+	│   ├── BoardRouter            # 板块列路由
+	│   └── ai/                    # AI 功能页面
+	│       ├── AiChatPage         # 通用 AI 对话页（流式聊天）
+	│       └── AiSettingsPanel    # AI 配置管理面板
+	├── parser/                    # NGA API 响应解析器
+	│   ├── ForumParser            # 版块列表解析
+	│   ├── TopicParser            # 主题列表解析
+	│   ├── ThreadParser           # 帖子内容 JSON 解析
+	│   ├── HtmlThreadParser       # HTML 帖子降级解析
+	│   ├── NotificationParser     # 通知解析
+	│   ├── MessageParser          # 私信解析
+	│   ├── AnonymousParser        # 匿名用户解析
+	│   ├── ClientParser           # 客户端信息解析
+	│   ├── NgaJsonSanitizer       # JSON 预处理（非法字符清理）
+	│   ├── ErrorParser            # NGA API 错误解析
+	│   ├── bbcode/                # BBCode 词法分析 & 块处理器（10 个 handler）
+	│   ├── md/                    # Markdown 解析器
+	│   ├── nga/html-thread/       # HTML 帖子详细解析
+	│   ├── task/                  # taskpool 解析任务
+	│   └── _shared/               # 共享工具（AttachUrl、HTML 实体编解码）
+	├── service/                   # 业务逻辑层
+	│   ├── NgaClient              # HTTP 客户端（GB18030、RSA、域名故障转移、限流）
+	│   ├── NgaApi                 # API 业务封装入口（转发至各子模块）
+	│   ├── BBCodeParser           # BBCode 解析器
+	│   ├── BBCodeCache            # 解析缓存（LRU）
+	│   ├── ContentParser          # BBCode→HTML 转换
+	│   ├── SessionStore           # 会话管理
+	│   ├── Throttle               # 请求频率控制
+	│   ├── api/                   # 细分 API 子模块
+	│   │   ├── AuthApi            # 登录认证 API
+	│   │   ├── UserApi            # 用户资料 API
+	│   │   ├── ForumApi           # 版块/主题 API
+	│   │   ├── ThreadApi          # 帖子/回复/附件 API
+	│   │   ├── FavoriteApi        # 收藏/投票/签到 API
+	│   │   ├── MessageApi         # 通知/私信 API
+	│   │   └── MiscApi            # 域名切换等杂项 API
+	│   └── ai/                    # AI 服务层
+	│       ├── ActiveAiService    # AI 门面（获取配置、发起对话）
+	│       ├── OpenAiCompatibleClient # OpenAI 兼容 API 客户端
+	│       ├── AiModelPresets     # 7 个 AI 服务商预设
+	│       └── AiErrorTranslator  # 错误码→中文提示翻译
+	└── store/                     # 状态管理层
+	    ├── AppStore               # 全局应用状态 Facade（编排所有子 Store）
+	    ├── RouterStore            # 导航路由状态（双列路由）
+	    ├── AuthStore              # 认证状态（多会话管理）
+	    ├── SettingsStore          # 用户设置门面（编排 9 个设置域子 Store）
+	    ├── CategoryStore          # 版块分类缓存
+	    ├── ProfileStore           # 用户资料缓存
+	    ├── NotificationStore      # 通知状态（未读数、缓存）
+	    ├── VoteStore              # 投票记录持久化
+	    ├── HistoryStore           # 浏览历史持久化
+	    ├── FloatingLayerStore     # 弹窗/浮层管理
+	    ├── BaseStore              # Store 抽象基类（生命周期、uidGuard）
+	    └── settings/              # 设置域子 Store
+	        ├── SettingsState      # 持久化根状态（23 个字段）
+	        ├── SettingsContext    # 设置域共享上下文
+	        └── domain/
+	            ├── ThemeSettings / DisplaySettings / MediaSettings
+	            ├── ReadingSettings / SocialListSettings
+	            ├── FilterKeywordSettings / NoteSettings
+	            ├── CheckinSettings / AiSettings
 ```
 
 ### 分层设计
