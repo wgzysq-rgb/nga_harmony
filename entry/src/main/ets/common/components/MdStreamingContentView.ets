@@ -4,11 +4,18 @@ import { MdNodeDataSource } from '../datasource/MdNodeDataSource'
 import { AppColors } from '../constants/Constants'
 import { MdNodesView } from './MdNodesView'
 
-/** 流式 Markdown 拆分结果。 */
+/**
+ * 流式 Markdown 拆分结果。
+ *
+ * 采用"逐行稳定"策略：非代码块内的每个完整行（以 \n 结尾）都视作稳定块，
+ * 立即送入 AST 解析渲染。尾段仅包含当前未完结行和未闭合代码块内的内容。
+ * 这种策略让标量、段落、列表项等在流式过程中即时获得 Markdown 格式化，
+ * 显著提升感知流畅度。最终气泡由 MdContentView 完整解析纠正。
+ */
 class MarkdownStreamSplit {
-  /** 已经到达安全块边界的稳定 Markdown 前缀。 */
+  /** 已到达"逐行稳定"边界的 Markdown 前缀，可安全送入 AST 解析渲染。 */
   stableText: string = ''
-  /** 正在增长的尾部文本。 */
+  /** 仍在增长中的尾部文本（当前行未完结，或位于未闭合代码块内）。 */
   tailText: string = ''
   /** 尾部文本是否位于未闭合代码块内。 */
   tailInCodeBlock: boolean = false
@@ -179,6 +186,16 @@ export struct MdStreamingContentView {
 /**
  * 将流式 Markdown 拆分为稳定前缀与不稳定尾段。
  *
+ * 稳定边界策略（逐行提交）：
+ * - 非代码块区域：**每行**（以 \n 结尾的完整行）都是稳定边界。
+ *   标题、段落、列表项、分隔线等到达即提交 AST，无需等待空行。
+ *   不会截断 mid-line，因为仅当行完整（遇到 \n）时才推进边界。
+ * - 代码块区域：围栏闭合前不推进稳定边界，整块以 tail 滞留，
+ *   避免不完整的代码块内容进入 AST。
+ *
+ * 设计权衡：流式期间相同段落的多行会被拆成多个独立段落节点，
+ * 流式结束后 MdContentView 会做完整正确解析，这是临时可接受的。
+ *
  * @param text - 当前累计 Markdown 文本
  * @returns 拆分后的稳定前缀、尾部文本与代码块状态
  */
@@ -205,8 +222,12 @@ function splitStreamingMarkdown(text: string): MarkdownStreamSplit {
     if (isFenceLine(trimmedLine)) {
       inCodeBlock = !inCodeBlock
     }
-    if (!inCodeBlock && trimmedLine.length === 0) {
-      stableBoundary = i < normalized.length ? i + 1 : i
+    if (!inCodeBlock && i < normalized.length) {
+      // 每个以换行符结尾的完整行都标记为稳定边界。
+      // 相比"仅空行"策略，此方案让标题、段落、列表项等立即进入 AST 格式化渲染，
+      // 而非滞留 tail 区以纯文本展示。流式结束后 MdContentView 会做完整正确解析，
+      // 流式期间的段落分割差异（同一段多行变成多段）是临时可接受的视觉表现。
+      stableBoundary = i + 1
     }
     lineStart = i + 1
     i++
