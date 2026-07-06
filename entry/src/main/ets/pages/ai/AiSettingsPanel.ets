@@ -11,7 +11,15 @@ import { routerStore } from '../../store/RouterStore'
 import { AppColors } from '../../common/constants/Constants'
 import { PanelNavBar } from '../../common/components/PanelNavBar'
 import { ConfirmDialog, ActionSheetDialog } from '../../common/dialogs/Dialogs'
-import { AiProviderProfile } from '../../model/AiConfig'
+import {
+  AiProviderProfile,
+  DEFAULT_AI_MAX_TOKENS,
+  DEFAULT_AI_TEMPERATURE,
+  MAX_AI_MAX_TOKENS,
+  MAX_AI_TEMPERATURE,
+  MIN_AI_MAX_TOKENS,
+  MIN_AI_TEMPERATURE
+} from '../../model/AiConfig'
 import { PROVIDER_PRESETS } from '../../service/ai/AiModelPresets'
 import { testConnection, listModels } from '../../service/ai/OpenAiCompatibleClient'
 import type { ActionOption } from '../../common/dialogs/Dialogs'
@@ -44,6 +52,12 @@ export struct AiSettingsPanel {
   @State editModelInput: string = ''
   /** 是否启用流式输出。 */
   @State editStreamingInput: boolean = true
+  /** 温度参数输入值。 */
+  @State editTemperatureInput: number = DEFAULT_AI_TEMPERATURE
+  /** 输出上限输入值。 */
+  @State editMaxTokensInput: number = DEFAULT_AI_MAX_TOKENS
+  /** 是否展开高级 AI 参数。 */
+  @State showAdvancedParams: boolean = false
   /** 当前展开编辑的场景 ID（空字符串表示无展开）。 */
   @State expandedScenario: string = ''
   /** 当前编辑的场景 prompt 文本缓冲。 */
@@ -159,6 +173,9 @@ export struct AiSettingsPanel {
       this.editApiKeyInput = ''
       this.editModelInput = ''
       this.editStreamingInput = true
+      this.editTemperatureInput = DEFAULT_AI_TEMPERATURE
+      this.editMaxTokensInput = DEFAULT_AI_MAX_TOKENS
+      this.showAdvancedParams = false
     } else {
       const profile: AiProviderProfile | null = this.findProfile(profileId)
       if (profile) {
@@ -167,6 +184,9 @@ export struct AiSettingsPanel {
         this.editApiKeyInput = profile.apiKey
         this.editModelInput = profile.modelName
         this.editStreamingInput = profile.streaming
+        this.editTemperatureInput = this.clampTemperature(profile.temperature)
+        this.editMaxTokensInput = this.clampMaxTokens(profile.maxTokens)
+        this.showAdvancedParams = false
       }
     }
   }
@@ -232,7 +252,9 @@ export struct AiSettingsPanel {
         this.editEndpointInput.length > 0 ||
         this.editApiKeyInput.length > 0 ||
         this.editModelInput.length > 0 ||
-        !this.editStreamingInput
+        !this.editStreamingInput ||
+        this.editTemperatureInput !== DEFAULT_AI_TEMPERATURE ||
+        this.editMaxTokensInput !== DEFAULT_AI_MAX_TOKENS
     }
     const profile: AiProviderProfile | null = this.findProfile(this.expandedProfileId)
     if (!profile) {
@@ -242,7 +264,9 @@ export struct AiSettingsPanel {
       this.editEndpointInput !== profile.endpoint ||
       this.editApiKeyInput !== profile.apiKey ||
       this.editModelInput !== profile.modelName ||
-      this.editStreamingInput !== profile.streaming
+      this.editStreamingInput !== profile.streaming ||
+      this.editTemperatureInput !== this.clampTemperature(profile.temperature) ||
+      this.editMaxTokensInput !== this.clampMaxTokens(profile.maxTokens)
   }
 
   /** 清空编辑表单缓存和异步结果。 */
@@ -252,6 +276,9 @@ export struct AiSettingsPanel {
     this.editApiKeyInput = ''
     this.editModelInput = ''
     this.editStreamingInput = true
+    this.editTemperatureInput = DEFAULT_AI_TEMPERATURE
+    this.editMaxTokensInput = DEFAULT_AI_MAX_TOKENS
+    this.showAdvancedParams = false
     this.testResultMessage = ''
     this.testSuccess = false
     this.fetchedModels = []
@@ -282,6 +309,28 @@ export struct AiSettingsPanel {
     return appStore.settings.activeAiProfileId === id
   }
 
+  /**
+   * 将温度参数限制到可编辑范围并规范到一位小数。
+   *
+   * @param value - 待规范化的温度参数
+   * @returns 规范化后的温度参数
+   */
+  private clampTemperature(value: number): number {
+    const clamped: number = Math.max(MIN_AI_TEMPERATURE, Math.min(MAX_AI_TEMPERATURE, value))
+    return Math.round(clamped * 10) / 10
+  }
+
+  /**
+   * 将输出上限限制到可编辑范围并规范到整数。
+   *
+   * @param value - 待规范化的输出上限
+   * @returns 规范化后的输出上限
+   */
+  private clampMaxTokens(value: number): number {
+    const clamped: number = Math.max(MIN_AI_MAX_TOKENS, Math.min(MAX_AI_MAX_TOKENS, value))
+    return Math.round(clamped)
+  }
+
   /** 保存当前表单中的新建或编辑配置。 */
   saveProfile(): void {
     if (!this.editNameInput || this.editNameInput.trim().length === 0) {
@@ -302,6 +351,8 @@ export struct AiSettingsPanel {
     profile.endpoint = this.editEndpointInput.trim()
     profile.modelName = this.editModelInput.trim()
     profile.streaming = this.editStreamingInput
+    profile.temperature = this.clampTemperature(this.editTemperatureInput)
+    profile.maxTokens = this.clampMaxTokens(this.editMaxTokensInput)
 
     if (this.expandedProfileId === NEW_ID) {
       profile.apiKey = this.editApiKeyInput.trim()
@@ -312,9 +363,6 @@ export struct AiSettingsPanel {
       const old: AiProviderProfile | null = this.findProfile(this.expandedProfileId)
       if (old) {
         profile.id = old.id
-        profile.temperature = old.temperature
-        profile.maxTokens = old.maxTokens
-        profile.privacyConfirmed = old.privacyConfirmed
         profile.apiKey = this.editApiKeyInput.trim()
       } else {
         profile.id = this.expandedProfileId
@@ -1242,33 +1290,7 @@ export struct AiSettingsPanel {
       .margin({ bottom: 12 })
     }
 
-    Row() {
-      Column() {
-        Text('流式输出')
-          .fontSize(13)
-          .fontColor(AppColors.textSecondary)
-          .width('100%')
-        Text('开启后 AI 结果会边生成边显示')
-          .fontSize(11)
-          .fontColor(AppColors.textTertiary)
-          .width('100%')
-          .margin({ top: 2 })
-      }
-      .layoutWeight(1)
-      .alignItems(HorizontalAlign.Start)
-
-      Toggle({ type: ToggleType.Switch, isOn: this.editStreamingInput })
-        .onChange((v: boolean) => {
-          this.editStreamingInput = v
-        })
-    }
-    .width('100%')
-    .height(46)
-    .padding({ left: 12, right: 12 })
-    .backgroundColor(AppColors.bgSecondary)
-    .borderRadius(8)
-    .alignItems(VerticalAlign.Center)
-    .margin({ bottom: 10 })
+    this.AdvancedParameterFields()
 
     Row() {
       Text(this.testing ? '测试中...' : '测试连接')
@@ -1322,6 +1344,146 @@ export struct AiSettingsPanel {
     }
     .width('100%')
     .margin({ top: 4 })
+  }
+
+  /**
+   * 构建默认折叠的高级 AI 参数编辑区。
+   */
+  @Builder
+  AdvancedParameterFields() {
+    Column() {
+      Row() {
+        Column() {
+          Text('高级参数')
+            .fontSize(13)
+            .fontColor(AppColors.textSecondary)
+            .width('100%')
+          Text('调整回答随机性和输出长度')
+            .fontSize(11)
+            .fontColor(AppColors.textTertiary)
+            .width('100%')
+            .margin({ top: 2 })
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
+
+        Text(this.showAdvancedParams ? '收起 ▲' : '展开 ▼')
+          .fontSize(12)
+          .fontColor(AppColors.primary)
+      }
+      .width('100%')
+      .height(46)
+      .padding({ left: 12, right: 12 })
+      .alignItems(VerticalAlign.Center)
+      .onClick(() => {
+        this.showAdvancedParams = !this.showAdvancedParams
+      })
+
+      if (this.showAdvancedParams) {
+        Divider().color(AppColors.separator).margin({ left: 12, right: 12 })
+
+        Column() {
+          Row() {
+            Column() {
+              Text('流式输出')
+                .fontSize(13)
+                .fontColor(AppColors.textPrimary)
+                .width('100%')
+              Text('开启后 AI 结果会边生成边显示')
+                .fontSize(11)
+                .fontColor(AppColors.textTertiary)
+                .width('100%')
+                .margin({ top: 2 })
+            }
+            .layoutWeight(1)
+            .alignItems(HorizontalAlign.Start)
+
+            Toggle({ type: ToggleType.Switch, isOn: this.editStreamingInput })
+              .onChange((value: boolean): void => {
+                this.editStreamingInput = value
+              })
+          }
+          .width('100%')
+          .height(48)
+          .alignItems(VerticalAlign.Center)
+
+          Divider().color(AppColors.separator).margin({ bottom: 4 })
+
+          Row() {
+            Text('温度')
+              .fontSize(13)
+              .fontColor(AppColors.textPrimary)
+              .width(52)
+            Slider({
+              value: this.editTemperatureInput,
+              min: MIN_AI_TEMPERATURE,
+              max: MAX_AI_TEMPERATURE,
+              step: 0.1,
+              style: SliderStyle.InSet
+            })
+              .onChange((value: number, mode: SliderChangeMode): void => {
+                this.editTemperatureInput = this.clampTemperature(value)
+              })
+              .layoutWeight(1)
+              .height(40)
+            Text(this.editTemperatureInput.toFixed(1))
+              .fontSize(13)
+              .fontColor(AppColors.textSecondary)
+              .width(42)
+              .textAlign(TextAlign.End)
+          }
+          .width('100%')
+          .height(46)
+          .alignItems(VerticalAlign.Center)
+
+          Text('越低越稳定，越高越发散')
+            .fontSize(11)
+            .fontColor(AppColors.textTertiary)
+            .width('100%')
+            .margin({ left: 52, bottom: 8 })
+
+          Row() {
+            Text('输出')
+              .fontSize(13)
+              .fontColor(AppColors.textPrimary)
+              .width(52)
+            Slider({
+              value: this.editMaxTokensInput,
+              min: MIN_AI_MAX_TOKENS,
+              max: MAX_AI_MAX_TOKENS,
+              step: 100,
+              style: SliderStyle.InSet
+            })
+              .onChange((value: number, mode: SliderChangeMode): void => {
+                this.editMaxTokensInput = this.clampMaxTokens(value)
+              })
+              .layoutWeight(1)
+              .height(40)
+            Text(this.editMaxTokensInput.toString())
+              .fontSize(13)
+              .fontColor(AppColors.textSecondary)
+              .width(50)
+              .textAlign(TextAlign.End)
+          }
+          .width('100%')
+          .height(46)
+          .alignItems(VerticalAlign.Center)
+
+          Text('限制单次回复的最大 token 数')
+            .fontSize(11)
+            .fontColor(AppColors.textTertiary)
+            .width('100%')
+            .margin({ left: 52 })
+        }
+        .width('100%')
+        .padding({ left: 12, right: 12, top: 8, bottom: 12 })
+        .alignItems(HorizontalAlign.Start)
+      }
+    }
+    .width('100%')
+    .backgroundColor(AppColors.bgSecondary)
+    .borderRadius(8)
+    .margin({ bottom: 10 })
   }
 
   /** 构建已存在配置的展开编辑区。 */

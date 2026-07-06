@@ -4,6 +4,19 @@
  * 定义自定义 AI 提供方配置的数据结构。
  */
 
+/** AI 温度参数默认值。 */
+export const DEFAULT_AI_TEMPERATURE: number = 0.7
+/** AI 温度参数最小值。 */
+export const MIN_AI_TEMPERATURE: number = 0
+/** AI 温度参数最大值。 */
+export const MAX_AI_TEMPERATURE: number = 1.5
+/** AI 输出上限默认值。 */
+export const DEFAULT_AI_MAX_TOKENS: number = 2000
+/** AI 输出上限最小值。 */
+export const MIN_AI_MAX_TOKENS: number = 400
+/** AI 输出上限最大值。 */
+export const MAX_AI_MAX_TOKENS: number = 20000
+
 /**
  * 自定义 AI 提供方配置。
  *
@@ -24,11 +37,9 @@ export class AiProviderProfile {
   /** 是否启用流式输出 */
   streaming: boolean = true
   /** 温度参数（0.0 - 1.5，默认 0.7） */
-  temperature: number = 0.7
-  /** 输出上限（400 - 4000，默认 2000） */
-  maxTokens: number = 2000
-  /** 隐私确认是否已通过 */
-  privacyConfirmed: boolean = false
+  temperature: number = DEFAULT_AI_TEMPERATURE
+  /** 输出上限（400 - 20000，默认 2000） */
+  maxTokens: number = DEFAULT_AI_MAX_TOKENS
 }
 
 /** 连接测试结果 */

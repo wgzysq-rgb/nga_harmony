@@ -8,6 +8,7 @@
 import { SettingsContext } from '../SettingsContext'
 import { SettingsState } from '../SettingsState'
 import type { AiProviderProfile } from '../../../model/AiConfig'
+import { DEFAULT_AI_MAX_TOKENS, DEFAULT_AI_TEMPERATURE } from '../../../model/AiConfig'
 import { DEFAULT_SYSTEM_PROMPTS } from '../../../model/AiScenarioConfig'
 import { KEY_AI_CONFIG_VERSION } from '../../../common/constants/AppStorageKeys'
 import { bumpAppStorageVersion } from '../../../common/utils/AppStorageVersion'
@@ -26,12 +27,11 @@ function generateId(): string {
 function normalizeSavedProfile(profile: AiProviderProfile): AiProviderProfile {
   profile.streaming = profile.streaming !== false
   if (profile.temperature === undefined) {
-    profile.temperature = 0.7
+    profile.temperature = DEFAULT_AI_TEMPERATURE
   }
   if (profile.maxTokens === undefined) {
-    profile.maxTokens = 2000
+    profile.maxTokens = DEFAULT_AI_MAX_TOKENS
   }
-  profile.privacyConfirmed = profile.privacyConfirmed === true
   return profile
 }
 
