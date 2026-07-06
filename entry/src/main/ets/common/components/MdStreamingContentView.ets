@@ -27,7 +27,9 @@ export struct MdStreamingContentView {
   onLinkClick: (href: string) => void = (_href: string) => {}
 
   /** 已稳定的 Markdown AST 节点。 */
-  @State private stableNodes: MdNode[] = []
+  private stableNodes: MdNode[] = []
+  /** 当前是否已有稳定 Markdown 节点。 */
+  @State private hasStableNodes: boolean = false
   /** 正在增长的尾部文本。 */
   @State private tailText: string = ''
   /** 尾部文本是否处于未闭合代码块。 */
@@ -79,6 +81,7 @@ export struct MdStreamingContentView {
    */
   private resetStableNodes(): void {
     this.stableNodes = []
+    this.hasStableNodes = false
     this.stableDataSource.clear()
     this.consumedStableLength = 0
     this.stableSegmentSerial = 0
@@ -99,8 +102,13 @@ export struct MdStreamingContentView {
     }
     this.stableSegmentSerial++
     prefixNodeKeys(addedNodes, 'stream_' + this.stableSegmentSerial.toString())
-    this.stableNodes = this.stableNodes.concat(addedNodes)
+    for (let i: number = 0; i < addedNodes.length; i++) {
+      this.stableNodes.push(addedNodes[i])
+    }
     this.stableDataSource.appendAll(addedNodes)
+    if (!this.hasStableNodes) {
+      this.hasStableNodes = true
+    }
   }
 
   /**
@@ -108,7 +116,7 @@ export struct MdStreamingContentView {
    */
   build() {
     Column() {
-      if (this.stableNodes.length > 0) {
+      if (this.hasStableNodes) {
         MdNodesView({
           nodes: this.stableNodes,
           onLinkClick: this.onLinkClick,

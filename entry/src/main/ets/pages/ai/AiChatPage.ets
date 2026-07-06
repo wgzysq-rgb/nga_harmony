@@ -130,7 +130,6 @@ struct AiChatPage {
       const finalText: string = await chatCompleteWithActiveAiStream(history, (chunk: string): void => {
         this.appendStreamingChunk(chunk)
       })
-      this.flushStreamingText()
       // 流式完成 — 添加完整的 AI 气泡
       const aiBubble: ChatBubble = new ChatBubble('assistant', finalText, false)
       this.bubbles.push(aiBubble)
