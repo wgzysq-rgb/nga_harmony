@@ -338,6 +338,7 @@ struct AiChatPage {
       .layoutWeight(1)
       .scrollBar(BarState.Off)
       .edgeEffect(EdgeEffect.None)
+      .align(Alignment.TopStart)
 
       // 底部输入栏
       this.RenderInputBar()
