@@ -94,136 +94,18 @@
 
 ## 架构
 
-```
-	entry/src/main/ets/
-	├── entryability/              # 应用入口 UIAbility
-	├── entrybackupability/        # 备份恢复扩展能力
-	├── common/                    # 公共 UI 组件与工具
-	│   ├── BBCodeContentView      # BBCode 内容渲染组件
-	│   ├── MdContentView          # Markdown 渲染组件
-	│   ├── MdStreamingContentView  # 流式 Markdown 渲染（增量追加）
-	│   ├── PostItem               # 帖子楼层组件
-	│   ├── EmotionResources       # 表情资源管理（6 套 NGA 表情包）
-	│   ├── ProfileCardPopup       # 用户卡片弹出层
-	│   ├── ReplyManager           # 回复管理（引用/编辑/新回复）
-	│   ├── ReplyDialog            # 回复编辑器弹窗（BBCode 工具栏+表情+匿名）
-	│   ├── ImageViewer            # 图片查看器（全屏手势缩放）
-	│   ├── AudioPlayer            # 音频播放器
-	│   ├── MutedVideo             # 静音视频播放组件
-	│   ├── TtsPlayer              # 语音朗读（TTS 引擎管理）
-	│   ├── PanelNavBar            # Panel 内嵌导航栏
-	│   ├── FloatingLayerComponent # 浮层管理器（图片/用户卡片/回复/确认弹窗）
-	│   ├── PageStateView          # 页面状态视图（加载/错误/空）
-	│   ├── LazyDataSource         # 懒加载数据源合集
-	│   ├── Dialogs                # 通用弹窗（确认/备注/黑名单/关键词）
-	│   ├── Constants              # 颜色/主题/字体/域名/断点常量
-	│   ├── ShareUtils             # 分享工具
-	│   ├── SettingRow             # 设置行组件
-	│   └── ...                    # Avatar, NavBar, Toast, Utils 等
-	├── model/                     # 数据模型与类型定义
-	│   ├── Forum                  # 版块模型
-	│   ├── Topic                  # 主题模型
-	│   ├── Thread                 # 帖子详情模型
-	│   ├── Post                   # 楼层/内容模型
-	│   ├── User                   # 用户模型
-	│   ├── Notification           # 通知模型
-	│   ├── Message                # 私信模型
-	│   ├── BBCodeNode             # BBCode 解析节点类型
-	│   ├── AiConfig               # AI 服务商配置模型
-	│   └── AiScenarioConfig       # AI 场景配置与 system prompt 模型
-	├── pages/                     # 页面组件
-	│   ├── Index                  # 启动/加载页
-	│   ├── LoginPage              # 登录页（密码+Web+凭证导入）
-	│   ├── MainPage               # 主页面（自适应三栏布局）
-	│   ├── ThreadPanel            # 帖子详情
-	│   ├── TopicListPanel         # 主题列表
-	│   ├── ProfilePanel           # 用户主页
-	│   ├── SearchPanel            # 搜索
-	│   ├── SettingsPanel          # 设置
-	│   ├── MessageListPanel       # 私信列表
-	│   ├── MessageDetailPanel     # 私信详情
-	│   ├── NotificationPanel      # 通知中心
-	│   ├── WebViewPanel           # 内嵌网页
-	│   ├── BlacklistPanel         # 黑名单管理
-	│   ├── NotesPanel             # 用户备注管理
-	│   ├── FilterKeywordsPanel    # 关键词屏蔽管理
-	│   ├── BrowseHistoryPanel     # 浏览历史
-	│   ├── TtsSettingsPanel       # 语音朗读设置
-	│   ├── CommunityPanel         # 社区版块列表
-	│   ├── ActivityRouter         # 活动列路由
-	│   ├── BoardRouter            # 板块列路由
-	│   └── ai/                    # AI 功能页面
-	│       ├── AiChatPage         # 通用 AI 对话页（流式聊天）
-	│       └── AiSettingsPanel    # AI 配置管理面板
-	├── parser/                    # NGA API 响应解析器
-	│   ├── ForumParser            # 版块列表解析
-	│   ├── TopicParser            # 主题列表解析
-	│   ├── ThreadParser           # 帖子内容 JSON 解析
-	│   ├── HtmlThreadParser       # HTML 帖子降级解析
-	│   ├── NotificationParser     # 通知解析
-	│   ├── MessageParser          # 私信解析
-	│   ├── AnonymousParser        # 匿名用户解析
-	│   ├── ClientParser           # 客户端信息解析
-	│   ├── NgaJsonSanitizer       # JSON 预处理（非法字符清理）
-	│   ├── ErrorParser            # NGA API 错误解析
-	│   ├── bbcode/                # BBCode 词法分析 & 块处理器（10 个 handler）
-	│   ├── md/                    # Markdown 解析器
-	│   ├── nga/html-thread/       # HTML 帖子详细解析
-	│   ├── task/                  # taskpool 解析任务
-	│   └── _shared/               # 共享工具（AttachUrl、HTML 实体编解码）
-	├── service/                   # 业务逻辑层
-	│   ├── NgaClient              # HTTP 客户端（GB18030、RSA、域名故障转移、限流）
-	│   ├── NgaApi                 # API 业务封装入口（转发至各子模块）
-	│   ├── BBCodeParser           # BBCode 解析器
-	│   ├── BBCodeCache            # 解析缓存（LRU）
-	│   ├── ContentParser          # BBCode→HTML 转换
-	│   ├── SessionStore           # 会话管理
-	│   ├── Throttle               # 请求频率控制
-	│   ├── api/                   # 细分 API 子模块
-	│   │   ├── AuthApi            # 登录认证 API
-	│   │   ├── UserApi            # 用户资料 API
-	│   │   ├── ForumApi           # 版块/主题 API
-	│   │   ├── ThreadApi          # 帖子/回复/附件 API
-	│   │   ├── FavoriteApi        # 收藏/投票/签到 API
-	│   │   ├── MessageApi         # 通知/私信 API
-	│   │   └── MiscApi            # 域名切换等杂项 API
-	│   └── ai/                    # AI 服务层
-	│       ├── ActiveAiService    # AI 门面（获取配置、发起对话）
-	│       ├── OpenAiCompatibleClient # OpenAI 兼容 API 客户端
-	│       ├── AiModelPresets     # 7 个 AI 服务商预设
-	│       └── AiErrorTranslator  # 错误码→中文提示翻译
-	└── store/                     # 状态管理层
-	    ├── AppStore               # 全局应用状态 Facade（编排所有子 Store）
-	    ├── RouterStore            # 导航路由状态（双列路由）
-	    ├── AuthStore              # 认证状态（多会话管理）
-	    ├── SettingsStore          # 用户设置门面（编排 9 个设置域子 Store）
-	    ├── CategoryStore          # 版块分类缓存
-	    ├── ProfileStore           # 用户资料缓存
-	    ├── NotificationStore      # 通知状态（未读数、缓存）
-	    ├── VoteStore              # 投票记录持久化
-	    ├── HistoryStore           # 浏览历史持久化
-	    ├── FloatingLayerStore     # 弹窗/浮层管理
-	    ├── BaseStore              # Store 抽象基类（生命周期、uidGuard）
-	    └── settings/              # 设置域子 Store
-	        ├── SettingsState      # 持久化根状态（23 个字段）
-	        ├── SettingsContext    # 设置域共享上下文
-	        └── domain/
-	            ├── ThemeSettings / DisplaySettings / MediaSettings
-	            ├── ReadingSettings / SocialListSettings
-	            ├── FilterKeywordSettings / NoteSettings
-	            ├── CheckinSettings / AiSettings
-```
+项目采用经典分层架构，自顶向下分为六个层级，职责清晰、关注点分离：
 
-### 分层设计
+| 层 | 职责 | 核心模块 |
+|---|---|---|
+| **Pages** | 页面编排与布局 | 20+ 页面，覆盖论坛浏览、帖子详情、AI 对话、设置等 |
+| **Store** | 全局状态管理（响应式 `@State` / `@Observed`） | AppStore 统一编排，下含 Router / Auth / Settings / Notification 等子 Store |
+| **Service** | 业务逻辑与数据处理 | HTTP 客户端（GB18030 / RSA / 域名故障转移 / 限流）、API 封装、BBCode 解析缓存、AI 对话服务 |
+| **Parser** | NGA API 响应反序列化 | JSON 解析 + HTML 降级解析 + BBCode 词法分析（10 个 handler） |
+| **Model** | 类型定义与数据实体 | 论坛、主题、帖子、用户、通知、私信、AI 配置等 |
+| **Common** | 可复用 UI 组件 | BBCode 渲染、Markdown / 流式 Markdown 渲染、图片查看器、音视频播放、TTS、浮层管理、懒加载数据源等 |
 
-| 层 | 职责 |
-|---|---|
-| **Pages** | 页面编排、布局、页面级状态 |
-| **Store** | 全局状态管理（响应式 `@State` / `@Observed`） |
-| **Service** | API 调用、数据转换、BBCode 解析、缓存 |
-| **Parser** | NGA API 响应数据反序列化 |
-| **Model** | 类型定义、数据实体 |
-| **Common** | 可复用 UI 组件 |
+代码入口文件位于 `entry/src/main/ets/`，按分层组织；每个模块约 1～3 个文件，无深层嵌套。
 
 ---
 
