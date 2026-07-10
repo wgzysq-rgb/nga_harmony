@@ -97,11 +97,16 @@ struct AiChatPage {
   private lastChunkTimeMs: number = 0
   /** 当前自适应刷新间隔。 */
   private adaptiveFlushMs: number = DEFAULT_FLUSH_INTERVAL_MS
+  /** 当前有效 AI 请求序号，用于丢弃过期异步回调。 */
+  private activeRequestId: number = 0
+  /** 页面是否仍处于可安全更新状态。 */
+  private pageAlive: boolean = false
 
   /** 滚动控制器 */
   private scroller: Scroller = new Scroller()
 
   aboutToAppear(): void {
+    this.pageAlive = true
     const params: Record<string, Object> = this.getUIContext().getRouter().getParams() as Record<string, Object>
     if (params) {
       const prompt: string = (params['initialPrompt'] as string) ?? ''
@@ -123,8 +128,10 @@ struct AiChatPage {
   }
 
   aboutToDisappear(): void {
-    this.clearStreamingFlushTimer()
-    this.clearStreamingScrollTimer()
+    this.pageAlive = false
+    this.activeRequestId++
+    this.isSending = false
+    this.resetStreamingState()
   }
 
   /**
@@ -143,10 +150,11 @@ struct AiChatPage {
    * @param text - 用户输入的文本
    */
   private async sendMessage(text: string): Promise<void> {
-    if (text.trim().length === 0) {
+    if (text.trim().length === 0 || this.isSending) {
       return
     }
 
+    const requestId: number = this.nextRequestId()
     const userBubble: ChatBubble = new ChatBubble('user', text, false)
     this.bubbles.push(userBubble)
     this.inputText = ''
@@ -158,19 +166,30 @@ struct AiChatPage {
 
     // 延迟到下一帧渲染完成后滚动，避免在旧内容上滚动
     setTimeout((): void => {
-      this.scrollToBottom()
+      if (this.isActiveRequest(requestId)) {
+        this.scrollToBottom()
+      }
     }, 0)
 
 	    try {
 	      const finalText: string = await chatCompleteWithActiveAiStream(
 	        history,
 	        (chunk: string): void => {
+            if (!this.isActiveRequest(requestId)) {
+              return
+            }
 	          this.appendStreamingChunk(chunk)
 	        },
 	        (status: string): void => {
+            if (!this.isActiveRequest(requestId)) {
+              return
+            }
 	          this.aiStatus = status
 	        },
 	        (info: ToolCallInfo): void => {
+            if (!this.isActiveRequest(requestId)) {
+              return
+            }
 	          // 原子 @State 字段逐一赋值，确保 ArkUI 可靠检测变化
 	          this.toolPhase = info.phase
 	          this.toolIcon = info.phaseIcon
@@ -179,6 +198,9 @@ struct AiChatPage {
 	          this.toolResultCount = info.resultCount
 	        }
 	      )
+        if (!this.isActiveRequest(requestId)) {
+          return
+        }
 	      // 流式完成 — 添加完整的 AI 气泡
 	      if (this.toolPhase.length > 0) {
 	        const savedInfo: ToolCallInfo = new ToolCallInfo()
@@ -195,18 +217,44 @@ struct AiChatPage {
 	        this.bubbles.push(aiBubble)
 	      }
     } catch (err) {
+      if (!this.isActiveRequest(requestId)) {
+        return
+      }
       const e: Error = err as Error
       const errorText: string = formatAiCompletionError(e)
       const aiBubble: ChatBubble = new ChatBubble('assistant', errorText, false)
       this.bubbles.push(aiBubble)
+    } finally {
+      if (this.isActiveRequest(requestId)) {
+        this.resetStreamingState()
+        this.isSending = false
+        setTimeout((): void => {
+          if (this.isActiveRequest(requestId)) {
+            this.scrollToBottom()
+          }
+        }, 0)
+      }
     }
+  }
 
-    this.resetStreamingState()
-    this.isSending = false
-    // 延迟到下一帧渲染完成后滚动，确保新气泡已布局
-    setTimeout((): void => {
-      this.scrollToBottom()
-    }, 0)
+  /**
+   * 分配新的 AI 请求序号。
+   *
+   * @returns 新请求序号
+   */
+  private nextRequestId(): number {
+    this.activeRequestId++
+    return this.activeRequestId
+  }
+
+  /**
+   * 判断指定请求是否仍允许更新页面状态。
+   *
+   * @param requestId - 请求序号
+   * @returns true 表示请求仍有效
+   */
+  private isActiveRequest(requestId: number): boolean {
+    return this.pageAlive && this.activeRequestId === requestId
   }
 
   /**

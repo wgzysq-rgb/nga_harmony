@@ -28,6 +28,12 @@
             "useNormalizedOHMUrl": true
           }
         }
+      },
+      {
+        "name": "unsigned",
+        "targetSdkVersion": "6.1.0(23)",
+        "compatibleSdkVersion": "6.1.0(23)",
+        "runtimeOS": "HarmonyOS"
       }
     ],
     "buildModeSet": [
@@ -47,7 +53,8 @@
         {
           "name": "default",
           "applyToProducts": [
-            "default"
+            "default",
+            "unsigned"
           ]
         }
       ]
