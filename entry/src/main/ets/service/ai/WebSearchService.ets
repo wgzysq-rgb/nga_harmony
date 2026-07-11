@@ -12,7 +12,7 @@ import {
   SearchResultItem
 } from './search/WebSearchAdapter'
 import { TavilySearchAdapter } from './search/TavilySearchAdapter'
-import type { WebSearchProviderProfile } from '../../model/WebSearchConfig'
+import type { WebSearchProviderProfile, WebSearchProviderType } from '../../model/WebSearchConfig'
 import { Logger, DOMAIN_SERVICE } from '../../common/utils/Logger'
 
 const logger = new Logger(DOMAIN_SERVICE, 'WebSearchSvc')
@@ -38,7 +38,7 @@ export function getActiveWebSearchProfile(): WebSearchProviderProfile | null {
  * @param providerType - 提供商类型标识
  * @returns 适配器实例，若类型不支持则返回 null
  */
-function getAdapter(providerType: string): WebSearchAdapter | null {
+function getAdapter(providerType: WebSearchProviderType): WebSearchAdapter | null {
   if (adapterCache[providerType]) {
     return adapterCache[providerType]
   }
