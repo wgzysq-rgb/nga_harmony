@@ -21,6 +21,12 @@ import {
   MIN_AI_TEMPERATURE
 } from '../../model/AiConfig'
 import { PROVIDER_PRESETS } from '../../service/ai/AiModelPresets'
+import {
+  WebSearchProviderProfile,
+  WebSearchProviderPreset,
+  WEB_SEARCH_PROVIDER_PRESETS,
+  type WebSearchProviderType
+} from '../../model/WebSearchConfig'
 import { testConnection, listModels } from '../../service/ai/OpenAiCompatibleClient'
 import type { ActionOption } from '../../common/dialogs/Dialogs'
 import type { AiTestResult } from '../../model/AiConfig'
@@ -58,10 +64,6 @@ export struct AiSettingsPanel {
   @State editMaxTokensInput: number = DEFAULT_AI_MAX_TOKENS
   /** 是否展开高级 AI 参数。 */
   @State showAdvancedParams: boolean = false
-  /** 是否启用联网搜索。 */
-  @State editEnableSearchInput: boolean = false
-  /** Tavily 搜索 API 密钥输入值。 */
-  @State editTavilyApiKeyInput: string = ''
   /** 当前展开编辑的场景 ID（空字符串表示无展开）。 */
   @State expandedScenario: string = ''
   /** 当前编辑的场景 prompt 文本缓冲。 */
@@ -90,6 +92,24 @@ export struct AiSettingsPanel {
   /** 测试连接请求序号。 */
   private testConnectionRequestId: number = 0
 
+  // --- Web Search 编辑状态 ---
+  /** 搜索提供商配置列表快照。 */
+  @State searchProfiles: WebSearchProviderProfile[] = []
+  /** 当前展开编辑的搜索提供商 ID。 */
+  @State expandedSearchProfileId: string = ''
+  /** 搜索提供商名称输入值。 */
+  @State editSearchNameInput: string = ''
+  /** 搜索提供商类型。 */
+  @State editSearchProviderType: WebSearchProviderType = 'tavily'
+  /** 搜索 API Key 输入值。 */
+  @State editSearchApiKeyInput: string = ''
+  /** 搜索自定义端点输入值。 */
+  @State editSearchEndpointInput: string = ''
+  /** 搜索提供商预设选择弹窗控制器。 */
+  searchProviderPickerController?: CustomDialogController
+  /** 搜索删除确认弹窗控制器。 */
+  searchDeleteConfirmController?: CustomDialogController
+
   /** 是否正在新建方案 */
   private isNew(): boolean {
     return this.expandedProfileId === NEW_ID
@@ -105,6 +125,7 @@ export struct AiSettingsPanel {
   /** 页面出现时同步配置列表并注册返回拦截。 */
   aboutToAppear(): void {
     this.syncProfiles()
+    this.syncSearchProfiles()
     const entry = routerStore.topActivity
     if (entry) {
       entry.preBack = (): boolean => {
@@ -132,6 +153,8 @@ export struct AiSettingsPanel {
     this.deleteConfirmController = undefined
     this.providerPickerController = undefined
     this.discardConfirmController = undefined
+    this.searchProviderPickerController = undefined
+    this.searchDeleteConfirmController = undefined
   }
 
   /** 同步当前持久化配置列表到页面状态。 */
@@ -177,8 +200,6 @@ export struct AiSettingsPanel {
       this.editApiKeyInput = ''
       this.editModelInput = ''
       this.editStreamingInput = true
-      this.editEnableSearchInput = false
-      this.editTavilyApiKeyInput = ''
       this.editTemperatureInput = DEFAULT_AI_TEMPERATURE
       this.editMaxTokensInput = DEFAULT_AI_MAX_TOKENS
       this.showAdvancedParams = false
@@ -190,8 +211,6 @@ export struct AiSettingsPanel {
         this.editApiKeyInput = profile.apiKey
         this.editModelInput = profile.modelName
         this.editStreamingInput = profile.streaming
-        this.editEnableSearchInput = profile.enableSearch
-        this.editTavilyApiKeyInput = profile.tavilyApiKey
         this.editTemperatureInput = this.clampTemperature(profile.temperature)
         this.editMaxTokensInput = this.clampMaxTokens(profile.maxTokens)
         this.showAdvancedParams = false
@@ -261,8 +280,6 @@ export struct AiSettingsPanel {
         this.editApiKeyInput.length > 0 ||
         this.editModelInput.length > 0 ||
         !this.editStreamingInput ||
-        this.editEnableSearchInput ||
-        this.editTavilyApiKeyInput.length > 0 ||
         this.editTemperatureInput !== DEFAULT_AI_TEMPERATURE ||
         this.editMaxTokensInput !== DEFAULT_AI_MAX_TOKENS
     }
@@ -275,8 +292,6 @@ export struct AiSettingsPanel {
       this.editApiKeyInput !== profile.apiKey ||
       this.editModelInput !== profile.modelName ||
       this.editStreamingInput !== profile.streaming ||
-      this.editEnableSearchInput !== profile.enableSearch ||
-      this.editTavilyApiKeyInput !== profile.tavilyApiKey ||
       this.editTemperatureInput !== this.clampTemperature(profile.temperature) ||
       this.editMaxTokensInput !== this.clampMaxTokens(profile.maxTokens)
   }
@@ -288,8 +303,6 @@ export struct AiSettingsPanel {
     this.editApiKeyInput = ''
     this.editModelInput = ''
     this.editStreamingInput = true
-    this.editEnableSearchInput = false
-    this.editTavilyApiKeyInput = ''
     this.editTemperatureInput = DEFAULT_AI_TEMPERATURE
     this.editMaxTokensInput = DEFAULT_AI_MAX_TOKENS
     this.showAdvancedParams = false
@@ -365,8 +378,6 @@ export struct AiSettingsPanel {
     profile.endpoint = this.editEndpointInput.trim()
     profile.modelName = this.editModelInput.trim()
     profile.streaming = this.editStreamingInput
-    profile.enableSearch = this.editEnableSearchInput
-    profile.tavilyApiKey = this.editTavilyApiKeyInput.trim()
     profile.temperature = this.clampTemperature(this.editTemperatureInput)
     profile.maxTokens = this.clampMaxTokens(this.editMaxTokensInput)
 
@@ -769,9 +780,11 @@ export struct AiSettingsPanel {
 	              this.NewProfileCard()
 	            }
 
-	            this.AddButton()
+            this.AddButton()
 
-	            this.ScenarioSection()
+            this.WebSearchSection()
+
+            this.ScenarioSection()
 	          }
 	          .width('100%')
 	          .alignItems(HorizontalAlign.Center)
@@ -787,6 +800,556 @@ export struct AiSettingsPanel {
     }
     .width('100%')
     .height('100%')
+  }
+
+  // ============================================================
+  // 联网搜索提供商
+  // ============================================================
+
+  /** 同步搜索提供商配置列表到页面状态。 */
+  private syncSearchProfiles(): void {
+    this.searchProfiles = appStore.settings.webSearchProfiles
+  }
+
+  /** 判断指定搜索配置是否为当前激活的。 */
+  private isActiveSearchProfile(id: string): boolean {
+    return appStore.settings.activeWebSearchProfileId === id
+  }
+
+  /**
+   * 获取提供商类型的显示名称。
+   *
+   * @param providerType - 提供商类型标识
+   * @returns 可读的提供商名称
+   */
+  private getSearchProviderTypeLabel(providerType: WebSearchProviderType): string {
+    for (let i = 0; i < WEB_SEARCH_PROVIDER_PRESETS.length; i++) {
+      if (WEB_SEARCH_PROVIDER_PRESETS[i].id === providerType) {
+        return WEB_SEARCH_PROVIDER_PRESETS[i].name
+      }
+    }
+    return providerType
+  }
+
+  /**
+   * 判断搜索提供商编辑是否有未保存修改。
+   *
+   * @returns 是否有未保存修改
+   */
+  private hasUnsavedSearchEdit(): boolean {
+    if (this.expandedSearchProfileId.length === 0) {
+      return false
+    }
+    if (this.expandedSearchProfileId === NEW_ID) {
+      return this.editSearchNameInput.length > 0 ||
+        this.editSearchApiKeyInput.length > 0 ||
+        this.editSearchEndpointInput.length > 0
+    }
+    for (let i = 0; i < this.searchProfiles.length; i++) {
+      if (this.searchProfiles[i].id === this.expandedSearchProfileId) {
+        const p = this.searchProfiles[i]
+        return this.editSearchNameInput !== p.name ||
+          this.editSearchApiKeyInput !== p.apiKey ||
+          this.editSearchProviderType !== p.providerType ||
+          this.editSearchEndpointInput !== p.endpoint
+      }
+    }
+    return false
+  }
+
+  /**
+   * 展开搜索提供商编辑卡片（检查未保存修改后执行）。
+   *
+   * @param profileId - 已有配置的 ID，或 NEW_ID 表示新建
+   */
+  private expandSearchCard(profileId: string): void {
+    if (this.expandedSearchProfileId === profileId) {
+      return
+    }
+    if (this.hasUnsavedSearchEdit()) {
+      // 有未保存修改时直接放弃（简化处理）
+      this.doExpandSearchCard(profileId)
+      return
+    }
+    this.doExpandSearchCard(profileId)
+  }
+
+  /**
+   * 执行搜索提供商卡片展开并初始化表单。
+   *
+   * @param profileId - 已有配置的 ID，或 NEW_ID 表示新建
+   */
+  private doExpandSearchCard(profileId: string): void {
+    this.expandedSearchProfileId = profileId
+    if (profileId === NEW_ID) {
+      this.editSearchNameInput = ''
+      this.editSearchProviderType = 'tavily'
+      this.editSearchApiKeyInput = ''
+      this.editSearchEndpointInput = ''
+    } else {
+      for (let i = 0; i < this.searchProfiles.length; i++) {
+        if (this.searchProfiles[i].id === profileId) {
+          this.editSearchNameInput = this.searchProfiles[i].name
+          this.editSearchProviderType = this.searchProfiles[i].providerType
+          this.editSearchApiKeyInput = this.searchProfiles[i].apiKey
+          this.editSearchEndpointInput = this.searchProfiles[i].endpoint
+          break
+        }
+      }
+    }
+  }
+
+  /**
+   * 折叠搜索提供商编辑卡片（检查未保存修改后执行）。
+   */
+  private collapseSearchCard(): void {
+    if (this.hasUnsavedSearchEdit()) {
+      // 简化处理：直接放弃并折叠
+      this.doCollapseSearchCard()
+      return
+    }
+    this.doCollapseSearchCard()
+  }
+
+  /** 执行搜索提供商卡片折叠并清空表单。 */
+  private doCollapseSearchCard(): void {
+    this.expandedSearchProfileId = ''
+    this.editSearchNameInput = ''
+    this.editSearchApiKeyInput = ''
+    this.editSearchEndpointInput = ''
+  }
+
+  /** 保存搜索提供商配置。 */
+  private saveSearchProfile(): void {
+    if (!this.editSearchNameInput || this.editSearchNameInput.trim().length === 0) {
+      appStore.showToast('请输入方案名称')
+      return
+    }
+    if (!this.editSearchApiKeyInput || this.editSearchApiKeyInput.trim().length === 0) {
+      appStore.showToast('请输入 API Key')
+      return
+    }
+    if (this.editSearchProviderType === 'custom' &&
+      (!this.editSearchEndpointInput || this.editSearchEndpointInput.trim().length === 0)) {
+      appStore.showToast('自定义类型需填写端点地址')
+      return
+    }
+
+    const profile: WebSearchProviderProfile = new WebSearchProviderProfile()
+    profile.name = this.editSearchNameInput.trim()
+    profile.providerType = this.editSearchProviderType
+    profile.apiKey = this.editSearchApiKeyInput.trim()
+    profile.endpoint = this.editSearchEndpointInput.trim()
+
+    if (this.expandedSearchProfileId === NEW_ID) {
+      appStore.addWebSearchProfile(profile)
+      appStore.setActiveWebSearchProfile(profile.id)
+      appStore.showToast('已添加并切换到 ' + profile.name)
+    } else {
+      profile.id = this.expandedSearchProfileId
+      appStore.updateWebSearchProfile(profile)
+      appStore.showToast('配置已更新')
+    }
+
+    this.syncSearchProfiles()
+    this.doCollapseSearchCard()
+  }
+
+  /** 删除搜索提供商配置。 */
+  private deleteSearchProfile(id: string): void {
+    for (let i = 0; i < this.searchProfiles.length; i++) {
+      if (this.searchProfiles[i].id === id) {
+        const name: string = this.searchProfiles[i].name
+        this.searchDeleteConfirmController = new CustomDialogController({
+          builder: ConfirmDialog({
+            title: '删除搜索提供商',
+            message: this.isActiveSearchProfile(id)
+              ? '你将删除当前正在使用的配置「' + name + '」。\n删除后会自动切换到剩余配置；若没有其他配置，联网搜索功能将不可用。'
+              : '确定要删除配置「' + name + '」吗？',
+            confirmLabel: '删除',
+            destructive: true,
+            icon: $r('app.media.icon_delete'),
+            onConfirm: (): void => {
+              appStore.deleteWebSearchProfile(id)
+              this.syncSearchProfiles()
+              if (this.expandedSearchProfileId === id) {
+                this.doCollapseSearchCard()
+              }
+            },
+            onCancel: (): void => {}
+          }),
+          autoCancel: true,
+          customStyle: true
+        })
+        this.searchDeleteConfirmController.open()
+        return
+      }
+    }
+  }
+
+  /** 显示搜索提供商预设选择弹窗。 */
+  private showSearchProviderPresetPicker(): void {
+    const options: ActionOption[] = []
+    for (let i = 0; i < WEB_SEARCH_PROVIDER_PRESETS.length; i++) {
+      const opt: ActionOption = {
+        label: WEB_SEARCH_PROVIDER_PRESETS[i].name + ' - ' + WEB_SEARCH_PROVIDER_PRESETS[i].description,
+        value: i
+      }
+      options.push(opt)
+    }
+
+    this.searchProviderPickerController = new CustomDialogController({
+      builder: ActionSheetDialog({
+        title: '选择搜索提供商',
+        options: options,
+        selected: -1,
+        onSelect: (v: number): void => {
+          const preset: WebSearchProviderPreset = WEB_SEARCH_PROVIDER_PRESETS[v]
+          this.editSearchNameInput = preset.name
+          this.editSearchProviderType = preset.id
+          this.editSearchApiKeyInput = ''
+          this.editSearchEndpointInput = ''
+          this.doExpandSearchCard(NEW_ID)
+        }
+      }),
+      autoCancel: true,
+      customStyle: true
+    })
+    this.searchProviderPickerController.open()
+  }
+
+  /**
+   * 获取搜索 API Key 输入框占位提示。
+   *
+   * @returns 当前提供商类型的 API Key 格式提示
+   */
+  private getSearchApiKeyPlaceholder(): string {
+    for (let i = 0; i < WEB_SEARCH_PROVIDER_PRESETS.length; i++) {
+      if (WEB_SEARCH_PROVIDER_PRESETS[i].id === this.editSearchProviderType) {
+        return WEB_SEARCH_PROVIDER_PRESETS[i].apiKeyPlaceholder
+      }
+    }
+    return '请输入 API Key'
+  }
+
+  /** 构建搜索提供商区域。 */
+  @Builder
+  WebSearchSection() {
+    Column() {
+      Text('搜索提供商')
+        .fontSize(14)
+        .fontColor(AppColors.textPrimary)
+        .fontWeight(FontWeight.Medium)
+        .width('92%')
+        .margin({ top: 20, bottom: 2 })
+
+      Text('配置联网搜索 API。至少激活一个提供商后，AI 即可在需要时自动搜索互联网')
+        .fontSize(11)
+        .fontColor(AppColors.textTertiary)
+        .lineHeight(16)
+        .width('92%')
+        .margin({ bottom: 8, top: 2 })
+
+      if (this.searchProfiles.length === 0 &&
+        this.expandedSearchProfileId !== NEW_ID) {
+        Column() {
+          Text('🔍')
+            .fontSize(28)
+
+          Text('还没有搜索提供商')
+            .fontSize(14)
+            .fontColor(AppColors.textPrimary)
+            .fontWeight(FontWeight.Medium)
+            .margin({ top: 8 })
+
+          Text('添加 Tavily 等搜索 API 后，\nAI 将自动判断是否需要联网搜索')
+            .fontSize(11)
+            .fontColor(AppColors.textTertiary)
+            .textAlign(TextAlign.Center)
+            .margin({ top: 4 })
+            .lineHeight(16)
+        }
+        .width('92%')
+        .padding({ top: 16, bottom: 8 })
+        .alignItems(HorizontalAlign.Center)
+      } else {
+        ForEach(this.searchProfiles, (profile: WebSearchProviderProfile) => {
+          this.SearchProviderCard(profile)
+        }, (profile: WebSearchProviderProfile): string => profile.id)
+      }
+
+      if (this.expandedSearchProfileId === NEW_ID) {
+        this.NewSearchProviderCard()
+      }
+
+      Row() {
+        Text('+ 添加搜索提供商')
+          .fontSize(15)
+          .fontColor(AppColors.primary)
+          .fontWeight(FontWeight.Medium)
+      }
+      .width('92%')
+      .height(44)
+      .justifyContent(FlexAlign.Center)
+      .backgroundColor(AppColors.bgTertiary)
+      .borderRadius(12)
+      .margin({ top: 8 })
+      .onClick(() => {
+        if (this.hasUnsavedSearchEdit()) {
+          this.doCollapseSearchCard()
+        }
+        this.showSearchProviderPresetPicker()
+      })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Center)
+  }
+
+  /**
+   * 构建已有搜索提供商卡片。
+   *
+   * @param profile - 搜索提供商配置
+   */
+  @Builder
+  SearchProviderCard(profile: WebSearchProviderProfile) {
+    Column() {
+      this.SearchProviderCardHeader(profile)
+
+      if (this.expandedSearchProfileId === profile.id) {
+        Divider().color(AppColors.separator).width('100%').margin({ bottom: 4 })
+        this.SearchProviderCardBody()
+      }
+    }
+    .width('92%')
+    .backgroundColor(AppColors.bgTertiary)
+    .borderRadius(12)
+    .margin({ top: 8 })
+  }
+
+  /**
+   * 构建搜索提供商卡片头部。
+   *
+   * @param profile - 搜索提供商配置
+   */
+  @Builder
+  SearchProviderCardHeader(profile: WebSearchProviderProfile) {
+    Row() {
+      Row() {
+        Radio({ value: profile.id, group: 'searchProvider' })
+          .checked(this.isActiveSearchProfile(profile.id))
+          .onChange((checked: boolean) => {
+            if (checked) {
+              appStore.setActiveWebSearchProfile(profile.id)
+              this.syncSearchProfiles()
+            }
+          })
+          .width(20)
+          .height(20)
+      }
+      .width(36)
+      .height(48)
+      .justifyContent(FlexAlign.Center)
+
+      Column() {
+        Text(profile.name)
+          .fontSize(15)
+          .fontColor(AppColors.textPrimary)
+          .fontWeight(FontWeight.Medium)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+        Text(this.getSearchProviderTypeLabel(profile.providerType))
+          .fontSize(11)
+          .fontColor(AppColors.textTertiary)
+          .margin({ top: 2 })
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
+      .alignItems(HorizontalAlign.Start)
+      .layoutWeight(1)
+      .onClick(() => {
+        if (this.expandedSearchProfileId === profile.id) {
+          this.collapseSearchCard()
+        } else {
+          this.expandSearchCard(profile.id)
+        }
+      })
+
+      Text('删除')
+        .fontSize(12)
+        .fontColor(AppColors.destructive)
+        .padding({ left: 6, right: 6, top: 4, bottom: 4 })
+        .onClick(() => {
+          this.deleteSearchProfile(profile.id)
+        })
+    }
+    .width('100%')
+    .padding({ left: 12, right: 8, top: 12, bottom: 12 })
+  }
+
+  /**
+   * 构建搜索提供商编辑表单（已有配置卡片展开时）。
+   *
+   * 与 NewSearchProviderCard 共享表单字段。
+   */
+  @Builder
+  SearchProviderCardBody() {
+    Column() {
+      this.SearchProviderFormFields()
+    }
+    .width('100%')
+    .padding({ left: 12, right: 12, top: 8, bottom: 12 })
+  }
+
+  /** 构建新建搜索提供商卡片。 */
+  @Builder
+  NewSearchProviderCard() {
+    Column() {
+      Row() {
+        Column() {
+          Text(this.editSearchNameInput.length > 0 ? this.editSearchNameInput : '新建搜索提供商')
+            .fontSize(15)
+            .fontColor(AppColors.textPrimary)
+            .fontWeight(FontWeight.Medium)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+          Text(this.getSearchProviderTypeLabel(this.editSearchProviderType))
+            .fontSize(11)
+            .fontColor(AppColors.textTertiary)
+            .margin({ top: 2 })
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
+
+        Text('放弃')
+          .fontSize(12)
+          .fontColor(AppColors.textTertiary)
+          .padding({ left: 6, right: 6, top: 4, bottom: 4 })
+          .onClick(() => {
+            this.doCollapseSearchCard()
+          })
+      }
+      .width('100%')
+      .padding({ left: 12, right: 8, top: 12, bottom: 4 })
+
+      Divider().color(AppColors.separator).width('100%').margin({ bottom: 4 })
+
+      Column() {
+        this.SearchProviderFormFields()
+      }
+      .width('100%')
+      .padding({ left: 12, right: 12, top: 8, bottom: 12 })
+    }
+    .width('92%')
+    .backgroundColor(AppColors.bgTertiary)
+    .borderRadius(12)
+    .margin({ top: 8 })
+  }
+
+  /**
+   * 构建搜索提供商表单字段。
+   *
+   * 由 SearchProviderCardBody 和 NewSearchProviderCard 共享。
+   */
+  @Builder
+  SearchProviderFormFields() {
+    Column() {
+      Text('方案名称')
+        .fontSize(13)
+        .fontColor(AppColors.textSecondary)
+        .width('100%')
+        .margin({ bottom: 4 })
+
+      TextInput({ placeholder: '为这个方案起个名字', text: this.editSearchNameInput })
+        .onChange((v: string) => {
+          this.editSearchNameInput = v
+        })
+        .width('100%')
+        .height(40)
+        .backgroundColor(AppColors.bgSecondary)
+        .borderRadius(8)
+        .fontSize(14)
+        .padding({ left: 12, right: 12 })
+    }
+    .width('100%')
+    .margin({ bottom: 10 })
+
+    Column() {
+      Text('API Key')
+        .fontSize(13)
+        .fontColor(AppColors.textSecondary)
+        .width('100%')
+        .margin({ bottom: 4 })
+
+      TextInput({
+        placeholder: this.getSearchApiKeyPlaceholder(),
+        text: this.editSearchApiKeyInput
+      })
+        .type(InputType.Password)
+        .onChange((v: string) => {
+          this.editSearchApiKeyInput = v
+        })
+        .width('100%')
+        .height(40)
+        .backgroundColor(AppColors.bgSecondary)
+        .borderRadius(8)
+        .fontSize(14)
+        .padding({ left: 12, right: 12 })
+    }
+    .width('100%')
+    .margin({ bottom: 10 })
+
+    if (this.editSearchProviderType === 'custom') {
+      Column() {
+        Text('端点地址')
+          .fontSize(13)
+          .fontColor(AppColors.textSecondary)
+          .width('100%')
+          .margin({ bottom: 4 })
+
+        TextInput({ placeholder: 'https://api.example.com/search', text: this.editSearchEndpointInput })
+          .onChange((v: string) => {
+            this.editSearchEndpointInput = v
+          })
+          .width('100%')
+          .height(40)
+          .backgroundColor(AppColors.bgSecondary)
+          .borderRadius(8)
+          .fontSize(14)
+          .padding({ left: 12, right: 12 })
+      }
+      .width('100%')
+      .margin({ bottom: 10 })
+    }
+
+    Row() {
+      Text('取消')
+        .fontSize(14)
+        .fontColor(AppColors.textSecondary)
+        .layoutWeight(1)
+        .height(38)
+        .textAlign(TextAlign.Center)
+        .onClick(() => {
+          this.doCollapseSearchCard()
+        })
+
+      Text('保存')
+        .fontSize(14)
+        .fontColor(AppColors.white)
+        .layoutWeight(1)
+        .height(38)
+        .textAlign(TextAlign.Center)
+        .backgroundColor(AppColors.primary)
+        .borderRadius(10)
+        .onClick(() => {
+          this.saveSearchProfile()
+        })
+    }
+    .width('100%')
+    .margin({ top: 4 })
   }
 
   // ============================================================
@@ -1423,59 +1986,7 @@ export struct AiSettingsPanel {
           .height(48)
           .alignItems(VerticalAlign.Center)
 
-          Divider().color(AppColors.separator).margin({ bottom: 4 })
-
-          // 联网搜索开关
-          Row() {
-            Column() {
-              Text('联网搜索')
-                .fontSize(13)
-                .fontColor(AppColors.textPrimary)
-                .width('100%')
-              Text('开启后 AI 可搜索互联网获取最新信息（需要 Tavily API Key）')
-                .fontSize(11)
-                .fontColor(AppColors.textTertiary)
-                .width('100%')
-                .margin({ top: 2 })
-            }
-            .layoutWeight(1)
-            .alignItems(HorizontalAlign.Start)
-
-            Toggle({ type: ToggleType.Switch, isOn: this.editEnableSearchInput })
-              .onChange((value: boolean): void => {
-                this.editEnableSearchInput = value
-              })
-          }
-          .width('100%')
-          .height(48)
-          .alignItems(VerticalAlign.Center)
-
-          // Tavily API Key（联网搜索开启时显示）
-          if (this.editEnableSearchInput) {
-            Column() {
-              Text('Tavily API Key')
-                .fontSize(13)
-                .fontColor(AppColors.textSecondary)
-                .width('100%')
-                .margin({ bottom: 4 })
-
-              TextInput({ placeholder: 'tvly-... 在 tavily.com 注册获取', text: this.editTavilyApiKeyInput })
-                .type(InputType.Password)
-                .onChange((v: string): void => {
-                  this.editTavilyApiKeyInput = v
-                })
-                .width('100%')
-                .height(40)
-                .backgroundColor(AppColors.bgSecondary)
-                .borderRadius(8)
-                .fontSize(14)
-                .padding({ left: 12, right: 12 })
-            }
-            .width('100%')
-            .margin({ bottom: 10 })
-
-            Divider().color(AppColors.separator).margin({ bottom: 4 })
-          }
+	        Divider().color(AppColors.separator).margin({ bottom: 4 })
 
           Row() {
             Text('温度')

@@ -15,6 +15,7 @@ import type { AuthState, Session } from './AuthStore'
 import { routerStore } from './RouterStore'
 import type { SettingsState, FavBoard, BlacklistEntry } from './SettingsStore'
 import type { AiProviderProfile } from '../model/AiConfig'
+import type { WebSearchProviderProfile } from '../model/WebSearchConfig'
 import type { BrowseHistoryEntry } from './HistoryStore'
 import type { ToastState } from '../common/feedback/ToastManager'
 import type { ProfileData } from '../model/User'
@@ -205,6 +206,14 @@ class AppStoreClass {
   getScenarioPrompt(scenario: string): string { return this.settingsStore.getScenarioPrompt(scenario) }
   setScenarioPrompt(scenario: string, prompt: string): void { this.settingsStore.setScenarioPrompt(scenario, prompt) }
   resetScenarioPrompt(scenario: string): void { this.settingsStore.resetScenarioPrompt(scenario) }
+
+  // ---------- Facade: Web Search Settings ----------
+
+  addWebSearchProfile(profile: WebSearchProviderProfile): void { this.settingsStore.addWebSearchProfile(profile) }
+  updateWebSearchProfile(profile: WebSearchProviderProfile): void { this.settingsStore.updateWebSearchProfile(profile) }
+  deleteWebSearchProfile(id: string): void { this.settingsStore.deleteWebSearchProfile(id) }
+  setActiveWebSearchProfile(id: string): void { this.settingsStore.setActiveWebSearchProfile(id) }
+  getActiveWebSearchProfile(): WebSearchProviderProfile | null { return this.settingsStore.getActiveWebSearchProfile() }
 
   // ---------- Facade: Categories ----------
 

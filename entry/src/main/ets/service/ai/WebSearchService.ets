@@ -1,118 +1,107 @@
 /**
- * Tavily 搜索 API 客户端。
+ * 联网搜索服务门面。
  *
- * 用于在 AI Function Calling 流程中提供联网搜索能力，
- * 返回结构化搜索结果。
+ * 作为搜索的统一入口，根据当前激活的搜索提供商配置
+ * 自动选择对应的适配器执行搜索。
  */
 
-import { http } from '@kit.NetworkKit'
+import { appStore } from '../../store/AppStore'
+import {
+  type WebSearchAdapter,
+  SearchResponse,
+  SearchResultItem
+} from './search/WebSearchAdapter'
+import { TavilySearchAdapter } from './search/TavilySearchAdapter'
+import type { WebSearchProviderProfile } from '../../model/WebSearchConfig'
 import { Logger, DOMAIN_SERVICE } from '../../common/utils/Logger'
 
 const logger = new Logger(DOMAIN_SERVICE, 'WebSearchSvc')
 
-/** Tavily API 基础地址 */
-const TAVILY_BASE_URL: string = 'https://api.tavily.com'
-/** 搜索超时毫秒数 */
-const SEARCH_TIMEOUT: number = 15000
+// 重新导出公共类型，保持调用方引用不变
+export { SearchResponse, SearchResultItem } from './search/WebSearchAdapter'
 
-/** 单条搜索结果。 */
-export class SearchResultItem {
-  /** 标题 */
-  title: string = ''
-  /** 链接 */
-  url: string = ''
-  /** 内容摘要 */
-  content: string = ''
-  /** 相关性评分（0~1） */
-  score: number = 0
-}
+/** 适配器缓存，按 providerType 存储实例避免重复创建。 */
+const adapterCache: Record<string, WebSearchAdapter> = {}
 
-/** Tavily 搜索响应。 */
-export class SearchResponse {
-  /** AI 生成的答案摘要 */
-  answer: string = ''
-  /** 搜索结果列表 */
-  results: SearchResultItem[] = []
-  /** 是否成功 */
-  success: boolean = false
-  /** 错误信息 */
-  errorMessage: string = ''
+/**
+ * 获取当前激活的搜索提供商配置。
+ *
+ * @returns 激活的配置，若未选择或配置不存在则返回 null
+ */
+export function getActiveWebSearchProfile(): WebSearchProviderProfile | null {
+  return appStore.getActiveWebSearchProfile()
 }
 
 /**
- * 执行 Tavily 网页搜索。
+ * 根据提供商类型获取对应的适配器实例。
  *
- * @param query - 搜索关键词或问题
- * @param apiKey - Tavily API 密钥
- * @returns 搜索结果
+ * @param providerType - 提供商类型标识
+ * @returns 适配器实例，若类型不支持则返回 null
  */
-export async function searchWeb(query: string, apiKey: string): Promise<SearchResponse> {
-  const result: SearchResponse = new SearchResponse()
-
-  if (query.trim().length === 0) {
-    result.errorMessage = '搜索关键词不能为空'
-    return result
+function getAdapter(providerType: string): WebSearchAdapter | null {
+  if (adapterCache[providerType]) {
+    return adapterCache[providerType]
   }
-  if (apiKey.trim().length === 0) {
-    result.errorMessage = 'Tavily API 密钥未配置'
-    return result
+  switch (providerType) {
+    case 'tavily':
+      adapterCache[providerType] = new TavilySearchAdapter()
+      return adapterCache[providerType]
+    default:
+      logger.warn('Unsupported web search provider: %{public}s', providerType)
+      return null
+  }
+}
+
+/**
+ * 执行联网搜索。
+ *
+ * 根据当前激活的搜索提供商配置自动选择适配器执行搜索，
+ * 若未激活任何搜索配置则返回失败。
+ *
+ * @param query - 搜索关键词或自然语言问题
+ * @returns 标准化搜索结果
+ */
+export async function searchWeb(query: string): Promise<SearchResponse> {
+  const profile: WebSearchProviderProfile | null = getActiveWebSearchProfile()
+  const errorResult: SearchResponse = new SearchResponse()
+
+  if (!profile) {
+    errorResult.errorMessage = '未激活联网搜索配置'
+    return errorResult
   }
 
-  const url: string = TAVILY_BASE_URL + '/search'
-  const body: Record<string, Object> = {
-    'query': query,
-    'search_depth': 'basic',
-    'max_results': 5,
-    'include_answer': true
+  const adapter: WebSearchAdapter | null = getAdapter(profile.providerType)
+  if (!adapter) {
+    errorResult.errorMessage = '不支持的搜索提供商: ' + profile.providerType
+    return errorResult
   }
 
-  const httpRequest: http.HttpRequest = http.createHttp()
-  try {
-    const response: http.HttpResponse = await httpRequest.request(url, {
-      method: http.RequestMethod.POST,
-      header: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + apiKey
-      },
-      extraData: JSON.stringify(body),
-      expectDataType: http.HttpDataType.STRING,
-      readTimeout: SEARCH_TIMEOUT,
-      connectTimeout: 10000
-    })
+  return adapter.search(query, profile.apiKey)
+}
 
-    const statusCode: number = response.responseCode
-    const responseText: string = (response.result as string) ?? ''
+/**
+ * 将搜索结果构造成适合模型阅读的上下文字符串。
+ *
+ * @param searchResponse - 搜索结果
+ * @returns 模型可读的搜索结果上下文
+ */
+export function buildSearchContext(searchResponse: SearchResponse): string {
+  let context: string = ''
 
-    if (statusCode !== 200) {
-      result.errorMessage = 'Tavily 搜索失败: HTTP ' + statusCode
-      logger.error('Tavily search failed: HTTP %{public}d', statusCode)
-      return result
+  if (searchResponse.answer.length > 0) {
+    context += '搜索摘要：' + searchResponse.answer + '\n\n'
+  }
+
+  context += '搜索结果：\n'
+  for (let i: number = 0; i < searchResponse.results.length; i++) {
+    const item: SearchResultItem = searchResponse.results[i]
+    context += (i + 1).toString() + '. [' + item.title + '](' + item.url + ')\n'
+    if (item.content.length > 0) {
+      context += '   ' + item.content + '\n'
     }
-
-    const json: Record<string, Object> = JSON.parse(responseText) as Record<string, Object>
-    result.answer = (json['answer'] as string) ?? ''
-
-    const rawResults: Object[] = json['results'] as Object[]
-    if (rawResults) {
-      for (let i = 0; i < rawResults.length; i++) {
-        const raw: Record<string, Object> = rawResults[i] as Record<string, Object>
-        const item: SearchResultItem = new SearchResultItem()
-        item.title = (raw['title'] as string) ?? ''
-        item.url = (raw['url'] as string) ?? ''
-        item.content = (raw['content'] as string) ?? ''
-        item.score = (raw['score'] as number) ?? 0
-        result.results.push(item)
-      }
-    }
-
-    result.success = true
-    return result
-  } catch (e) {
-    const err: Error = e as Error
-    result.errorMessage = 'Tavily 搜索异常: ' + (err.message || '未知错误')
-    logger.error('Tavily search exception: %{public}s', result.errorMessage)
-    return result
-  } finally {
-    httpRequest.destroy()
+    context += '\n'
   }
+
+  context += '请仅基于以上搜索结果回答用户问题，并标注引用来源；如果搜索结果不足以确认结论，请明确说明无法确认。'
+  return context
 }

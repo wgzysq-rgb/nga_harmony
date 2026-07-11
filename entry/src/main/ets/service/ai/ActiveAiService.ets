@@ -3,7 +3,7 @@
  *
  * 统一封装当前激活的用户自定义 AI 配置校验、调用与错误文案，
  * 页面层不再直接处理配置索引或额外调用分支。
- * 支持联网搜索（Function Calling + Tavily）。
+ * 支持联网搜索（Function Calling + 可配置搜索提供商）。
  */
 
 import { appStore } from '../../store/AppStore'
@@ -20,7 +20,7 @@ import type {
   ChatStreamChunkCallback,
   ToolCallResult
 } from './OpenAiCompatibleClient'
-import { searchWeb, SearchResponse } from './WebSearchService'
+import { searchWeb, buildSearchContext, getActiveWebSearchProfile, SearchResponse } from './WebSearchService'
 import { translateError } from './AiErrorTranslator'
 import { Logger, DOMAIN_SERVICE } from '../../common/utils/Logger'
 
@@ -69,7 +69,7 @@ class WebSearchExecution {
   toolCall: ToolCall
   /** 实际搜索查询。 */
   query: string
-  /** Tavily 搜索响应。 */
+  /** 搜索响应。 */
   response: SearchResponse
 
   /**
@@ -77,7 +77,7 @@ class WebSearchExecution {
    *
    * @param toolCall - 对应的模型 tool call
    * @param query - 实际搜索查询
-   * @param response - Tavily 搜索响应
+   * @param response - 搜索响应
    */
   constructor(toolCall: ToolCall, query: string, response: SearchResponse) {
     this.toolCall = toolCall
@@ -137,7 +137,7 @@ export async function chatCompleteWithActiveAi(messages: ChatMessage[]): Promise
  *
  * 当配置关闭流式输出时，自动降级为普通请求并一次性回调完整文本。
  * 当启用联网搜索时，先通过 Function Calling 判断模型是否需要搜索，
- * 若需要则调用 Tavily 获取结果后再输出最终答案。
+ * 若需要则调用搜索提供商获取结果后再输出最终答案。
  *
  * @param messages - 对话消息列表
  * @param onDelta - 文本增量回调
@@ -187,14 +187,15 @@ async function chatCompleteWithoutWebSearch(
 }
 
 /**
- * 判断当前配置是否应进入联网搜索工具流程。
+ * 判断当前是否应进入联网搜索工具流程。
+ *
+ * 当用户激活了至少一个搜索提供商配置且当前 AI 模型支持 tools 时启用。
  *
  * @param profile - AI 提供方配置
  * @returns true 表示应尝试联网搜索
  */
 function shouldUseWebSearch(profile: AiProviderProfile): boolean {
-  return profile.enableSearch &&
-    profile.tavilyApiKey.trim().length > 0 &&
+  return getActiveWebSearchProfile() !== null &&
     !isToolUnsupported(profile)
 }
 
@@ -203,7 +204,7 @@ function shouldUseWebSearch(profile: AiProviderProfile): boolean {
  *
  * 分两阶段：
  * 1. 请求带 tools 声明，让模型决定是否需要搜索。
- * 2. 若需搜索，调用 Tavily 后再请求模型生成最终答案。
+ * 2. 若需搜索，调用搜索提供商 API 后再请求模型生成最终答案。
  *
  * @param profile - AI 提供方配置
  * @param messages - 对话消息列表
@@ -268,14 +269,13 @@ async function chatCompleteWithWebSearch(
     return directText
   }
 
-  const executions: WebSearchExecution[] = await executeSearchToolCalls(
-    toolResult.toolCalls,
-    messages,
-    profile.tavilyApiKey,
-    toolCallInfo,
-    onStatus,
-    onToolCall
-  )
+	const executions: WebSearchExecution[] = await executeSearchToolCalls(
+	  toolResult.toolCalls,
+	  messages,
+	  toolCallInfo,
+	  onStatus,
+	  onToolCall
+	)
   const resultCount: number = countSearchResults(executions)
   const combinedQuery: string = buildCombinedQuery(executions)
 
@@ -342,7 +342,6 @@ function buildWebSearchTools(): Object[] {
  *
  * @param toolCalls - 模型发起的工具调用列表
  * @param messages - 对话消息列表
- * @param apiKey - Tavily API 密钥
  * @param toolCallInfo - 可复用的工具状态对象
  * @param onStatus - 可选的状态更新回调
  * @param onToolCall - 可选的工具调用阶段回调
@@ -351,7 +350,6 @@ function buildWebSearchTools(): Object[] {
 async function executeSearchToolCalls(
   toolCalls: ToolCall[],
   messages: ChatMessage[],
-  apiKey: string,
   toolCallInfo: ToolCallInfo,
   onStatus?: ChatStatusCallback,
   onToolCall?: ToolCallCallback
@@ -366,7 +364,7 @@ async function executeSearchToolCalls(
     onToolCall?.(toolCallInfo)
     onStatus?.('🔍 正在搜索互联网...')
 
-    const response: SearchResponse = await searchWeb(query, apiKey)
+    const response: SearchResponse = await searchWeb(query)
     executions.push(new WebSearchExecution(toolCalls[i], query, response))
   }
   return executions
@@ -574,33 +572,6 @@ function completeToolCall(info: ToolCallInfo, description: string, onToolCall?: 
   info.phaseIcon = '✅'
   info.phaseDescription = description
   onToolCall?.(info)
-}
-
-/**
- * 将 Tavily 搜索结果构造成适合模型阅读的上下文字符串。
- *
- * @param searchResponse - Tavily 搜索结果
- * @returns 带来源标记的上下文文本
- */
-function buildSearchContext(searchResponse: SearchResponse): string {
-  let context: string = ''
-
-  if (searchResponse.answer.length > 0) {
-    context += '搜索摘要：' + searchResponse.answer + '\n\n'
-  }
-
-  context += '搜索结果：\n'
-  for (let i: number = 0; i < searchResponse.results.length; i++) {
-    const item = searchResponse.results[i]
-    context += (i + 1).toString() + '. [' + item.title + '](' + item.url + ')\n'
-    if (item.content.length > 0) {
-      context += '   ' + item.content + '\n'
-    }
-    context += '\n'
-  }
-
-  context += '请仅基于以上搜索结果回答用户问题，并标注引用来源；如果搜索结果不足以确认结论，请明确说明无法确认。'
-  return context
 }
 
 /**
