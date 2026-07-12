@@ -196,6 +196,7 @@ async function tryToolCalling(
   const tools: Object[] = toolRegistry.getToolDefinitions()
 
   // Phase 1: 工具决策
+  logger.info('[ToolCall] Phase 1: 发送工具决策请求, tools=%d', tools.length)
   const toolCallInfo: ToolCallInfo = createToolInfo('analyzing', '⚡', 'AI 正在分析...', '', 0)
   onToolCall?.(toolCallInfo)
   onStatus?.('⚡ AI 正在分析...')
@@ -229,6 +230,7 @@ async function tryToolCalling(
   }
 
   if (!toolResult.hasToolCalls) {
+    logger.info('[ToolCall] Phase 1: 模型未请求工具调用, content=%d chars', toolResult.content.length)
     const directText: string = toolResult.content.length > 0 ? toolResult.content : decisionText
     notifyNoToolCall(onToolCall)
     if (directText.length > 0) {
@@ -238,6 +240,7 @@ async function tryToolCalling(
   }
 
   // Phase 2: 执行工具
+  logger.info('[ToolCall] Phase 2: 执行 %d 个工具调用', toolResult.toolCalls.length)
   const results: ToolResult[] = await executeToolCalls(
     toolResult.toolCalls,
     messages,
@@ -271,8 +274,10 @@ async function tryToolCalling(
   }
 
   // Phase 3: 最终回答
+  logger.info('[ToolCall] Phase 3: 发送最终回答请求, messages=%d', messages.length + 1 + results.length)
   const fullMessages: ChatMessage[] = buildMessagesWithToolResults(messages, toolResult, results)
   const finalText: string = await completeFinalAnswer(profile, fullMessages, onDelta, onStatus)
+  logger.info('[ToolCall] Phase 3: 完成, finalText=%d chars', finalText.length)
   completeToolCall(toolCallInfo, '共 ' + totalCount.toString() + ' 条结果', onToolCall)
   return finalText
 }
@@ -315,6 +320,8 @@ async function executeToolCalls(
     }
 
     const result: ToolResult = await adapter.execute(toolCall, messages)
+    logger.info('[ToolCall] Phase 2: tool=%s, success=%s, summary=%s, count=%d',
+      toolCall.function.name, String(result.success), result.summary, result.count)
     // 更新工具特定的 UI 信息
     if (result.summary.length > 0) {
       toolCallInfo.summary = result.summary
@@ -323,6 +330,7 @@ async function executeToolCalls(
     }
     results.push(result)
   }
+  logger.info('[ToolCall] Phase 2: 完成, %d results', results.length)
   return results
 }
 

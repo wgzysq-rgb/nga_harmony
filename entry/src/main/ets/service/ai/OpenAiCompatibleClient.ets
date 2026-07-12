@@ -161,6 +161,8 @@ class ChatStreamParser {
     if (text.indexOf('<| DSML |') < 0 && text.indexOf('<|DSML|') < 0) {
       return text
     }
+    logger.warn('[DSML] stripping from final content (%d chars): %{public}s',
+      text.length, text.substring(0, 300))
     // 移除 DSML 标记块：<| DSML | ... > 到 </| DSML | ... >
     let cleaned: string = text
     // 移除自闭合参数标签及内容
@@ -251,6 +253,11 @@ class ChatStreamParser {
       const delta: string = parseStreamDelta(dataText)
       if (delta.length > 0) {
         this.content += delta
+        // 告警：delta 已通过 parseStreamDelta 过滤，若仍含 DSML 则跨 chunk 漏网
+        if (isDSMLContent(delta)) {
+          logger.warn('[DSML] LEAKED to onDelta (%d chars): %{public}s',
+            delta.length, delta.substring(0, 200))
+        }
         onDelta(delta)
       }
       // 提取 finish_reason 和 tool_calls（用于流式工具决策）
@@ -310,6 +317,8 @@ class ChatStreamParser {
         const content: string = (delta['content'] as string) ?? ''
         if (content.indexOf('<| DSML |') >= 0 || content.indexOf('<|DSML|') >= 0) {
           this.dsmlContent += content
+          logger.info('[DSML] accumulated chunk (%d chars total): %{public}s',
+            this.dsmlContent.length, content.substring(0, 150))
         }
       }
     } catch (e) {
@@ -326,6 +335,7 @@ class ChatStreamParser {
     if (this.dsmlContent.length === 0) {
       return []
     }
+    logger.info('[DSML] parsing tool calls from %d chars', this.dsmlContent.length)
     const toolCalls: ToolCall[] = []
     // 匹配 invoke 块: <| DSML | invoke name="xxx"> ... </| DSML | invoke>
     const invokeRegex: RegExp = /<\|[ ]*DSML[ ]*\|[ ]*invoke[ ]+name="([^"]+)"[ ]*>/g
@@ -950,8 +960,9 @@ function parseStreamDelta(responseText: string): string {
       // 标准流式 delta.content（普通文本回复）
       const content: string = (delta['content'] as string) ?? ''
       if (content.length > 0) {
-        // 抑制 DeepSeek DSML 格式的 tool call 文本泄露
-        if (content.indexOf('<| DSML |') >= 0 || content.indexOf('<|DSML|') >= 0) {
+        // 抑制 DeepSeek DSML 格式的 tool call 文本泄露（含跨 chunk 的部分片段）
+        if (isDSMLContent(content)) {
+          logger.info('[parseStreamDelta] DSML suppressed: %{public}s', content.substring(0, 200))
           return ''
         }
         return content
@@ -961,7 +972,8 @@ function parseStreamDelta(responseText: string): string {
       if (msg) {
         const msgContent: string = (msg['content'] as string) ?? ''
         if (msgContent.length > 0) {
-          if (msgContent.indexOf('<| DSML |') >= 0 || msgContent.indexOf('<|DSML|') >= 0) {
+          if (isDSMLContent(msgContent)) {
+            logger.info('[parseStreamDelta] DSML suppressed (msg): %{public}s', msgContent.substring(0, 200))
             return ''
           }
           return msgContent
@@ -971,13 +983,41 @@ function parseStreamDelta(responseText: string): string {
     // 兼容非流式响应的 message 结构（某些 SSE 实现在最后 chunk 包含完整 message）
     const message: Record<string, Object> = firstChoice['message'] as Record<string, Object>
     if (message) {
-      return (message['content'] as string) ?? ''
+      const msgContent: string = (message['content'] as string) ?? ''
+      if (isDSMLContent(msgContent)) {
+        logger.warn('[parseStreamDelta] DSML in message field (may leak): %{public}s', msgContent.substring(0, 200))
+      }
+      return msgContent
     }
     return ''
   } catch (e) {
     logger.warn('parseStreamDelta: 解析 chunk 失败: %{public}s', (e as Error).message ?? 'unknown')
     return ''
   }
+}
+
+/**
+ * 检查文本是否包含 DSML 格式的工具调用内容。
+ *
+ * 匹配完整 DSML 标签和跨 chunk 被拆分的片段。
+ *
+ * @param text - 待检查的文本
+ * @returns true 表示包含 DSML 内容
+ */
+function isDSMLContent(text: string): boolean {
+  // 完整 DSML 标签
+  if (text.indexOf('<| DSML |') >= 0 || text.indexOf('<|DSML|') >= 0) {
+    return true
+  }
+  // DSML 跨 chunk 的尾部片段（前一个 chunk 以 <|DSM 或 <| DSM 开头）
+  if (/^[A-Z]*L[ ]*\|/.test(text)) {
+    return true
+  }
+  // 部分 DSML 起始片段（可能后续 chunk 继续拼接）
+  if (/<\|[ ]*D?S?M?L?$/i.test(text)) {
+    return true
+  }
+  return false
 }
 
 /**
@@ -1014,6 +1054,8 @@ function stripDSMLText(text: string): string {
   if (text.indexOf('<| DSML |') < 0 && text.indexOf('<|DSML|') < 0) {
     return text
   }
+  logger.warn('[DSML] stripDSMLText (%d chars): %{public}s',
+    text.length, text.substring(0, 300))
   let cleaned: string = text
   cleaned = cleaned.replace(/<\|[ ]*DSML[ ]*\|[ ]*parameter[^>]*>[\s\S]*?<\/\|[ ]*DSML[ ]*\|[ ]*parameter>/g, '')
   cleaned = cleaned.replace(/<\|[ ]*DSML[ ]*\|[ ]*invoke[^>]*>[\s\S]*?<\/\|[ ]*DSML[ ]*\|[ ]*invoke>/g, '')
