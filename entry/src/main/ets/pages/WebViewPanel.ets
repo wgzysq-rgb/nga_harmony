@@ -50,9 +50,12 @@ export struct WebViewPanel {
   @State pageTitle: string = ''
   @State isLoading: boolean = true
   @State progress: number = 0
+  /** 初始 URL 为 NGA 域名时进入 NGA 会话模式，允许 WebView 内自由浏览 NGA 页面而不被拦截回原生 */
+  private ngaSession: boolean = false
 
   aboutToAppear(): void {
     this.injectCookies()
+    this.ngaSession = this.isNgaDomain(this.extractHostname(this.url))
   }
 
   private injectCookies(): void {
@@ -117,6 +120,11 @@ export struct WebViewPanel {
 
     const hostname: string = this.extractHostname(targetUrl)
     const context: common.UIAbilityContext = this.getUIContext().getHostContext() as common.UIAbilityContext
+
+    // ─── NGA 会话模式：用户显式选择了浏览 NGA 网页版，放行所有 NGA 域名链接 ───
+    if (this.ngaSession && this.isNgaDomain(hostname)) {
+      return false
+    }
 
     // ─── 第一优先级：NGA 链接 → 回归原生页面 ───
     if (this.isNgaDomain(hostname)) {
