@@ -8,6 +8,7 @@
  *   不触碰 `<`、标签或换行，避免吞掉合法文本。
  *
  * 两者都支持 `&#91;` / `&#93;` / `&nbsp;` / `&#十进制;` / `&#x十六进制;`（含 BMP 之外代理对编码）。
+ * 命名实体（&amp; / &lt; / &mdash; / &hellip; 等）统一查表转换，未命中则保留原文。
  */
 
 /**
@@ -23,6 +24,19 @@ function fromCodePoint(code: number): string {
   return String.fromCharCode(hi) + String.fromCharCode(lo)
 }
 
+const NAMED_ENTITIES: Map<string, string> = new Map<string, string>([
+  ['amp', '&'], ['lt', '<'], ['gt', '>'], ['quot', '"'],
+  ['nbsp', ' '], ['emsp', '\u2003'], ['ensp', '\u2002'], ['thinsp', '\u2009'],
+  ['zwnj', ''], ['zwj', ''],
+  ['mdash', '\u2014'], ['ndash', '\u2013'],
+  ['lsquo', '\u2018'], ['rsquo', '\u2019'], ['ldquo', '\u201C'], ['rdquo', '\u201D'],
+  ['hellip', '\u2026'],
+  ['copy', '\u00A9'], ['reg', '\u00AE'], ['trade', '\u2122'],
+  ['laquo', '\u00AB'], ['raquo', '\u00BB'],
+  ['times', '\u00D7'], ['divide', '\u00F7'], ['plusmn', '\u00B1'],
+  ['deg', '\u00B0'], ['middot', '\u00B7'],
+])
+
 /**
  * 反转 HTML 实体为字符，不处理标签或换行。适用于纯文本字段显示。
  *
@@ -34,14 +48,7 @@ export function unescapeHtml(s: string): string {
   return s
     .replace(/&#91;/g, '[')
     .replace(/&#93;/g, ']')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&#x27;/g, "'")
-    .replace(/&#x2F;/g, '/')
-    .replace(/&nbsp;/g, ' ')
+    .replace(/&(\w+);/g, (_s: string, name: string): string => NAMED_ENTITIES.get(name) ?? _s)
     .replace(/&#(\d+);/g, (_s: string, c: string): string => fromCodePoint(parseInt(c, 10)))
     .replace(/&#x([0-9a-fA-F]+);/g, (_s: string, hex: string): string => fromCodePoint(parseInt(hex, 16)))
 }
@@ -57,14 +64,7 @@ export function decodeHtmlEntities(s: string): string {
   return s
     .replace(/&#91;/g, '[')
     .replace(/&#93;/g, ']')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&#x27;/g, "'")
-    .replace(/&#x2F;/g, '/')
-    .replace(/&nbsp;/g, ' ')
+    .replace(/&(\w+);/g, (_s: string, name: string): string => NAMED_ENTITIES.get(name) ?? _s)
     .replace(/&#(\d+);/g, (_s: string, c: string): string => fromCodePoint(parseInt(c, 10)))
     .replace(/&#x([0-9a-fA-F]+);/g, (_s: string, hex: string): string => fromCodePoint(parseInt(hex, 16)))
     .replace(/<br\s*\/?>/gi, '\n')
