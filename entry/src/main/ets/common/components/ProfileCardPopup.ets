@@ -2,11 +2,12 @@ import { appStore } from '../../store/AppStore'
 import { routerStore, Screen } from '../../store/RouterStore'
 import { ProfileData, AdminForumsData } from '../../model/User'
 import { AppColors } from '../constants/Constants'
-import { formatTime, fmtNum, escHtml, unescapeHtml } from '../utils/Utils'
+import { formatTime, fmtNum, escHtml } from '../utils/Utils'
+import { unescapeHtml } from '../../parser/_shared/HtmlEntityCodec'
 import { Avatar } from './Avatar'
 import { MakeNoteDialog } from '../dialogs/Dialogs'
 
-import { getUserActivityAnalysis } from '../../service/NgaApi'
+import { getUserActivityAnalysis } from '../../service/api/UserApi'
 import type { UserActivityAnalysis, ForumStat } from '../../model/NgaApiResults'
 import { getActiveAiValidationMessage } from '../../service/ai/ActiveAiService'
 
@@ -94,9 +95,9 @@ export struct ProfileCardPopup {
       builder: MakeNoteDialog({
         userName: this.profile?.userName ?? '',
         uid: this.targetUid,
-        currentNote: appStore.getNote(this.targetUid),
+        currentNote: appStore.settingsStore.getNote(this.targetUid),
         onConfirm: (note: string, uid: string, userName: string): void => {
-          appStore.addOrUpdateNote(uid, userName, note)
+          appStore.settingsStore.addOrUpdateNote(uid, userName, note)
           appStore.showToast('备注已保存')
         }
       }),
@@ -225,8 +226,8 @@ export struct ProfileCardPopup {
           Text(`UID: ${escHtml(profile.uid)}`)
             .fontSize(11).fontColor(AppColors.textTertiary).margin({ top: 3 })
 
-          if (appStore.getNote(profile.uid).length > 0) {
-            Text('备注: ' + appStore.getNote(profile.uid))
+          if (appStore.settingsStore.getNote(profile.uid).length > 0) {
+            Text('备注: ' + appStore.settingsStore.getNote(profile.uid))
               .fontSize(11).fontColor(AppColors.warning).margin({ top: 2 })
           }
         }
@@ -284,7 +285,7 @@ export struct ProfileCardPopup {
           .padding({ top: 10, bottom: 10 })
           .onClick(() => this.navigateAuthorPosts(profile.uid, profile.userName, true))
         Divider().vertical(true).height(16).alignSelf(ItemAlign.Center).color(AppColors.separator)
-        Text(appStore.getNote(profile.uid).length > 0 ? '编辑备注' : '备注')
+        Text(appStore.settingsStore.getNote(profile.uid).length > 0 ? '编辑备注' : '备注')
           .fontSize(12)
           .fontColor(AppColors.primary)
           .layoutWeight(1).textAlign(TextAlign.Center)
@@ -305,10 +306,10 @@ export struct ProfileCardPopup {
           .padding({ top: 10, bottom: 10 })
           .onClick(() => {
             if (appStore.settings.blacklist.some(e => e.userId === profile.uid)) {
-              appStore.removeBlacklist(profile.uid)
+              appStore.settingsStore.removeBlacklist(profile.uid)
               appStore.showToast('已取消屏蔽')
             } else {
-              appStore.addBlacklist({
+              appStore.settingsStore.addBlacklist({
                 userId: profile.uid,
                 nickName: profile.userName || `User${profile.uid}`
               })

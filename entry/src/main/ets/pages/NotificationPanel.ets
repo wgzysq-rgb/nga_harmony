@@ -1,13 +1,14 @@
 /**
- * 通知面板 - 从 NotificationPage 迁移, 统一 Panel 架构
+ * 通知面板
  */
 
 import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
-import { getNotifications, clearNotifications } from '../service/NgaApi'
+import { getNotifications, clearNotifications } from '../service/api/MessageApi'
 import type { NotificationInfo, ReplyNotification, UpvoteNotification } from '../model/Notification'
 import { AppColors, NOTI_TYPE_MAP, getNotiIcon } from '../common/constants/Constants'
-import { formatTime, escHtml, unescapeHtml } from '../common/utils/Utils'
+import { formatTime, escHtml } from '../common/utils/Utils'
+import { unescapeHtml } from '../parser/_shared/HtmlEntityCodec'
 import { BreakpointType } from '../common/constants/Constants'
 import { PanelNavBar } from '../common/components/PanelNavBar'
 import { Avatar } from '../common/components/Avatar'
@@ -197,8 +198,8 @@ export struct NotificationPanel {
                         if (n.userName.length > 0) {
                           Text(unescapeHtml(n.userName)).fontSize(15).fontColor(AppColors.primary)
                             .fontWeight(n.unread ? FontWeight.Bold : FontWeight.Normal)
-                          if (appStore.getNote(n.userId).length > 0) {
-                            Text('(' + appStore.getNote(n.userId) + ')')
+                          if (appStore.settingsStore.getNote(n.userId).length > 0) {
+                            Text('(' + appStore.settingsStore.getNote(n.userId) + ')')
                               .fontSize(11).fontColor(AppColors.warning).margin({ left: 3 })
                           }
                           Text('').margin({ right: 4 })

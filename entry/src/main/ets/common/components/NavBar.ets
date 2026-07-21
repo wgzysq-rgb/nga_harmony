@@ -1,5 +1,5 @@
 /**
- * 通用导航栏组件 - 从 React NavBar.tsx 迁移
+ * 通用导航栏组件
  */
 import { AppColors } from '../constants/Constants'
 

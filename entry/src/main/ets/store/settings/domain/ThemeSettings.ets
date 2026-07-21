@@ -30,9 +30,6 @@ export class ThemeSettings {
   /** 按当前 theme 应用颜色模式与状态栏样式 */
   applyCurrentTheme(): void {
     let theme: string = this.ctx.state.theme
-    if (theme === 'original' || theme === 'white') {
-      theme = 'light'
-    }
     let mode: number
     let effectiveTheme: string
     if (theme === 'system') {

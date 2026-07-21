@@ -64,7 +64,7 @@ export struct MutedVideo {
       .backgroundColor('rgba(0, 0, 0, 0.5)')
       .margin({ top: 8, right: 8 })
       .onClick(() => {
-        appStore.setVideoMuted(!this.videoMuted)
+        appStore.settingsStore.setVideoMuted(!this.videoMuted)
       })
     }
   }

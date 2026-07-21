@@ -1,7 +1,7 @@
 import { taskpool } from '@kit.ArkTS'
 import { withTimeout } from '../../common/utils/TimeoutUtils'
 import { BBNode, BBNodeType } from '../../model/BBCodeNode'
-import { parseBBCode } from './BBCodeParser'
+import { parseBBCode } from './parser'
 import { parseBBCodeTask, BBNodeJSON } from '../task/BBCodeParseTask'
 import { LruCache } from '../../common/cache/LruCache'
 import { Logger, DOMAIN_PARSER } from '../../common/utils/Logger'

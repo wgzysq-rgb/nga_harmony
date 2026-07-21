@@ -1,5 +1,5 @@
 /**
- * Toast 提示组件 - 从 React Toast.tsx 迁移
+ * Toast 提示组件
  * 通过 AppStorage 驱动显示
  */
 

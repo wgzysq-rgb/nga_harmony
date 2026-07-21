@@ -1,5 +1,5 @@
 /**
- * 设置面板 - 从 SettingsPage 迁移, 统一 Panel 架构
+ * 设置面板
  */
 
 
@@ -254,7 +254,7 @@ export struct SettingsPanel {
         options: this.threadNavOptions(),
         selected: parseInt(appStore.settings.threadNavMode),
         onSelect: (v: number): void => {
-          appStore.setThreadNavMode(String(v))
+          appStore.settingsStore.setThreadNavMode(String(v))
           this.threadNavBadge = this.threadNavLabel(String(v))
         }
       }),
@@ -289,7 +289,7 @@ export struct SettingsPanel {
         options: this.prefetchPageOptions(),
         selected: appStore.settings.prefetchPageCount,
         onSelect: (v: number): void => {
-          appStore.setPrefetchPageCount(v)
+          appStore.settingsStore.setPrefetchPageCount(v)
           this.prefetchPageBadge = this.prefetchPageLabel(v)
         }
       }),
@@ -306,7 +306,7 @@ export struct SettingsPanel {
         options: this.imageStrategyOptions(),
         selected: parseInt(appStore.settings.imageLoadStrategy),
         onSelect: (v: number): void => {
-          appStore.setImageLoadStrategy(String(v))
+          appStore.settingsStore.setImageLoadStrategy(String(v))
           this.imageStrategyBadge = this.imageStrategyLabel(String(v))
         }
       }),
@@ -317,7 +317,7 @@ export struct SettingsPanel {
   }
 
   private updateAiBadge(): void {
-    const profile: AiProviderProfile | null = appStore.getActiveAiProfile()
+    const profile: AiProviderProfile | null = appStore.settingsStore.getActiveAiProfile()
     if (profile) {
       this.aiProviderBadge = profile.name
     } else if (appStore.settings.aiProfiles.length > 0) {
@@ -385,7 +385,7 @@ export struct SettingsPanel {
                 iconRes: $r('app.media.icon_calendar_check'), iconColor: IconColors.checkin, label: '自动签到',
                 isOn: appStore.settings.autoCheckin,
                 onChange: (v: boolean) => {
-                  appStore.setAutoCheckin(v)
+                  appStore.settingsStore.setAutoCheckin(v)
                 }
               })
 
@@ -411,7 +411,7 @@ export struct SettingsPanel {
                 iconRes: $r('app.media.icon_hand'), iconColor: IconColors.hand, label: '智感握姿',
                 isOn: appStore.settings.smartGrip,
                 onChange: (v: boolean) => {
-                  appStore.setSmartGrip(v)
+                  appStore.settingsStore.setSmartGrip(v)
                 }
               })
 
@@ -435,7 +435,7 @@ export struct SettingsPanel {
                 iconRes: $r('app.media.icon_clipboard'), iconColor: IconColors.signature, label: '显示签名',
                 isOn: appStore.settings.showSignature,
                 onChange: (v: boolean) => {
-                  appStore.setShowSignature(v)
+                  appStore.settingsStore.setShowSignature(v)
                 }
               })
 
@@ -466,7 +466,7 @@ export struct SettingsPanel {
 
                 Toggle({ type: ToggleType.Switch, isOn: appStore.settings.enableImageSizePrefetch })
                   .onChange((v: boolean) => {
-                    appStore.setEnableImageSizePrefetch(v)
+                    appStore.settingsStore.setEnableImageSizePrefetch(v)
                   })
               }
               .width('100%').height(52).padding({ left: 16, right: 16 }).alignItems(VerticalAlign.Center)
@@ -497,7 +497,7 @@ export struct SettingsPanel {
                 iconRes: $r('app.media.icon_globe'), iconColor: IconColors.globe, label: '内置网页浏览',
                 isOn: appStore.settings.useInternalWebView,
                 onChange: (v: boolean) => {
-                  appStore.setUseInternalWebView(v)
+                  appStore.settingsStore.setUseInternalWebView(v)
                 }
               })
             }
@@ -623,7 +623,7 @@ export struct SettingsPanel {
     .borderRadius(10)
     .onClick(() => {
       if (theme.name !== this.themeName) {
-        appStore.setTheme(theme.name)
+        appStore.settingsStore.setTheme(theme.name)
       }
     })
   }

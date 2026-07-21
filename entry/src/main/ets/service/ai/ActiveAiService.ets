@@ -66,7 +66,7 @@ const toolRegistry: ToolRegistry = createToolRegistry()
  * @returns 当前激活配置，若未选择或配置不存在则返回 null
  */
 export function getActiveAiProfile(): AiProviderProfile | null {
-  return appStore.getActiveAiProfile()
+  return appStore.settingsStore.getActiveAiProfile()
 }
 
 /**

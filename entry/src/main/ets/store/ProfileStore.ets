@@ -1,4 +1,4 @@
-import { getUserProfile } from '../service/NgaApi'
+import { getUserProfile } from '../service/api/UserApi'
 import { LruCache } from '../common/cache/LruCache'
 import { BaseStore } from './BaseStore'
 import { PreferencesStore } from '../common/infra/PreferencesStore'

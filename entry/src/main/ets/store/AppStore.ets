@@ -13,9 +13,7 @@ import { ToastManager } from '../common/feedback/ToastManager'
 
 import type { AuthState, Session } from './AuthStore'
 import { routerStore } from './RouterStore'
-import type { SettingsState, FavBoard, BlacklistEntry } from './SettingsStore'
-import type { AiProviderProfile } from '../model/AiConfig'
-import type { WebSearchProviderProfile } from '../model/WebSearchConfig'
+import type { SettingsState } from './settings/SettingsState'
 import type { BrowseHistoryEntry } from './HistoryStore'
 import type { ToastState } from '../common/feedback/ToastManager'
 import type { ProfileData } from '../model/User'
@@ -141,20 +139,6 @@ class AppStoreClass {
     return this.settingsStore.state
   }
 
-  addBlacklist(entry: BlacklistEntry): void { this.settingsStore.addBlacklist(entry) }
-  removeBlacklist(userId: string): void { this.settingsStore.removeBlacklist(userId) }
-  removeAllBlacklist(): void { this.settingsStore.removeAllBlacklist() }
-  getBlacklistIds(): Set<string> { return this.settingsStore.getBlacklistIds() }
-  getBlacklistHeaderString(): string { return this.settingsStore.getBlacklistHeaderString() }
-
-  ensureFavorites(): void { this.settingsStore.ensureFavorites() }
-  addFavorite(board: FavBoard): void { this.settingsStore.addFavorite(board) }
-  removeFavorite(fid: number): void { this.settingsStore.removeFavorite(fid) }
-
-  setFontSize(size: number): void { this.settingsStore.setFontSize(size) }
-  setDomainIndex(index: number): void { this.settingsStore.setDomainIndex(index) }
-  setTheme(theme: string): void { this.settingsStore.setTheme(theme) }
-  setAutoCheckin(enabled: boolean): void { this.settingsStore.setAutoCheckin(enabled) }
   /** 若自动签到实际成功，则显示全局成功提示。 */
   autoCheckinIfNeeded(): void {
     this.settingsStore.autoCheckinIfNeeded().then((checked: boolean): void => {
@@ -163,57 +147,6 @@ class AppStoreClass {
       }
     }).catch((): void => {})
   }
-  setSmartGrip(enabled: boolean): void { this.settingsStore.setSmartGrip(enabled) }
-  setShowSignature(enabled: boolean): void { this.settingsStore.setShowSignature(enabled) }
-
-  setTtsPerson(v: number): void { this.settingsStore.setTtsPerson(v) }
-  setTtsSpeed(v: number): void { this.settingsStore.setTtsSpeed(v) }
-  setTtsVolume(v: number): void { this.settingsStore.setTtsVolume(v) }
-  setTtsPitch(v: number): void { this.settingsStore.setTtsPitch(v) }
-
-  setImageLoadStrategy(v: string): void { this.settingsStore.setImageLoadStrategy(v) }
-  setEnableImageSizePrefetch(enabled: boolean): void { this.settingsStore.setEnableImageSizePrefetch(enabled) }
-  setVideoMuted(enabled: boolean): void { this.settingsStore.setVideoMuted(enabled) }
-
-  /** 设置是否在应用内 WebView 打开无关联链接 */
-  setUseInternalWebView(enabled: boolean): void { this.settingsStore.setUseInternalWebView(enabled) }
-  setThreadNavMode(v: string): void { this.settingsStore.setThreadNavMode(v) }
-  setPrefetchPageCount(v: number): void { this.settingsStore.setPrefetchPageCount(v) }
-
-  addOrUpdateNote(userId: string, nickName: string, note: string): void {
-    this.settingsStore.addOrUpdateNote(userId, nickName, note)
-  }
-  removeNote(userId: string): void { this.settingsStore.removeNote(userId) }
-  removeAllNotes(): void { this.settingsStore.removeAllNotes() }
-  getNote(userId: string): string { return this.settingsStore.getNote(userId) }
-  getNoteMap(): Record<string, string> { return this.settingsStore.getNoteMap() }
-
-  addKeyword(keyword: string): void { this.settingsStore.addKeyword(keyword) }
-  removeKeyword(keyword: string): void { this.settingsStore.removeKeyword(keyword) }
-  toggleKeyword(keyword: string): void { this.settingsStore.toggleKeyword(keyword) }
-  removeAllKeywords(): void { this.settingsStore.removeAllKeywords() }
-  getEnabledKeywords(): string[] { return this.settingsStore.getEnabledKeywords() }
-
-  // ---------- Facade: AI Settings ----------
-
-  addAiProfile(profile: AiProviderProfile): void { this.settingsStore.addAiProfile(profile) }
-  updateAiProfile(profile: AiProviderProfile): void { this.settingsStore.updateAiProfile(profile) }
-  deleteAiProfile(id: string): void { this.settingsStore.deleteAiProfile(id) }
-  setActiveAiProfile(id: string): void { this.settingsStore.setActiveAiProfile(id) }
-  getActiveAiProfile(): AiProviderProfile | null { return this.settingsStore.getActiveAiProfile() }
-
-  // --- AI Scenario Prompts ---
-  getScenarioPrompt(scenario: string): string { return this.settingsStore.getScenarioPrompt(scenario) }
-  setScenarioPrompt(scenario: string, prompt: string): void { this.settingsStore.setScenarioPrompt(scenario, prompt) }
-  resetScenarioPrompt(scenario: string): void { this.settingsStore.resetScenarioPrompt(scenario) }
-
-  // ---------- Facade: Web Search Settings ----------
-
-  addWebSearchProfile(profile: WebSearchProviderProfile): void { this.settingsStore.addWebSearchProfile(profile) }
-  updateWebSearchProfile(profile: WebSearchProviderProfile): void { this.settingsStore.updateWebSearchProfile(profile) }
-  deleteWebSearchProfile(id: string): void { this.settingsStore.deleteWebSearchProfile(id) }
-  setActiveWebSearchProfile(id: string): void { this.settingsStore.setActiveWebSearchProfile(id) }
-  getActiveWebSearchProfile(): WebSearchProviderProfile | null { return this.settingsStore.getActiveWebSearchProfile() }
 
   // ---------- Facade: Categories ----------
 

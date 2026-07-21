@@ -1,8 +1,8 @@
 import { systemShare } from '@kit.ShareKit';
 import { uniformTypeDescriptor as utd } from '@kit.ArkData';
 import { common, Context } from '@kit.AbilityKit';
-import { getActiveDomain } from '../../service/NgaApi';
-import { unescapeHtml } from './Utils';
+import { getActiveDomain } from '../../service/api/MiscApi';
+import { unescapeHtml } from '../../parser/_shared/HtmlEntityCodec';
 import type { PostInfo } from '../../model/PostInfo';
 import { Logger, DOMAIN_MANAGER, formatError } from './Logger'
 

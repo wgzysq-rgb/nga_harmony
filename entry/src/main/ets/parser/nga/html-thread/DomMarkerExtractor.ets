@@ -4,7 +4,7 @@
  * 各 extract 函数保守保留独立实现（未强行参数化），原因：
  * - marker 构造存在差异：部分 marker 自带闭合 `>`（如 postsubject），部分需后续 indexOf('>')
  * - 结果后处理存在差异：postcontent/postsubject 调 unescapeHtml，postdate/forumName/threadsubject 调 trim
- * 物理拆分零风险，逻辑统一收益低且需逐字节验证，故仅迁移。
+ * 各函数保持独立实现。
  */
 
 import { unescapeHtml } from '../../_shared/HtmlEntityCodec';

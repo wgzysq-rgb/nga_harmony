@@ -6,9 +6,6 @@ import type { UserNoteEntry } from '../../model/NoteInfo'
 import type { AiProviderProfile } from '../../model/AiConfig'
 import type { WebSearchProviderProfile } from '../../model/WebSearchConfig'
 
-// 类型定义已迁至 model/SocialEntries.ets，此处 re-export 保持 store 内调用方零改动
-export { FavBoard }
-export type { BlacklistEntry }
 
 /**
  * 用户设置持久化根状态。

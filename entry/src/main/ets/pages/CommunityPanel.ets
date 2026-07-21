@@ -1,6 +1,6 @@
 import { appStore } from '../store/AppStore'
 import type { AuthState } from '../store/AuthStore'
-import { FavBoard } from '../store/SettingsStore'
+import { FavBoard } from '../model/SocialEntries'
 import { routerStore, RouterStoreClass, Screen } from '../store/RouterStore'
 import { AppColors } from '../common/constants/Constants'
 import { CategoryDataSource, SidebarDataSource, SidebarSection, SidebarBoardItem } from '../common/datasource/LazyDataSource'
@@ -146,13 +146,13 @@ export struct CommunityPanel {
 
   private handleToggleFav(fid: number, name: string): void {
     if (this.isFavBoard(fid)) {
-      appStore.removeFavorite(fid)
+      appStore.settingsStore.removeFavorite(fid)
     } else {
       const fb = new FavBoard()
       fb.fid = fid
       fb.stid = fid
       fb.name = name
-      appStore.addFavorite(fb)
+      appStore.settingsStore.addFavorite(fb)
     }
   }
 

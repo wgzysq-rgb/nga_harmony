@@ -1,14 +1,15 @@
 /**
- * 私信列表面板 - 从 MessageListPage 迁移, 统一 Panel 架构
+ * 私信列表面板
  */
 
 import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
-import { getMessageList, sendMessage } from '../service/NgaApi'
+import { getMessageList, sendMessage } from '../service/api/MessageApi'
 import type { MessageListResult, MessageSendResult } from '../model/MessageResult'
 import type { MessageThreadInfo } from '../model/Message'
 import { AppColors, BreakpointType } from '../common/constants/Constants'
-import { formatTime, unescapeHtml } from '../common/utils/Utils'
+import { formatTime } from '../common/utils/Utils'
+import { unescapeHtml } from '../parser/_shared/HtmlEntityCodec'
 import { Avatar } from '../common/components/Avatar'
 import { PanelNavBar } from '../common/components/PanelNavBar'
 import { MessageThreadDataSource } from '../common/datasource/LazyDataSource'

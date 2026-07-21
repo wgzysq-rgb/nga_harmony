@@ -46,7 +46,6 @@ export const SCENARIO_META: Record<string, ScenarioMeta> = {
  * 各场景默认 system prompt。
  *
  * 当用户未自定义时使用此默认值。
- * 保持与旧版硬编码 prompt 的指令部分一致，确保行为无变化。
  */
 export const DEFAULT_SYSTEM_PROMPTS: Record<string, string> = {
   [AiScenario.POST_SUMMARY]: [

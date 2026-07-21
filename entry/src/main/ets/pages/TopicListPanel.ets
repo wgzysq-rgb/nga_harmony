@@ -9,11 +9,13 @@ import { BusinessError } from '@kit.BasicServicesKit'
 import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
 import { withTimeout } from '../common/utils/TimeoutUtils'
-import { getTopicList, createTopicListParams, removeFavorite } from '../service/NgaApi'
-import type { TopicListParams } from '../service/NgaApi'
+import { getTopicList, createTopicListParams } from '../service/api/ForumApi'
+import { removeFavorite } from '../service/api/FavoriteApi'
+import type { TopicListParams } from '../service/api/ForumApi'
 import type { TopicListResult } from '../model/NgaApiResults'
 import { AppColors, FONT_COLORS, SORT_MODES, SortMode, BreakpointType } from '../common/constants/Constants'
-import { formatTime, unescapeHtml } from '../common/utils/Utils'
+import { formatTime } from '../common/utils/Utils'
+import { unescapeHtml } from '../parser/_shared/HtmlEntityCodec'
 import { PanelNavBar } from '../common/components/PanelNavBar'
 import { ThreadDataSource } from '../common/datasource/LazyDataSource'
 import { LoadingStateView, ErrorStateView, EmptyStateView } from '../common/components/PageStateView'
@@ -159,7 +161,7 @@ export struct TopicListPanel {
       for (let i = 0; i < pages.length; i++) {
         const p: number = pages[i]
         const params: TopicListParams = this.buildTopicParams(p)
-        promises.push(withTimeout<TopicListResult>(getTopicList(appStore.auth.token, params, appStore.getBlacklistIds(), appStore.getEnabledKeywords()), 15000))
+        promises.push(withTimeout<TopicListResult>(getTopicList(appStore.auth.token, params, appStore.settingsStore.getBlacklistIds(), appStore.settingsStore.getEnabledKeywords()), 15000))
       }
       const results: TopicListResult[] = await Promise.all(promises)
 
@@ -285,7 +287,7 @@ export struct TopicListPanel {
     const params: TopicListParams = this.buildTopicParams(page)
 
     try {
-      const result: TopicListResult = await withTimeout<TopicListResult>(getTopicList(appStore.auth.token, params, appStore.getBlacklistIds(), appStore.getEnabledKeywords()), 15000)
+      const result: TopicListResult = await withTimeout<TopicListResult>(getTopicList(appStore.auth.token, params, appStore.settingsStore.getBlacklistIds(), appStore.settingsStore.getEnabledKeywords()), 15000)
       if (gen !== this.mgr.getGeneration()) return
       if (result.ok && result.data) {
         const list: object[] = result.data.threadPageList
@@ -368,7 +370,7 @@ export struct TopicListPanel {
             try {
               const params: TopicListParams = this.buildTopicParams(page)
               const result: TopicListResult = await withTimeout<TopicListResult>(
-                getTopicList(appStore.auth.token, params, appStore.getBlacklistIds(), appStore.getEnabledKeywords()), 10000
+                getTopicList(appStore.auth.token, params, appStore.settingsStore.getBlacklistIds(), appStore.settingsStore.getEnabledKeywords()), 10000
               )
               if (result.ok && result.data) {
                 const pr: PrefetchPageResult = new PrefetchPageResult()
@@ -578,8 +580,8 @@ struct TopicCardComponent {
       Row() {
         Row() {
           AnonymousName({ author: String(this.thread['author'] ?? ''), isAnonymous: this.thread['isAnonymity'] as boolean, fontSize: 12 })
-          if (appStore.getNote(String(this.thread['authorId'] ?? '')).length > 0) {
-            Text('(' + appStore.getNote(String(this.thread['authorId'] ?? '')) + ')')
+          if (appStore.settingsStore.getNote(String(this.thread['authorId'] ?? '')).length > 0) {
+            Text('(' + appStore.settingsStore.getNote(String(this.thread['authorId'] ?? '')) + ')')
               .fontSize(11).fontColor(AppColors.warning).margin({ left: 3 })
           }
           Text(` · ${formatTime(Number(this.thread['postDate'] ?? 0))}`)

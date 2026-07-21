@@ -2,8 +2,9 @@ import { Context } from '@kit.AbilityKit'
 import { BaseStore } from './BaseStore'
 import { PreferencesStore } from '../common/infra/PreferencesStore'
 import { SerialQueue } from '../common/infra/SerialQueue'
-import { SettingsState, FavBoard } from './settings/SettingsState'
-import type { BlacklistEntry } from './settings/SettingsState'
+import { SettingsState } from './settings/SettingsState'
+import { FavBoard } from '../model/SocialEntries'
+import type { BlacklistEntry } from '../model/SocialEntries'
 import { SettingsContext } from './settings/SettingsContext'
 import { ThemeSettings } from './settings/domain/ThemeSettings'
 import { DisplaySettings } from './settings/domain/DisplaySettings'
@@ -26,17 +27,12 @@ import {
   KEY_USE_INTERNAL_WEBVIEW,
 } from '../common/constants/AppStorageKeys'
 
-// 类型与构造器从新位置 re-export，保持调用方 `from './SettingsStore'` 零改动
-export { SettingsState, FavBoard } from './settings/SettingsState'
-export type { BlacklistEntry } from './settings/SettingsState'
 
 /**
  * 用户设置管理门面（Facade）。
  *
- * 持有持久化根状态 state 与 8 个设置域子 store（theme/display/media/reading/
- * socialList/filterKeyword/note/checkin），编排 init / loadUserSettings /
- * persistSettings / reset 生命周期。所有 setter 兼容转发到对应域子 store，
- * 保证现有 AppStore / pages 调用方零改动。
+ * 持有持久化根状态 state 与设置域子 store，编排 init / loadUserSettings /
+ * persistSettings / reset 生命周期。
  */
 export class SettingsStore extends BaseStore<SettingsState> {
   override state: SettingsState = new SettingsState()
@@ -127,7 +123,7 @@ export class SettingsStore extends BaseStore<SettingsState> {
     AppStorage.setOrCreate(KEY_USE_INTERNAL_WEBVIEW, this.state.useInternalWebView)
   }
 
-  // ============== Facade: 兼容转发 setter ==============
+  // ============== 设置域 setter ==============
 
   // --- Blacklist (SocialList) ---
   addBlacklist(entry: BlacklistEntry): void { this.socialListSettings.addBlacklist(entry) }

@@ -1,5 +1,5 @@
 import { BBNode } from '../../model/BBCodeNode'
-import { parseBBCode } from '../bbcode/BBCodeParser'
+import { parseBBCode } from '../bbcode/parser'
 
 interface BBNodeJSON {
   type: number

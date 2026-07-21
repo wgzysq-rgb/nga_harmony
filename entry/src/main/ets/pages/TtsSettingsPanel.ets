@@ -94,7 +94,7 @@ export struct TtsSettingsPanel {
           }
           appStore.showToast('当前设备不支持下载此音色')
           this.currentPerson = this.previousPerson
-          appStore.setTtsPerson(this.previousPerson)
+          appStore.settingsStore.setTtsPerson(this.previousPerson)
           return
         }
         downloadResponse.on('complete', (voiceInfo: textToSpeech.VoiceInfo) => {
@@ -104,7 +104,7 @@ export struct TtsSettingsPanel {
         let errorCallback: ErrorCallback<BusinessError> = (error: BusinessError) => {
           appStore.showToast('当前设备不支持下载此音色')
           this.currentPerson = this.previousPerson
-          appStore.setTtsPerson(this.previousPerson)
+          appStore.settingsStore.setTtsPerson(this.previousPerson)
         }
         downloadResponse.on('error', errorCallback)
       })
@@ -148,7 +148,7 @@ export struct TtsSettingsPanel {
                 })
                   .onChange((v: number, mode: SliderChangeMode) => {
                     this.currentSpeed = v
-                    appStore.setTtsSpeed(v)
+                    appStore.settingsStore.setTtsSpeed(v)
                   })
                   .layoutWeight(1)
                   .height(40)
@@ -170,7 +170,7 @@ export struct TtsSettingsPanel {
                 })
                   .onChange((v: number, mode: SliderChangeMode) => {
                     this.currentVolume = v
-                    appStore.setTtsVolume(v)
+                    appStore.settingsStore.setTtsVolume(v)
                   })
                   .layoutWeight(1)
                   .height(40)
@@ -192,7 +192,7 @@ export struct TtsSettingsPanel {
                 })
                   .onChange((v: number, mode: SliderChangeMode) => {
                     this.currentPitch = v
-                    appStore.setTtsPitch(v)
+                    appStore.settingsStore.setTtsPitch(v)
                   })
                   .layoutWeight(1)
                   .height(40)
@@ -257,7 +257,7 @@ export struct TtsSettingsPanel {
           this.downloadVoice(opt.person, opt.label)
         }
         this.currentPerson = opt.person
-        appStore.setTtsPerson(opt.person)
+        appStore.settingsStore.setTtsPerson(opt.person)
       }
     })
   }

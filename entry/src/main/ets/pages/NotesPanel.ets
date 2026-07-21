@@ -2,7 +2,8 @@ import { appStore } from '../store/AppStore'
 import type { UserNoteEntry } from '../model/NoteInfo'
 import { display } from '@kit.ArkUI'
 import { AppColors } from '../common/constants/Constants'
-import { escHtml, unescapeHtml } from '../common/utils/Utils'
+import { escHtml } from '../common/utils/Utils'
+import { unescapeHtml } from '../parser/_shared/HtmlEntityCodec'
 import { NotesDataSource } from '../common/datasource/LazyDataSource'
 import { PanelNavBar } from '../common/components/PanelNavBar'
 import { ConfirmDialog, MakeNoteDialog, AddNoteDialog } from '../common/dialogs/Dialogs'
@@ -29,7 +30,7 @@ export struct NotesPanel {
       destructive: true,
       onConfirm: () => {
         if (this.removeTarget) {
-          appStore.removeNote(this.removeTarget.userId)
+          appStore.settingsStore.removeNote(this.removeTarget.userId)
           this.refreshNotes()
           this.removeTarget = null
         }
@@ -50,7 +51,7 @@ export struct NotesPanel {
         uid: entry.userId,
         currentNote: entry.note,
         onConfirm: (note: string, uid: string, userName: string): void => {
-          appStore.addOrUpdateNote(uid, userName, note)
+          appStore.settingsStore.addOrUpdateNote(uid, userName, note)
           appStore.showToast('备注已保存')
           this.editTarget = null
           this.refreshNotes()
@@ -117,7 +118,7 @@ export struct NotesPanel {
             Text('共 ' + String(this.notesCount) + ' 条备注').fontSize(13).fontColor(AppColors.textTertiary).layoutWeight(1)
             Text('删除全部').fontSize(13).fontColor(AppColors.destructive)
               .onClick(() => {
-                appStore.removeAllNotes()
+                appStore.settingsStore.removeAllNotes()
                 this.refreshNotes()
                 appStore.showToast('已清空备注')
               })
@@ -177,7 +178,7 @@ export struct NotesPanel {
         this.addDialogController = new CustomDialogController({
           builder: AddNoteDialog({
             onConfirm: (nickName: string, uid: string): void => {
-              appStore.addOrUpdateNote(uid, nickName, '')
+              appStore.settingsStore.addOrUpdateNote(uid, nickName, '')
               this.refreshNotes()
               appStore.showToast('已添加备注')
             }

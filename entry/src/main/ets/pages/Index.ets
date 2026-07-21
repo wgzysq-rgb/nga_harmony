@@ -5,7 +5,7 @@
 
 import { appStore } from '../store/AppStore'
 import { AppColors } from '../common/constants/Constants'
-import { verifyToken } from '../service/NgaApi'
+import { verifyToken } from '../service/api/AuthApi'
 import { Logger, DOMAIN_UI } from '../common/utils/Logger'
 
 const logger = new Logger(DOMAIN_UI, 'IndexPage')

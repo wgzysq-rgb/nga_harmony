@@ -119,7 +119,7 @@ struct AiChatPage {
       }
       // 获取场景 system prompt（有 scenario 时生效，自由聊天时不注入）
       if (this.scenario.length > 0) {
-        this.systemPrompt = appStore.getScenarioPrompt(this.scenario)
+        this.systemPrompt = appStore.settingsStore.getScenarioPrompt(this.scenario)
       }
     }
     if (this.initialPrompt.length > 0) {

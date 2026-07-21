@@ -1,12 +1,13 @@
 /**
- * 黑名单管理面板 - 从 BlacklistPage 迁移, 统一 Panel 架构
+ * 黑名单管理面板
  */
 
 import { appStore } from '../store/AppStore'
-import type { BlacklistEntry } from '../store/SettingsStore'
+import type { BlacklistEntry } from '../model/SocialEntries'
 import { display } from '@kit.ArkUI'
 import { AppColors } from '../common/constants/Constants'
-import { escHtml, unescapeHtml } from '../common/utils/Utils'
+import { escHtml } from '../common/utils/Utils'
+import { unescapeHtml } from '../parser/_shared/HtmlEntityCodec'
 import { BlacklistDataSource } from '../common/datasource/LazyDataSource'
 import { PanelNavBar } from '../common/components/PanelNavBar'
 import { EmptyStateView } from '../common/components/PageStateView'
@@ -32,7 +33,7 @@ export struct BlacklistPanel {
       destructive: true,
       onConfirm: () => {
         if (this.removeTarget) {
-          appStore.removeBlacklist(this.removeTarget.userId)
+          appStore.settingsStore.removeBlacklist(this.removeTarget.userId)
           this.refreshBlacklist()
           this.removeTarget = null
         }
@@ -97,7 +98,7 @@ export struct BlacklistPanel {
             Text('共 ' + String(this.blacklistCount) + ' 人').fontSize(13).fontColor(AppColors.textTertiary).layoutWeight(1)
             Text('删除全部').fontSize(13).fontColor(AppColors.destructive)
               .onClick(() => {
-                appStore.removeAllBlacklist()
+                appStore.settingsStore.removeAllBlacklist()
                 this.refreshBlacklist()
                 appStore.showToast('已清空黑名单')
               })
@@ -145,7 +146,7 @@ export struct BlacklistPanel {
         this.addDialogController = new CustomDialogController({
           builder: AddBlacklistDialog({
             onConfirm: (uid: string): void => {
-              appStore.addBlacklist({ userId: uid, nickName: `User${uid}` })
+              appStore.settingsStore.addBlacklist({ userId: uid, nickName: `User${uid}` })
               this.refreshBlacklist()
               appStore.showToast('已加入黑名单')
             }

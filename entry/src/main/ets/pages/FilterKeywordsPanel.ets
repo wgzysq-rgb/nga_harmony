@@ -24,7 +24,7 @@ export struct FilterKeywordsPanel {
       destructive: true,
       onConfirm: () => {
         if (this.removeTarget) {
-          appStore.removeKeyword(this.removeTarget)
+          appStore.settingsStore.removeKeyword(this.removeTarget)
           this.refreshKeywords()
           this.removeTarget = ''
         }
@@ -67,7 +67,7 @@ export struct FilterKeywordsPanel {
             Text('共 ' + String(this.keywordCount) + ' 个关键词').fontSize(13).fontColor(AppColors.textTertiary).layoutWeight(1)
             Text('删除全部').fontSize(13).fontColor(AppColors.destructive)
               .onClick(() => {
-                appStore.removeAllKeywords()
+                appStore.settingsStore.removeAllKeywords()
                 this.refreshKeywords()
                 appStore.showToast('已清空关键词')
               })
@@ -95,7 +95,7 @@ export struct FilterKeywordsPanel {
                   }
                   .layoutWeight(1).margin({ left: 12 }).alignItems(HorizontalAlign.Start)
                   .onClick(() => {
-                    appStore.toggleKeyword(item.keyword)
+                    appStore.settingsStore.toggleKeyword(item.keyword)
                     this.refreshKeywords()
                   })
 
@@ -122,7 +122,7 @@ export struct FilterKeywordsPanel {
         this.addDialogController = new CustomDialogController({
           builder: AddKeywordDialog({
             onConfirm: (keyword: string): void => {
-              appStore.addKeyword(keyword)
+              appStore.settingsStore.addKeyword(keyword)
               this.refreshKeywords()
               appStore.showToast('已添加关键词')
             }

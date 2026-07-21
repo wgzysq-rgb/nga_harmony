@@ -1,5 +1,6 @@
 import { AppColors } from '../common/constants/Constants'
-import { formatTime, unescapeHtml } from '../common/utils/Utils'
+import { formatTime } from '../common/utils/Utils'
+import { unescapeHtml } from '../parser/_shared/HtmlEntityCodec'
 import { appStore } from '../store/AppStore'
 import { BrowseHistoryEntry } from '../store/HistoryStore'
 import { routerStore, Screen } from '../store/RouterStore'
@@ -79,8 +80,8 @@ export struct BrowseHistoryPanel {
                             (itemObj as BrowseHistoryEntry).author.length === 39,
                           fontSize: 12
                         })
-                        if (appStore.getNote((itemObj as BrowseHistoryEntry).authorid).length > 0) {
-                          Text('(' + appStore.getNote((itemObj as BrowseHistoryEntry).authorid) + ')')
+                        if (appStore.settingsStore.getNote((itemObj as BrowseHistoryEntry).authorid).length > 0) {
+                          Text('(' + appStore.settingsStore.getNote((itemObj as BrowseHistoryEntry).authorid) + ')')
                             .fontSize(11).fontColor(AppColors.warning).margin({ left: 3 })
                         }
                         Text(` · ${formatTime((itemObj as BrowseHistoryEntry).ts / 1000)}`)

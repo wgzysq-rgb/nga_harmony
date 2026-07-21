@@ -1,4 +1,4 @@
-import { getNotifications } from '../service/NgaApi'
+import { getNotifications } from '../service/api/MessageApi'
 import { BaseStore } from './BaseStore'
 import { PreferencesStore } from '../common/infra/PreferencesStore'
 import { SerialQueue } from '../common/infra/SerialQueue'

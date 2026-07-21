@@ -1,8 +1,7 @@
 /**
  * 社交列表类型集合：收藏版块与黑名单条目。
  *
- * 由原 store/settings/SettingsState.ets 迁出，统一收敛到 model 层，
- * 消除 common/datasource 反向依赖 store 的分层违规。字段定义与序列化兼容旧版。
+ * 字段定义与序列化格式向后兼容。
  */
 
 /**

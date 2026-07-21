@@ -1,9 +1,10 @@
 /**
- * 登录页面 - 从 React LoginPage.tsx 迁移
+ * 登录页面
  * 支持两步登录：密码 → 验证码，以及凭据文件导入
  */
 
-import { loginStep1, loginStep2, injectCredentials, getActiveDomain } from '../service/NgaApi'
+import { loginStep1, loginStep2, injectCredentials } from '../service/api/AuthApi'
+import { getActiveDomain } from '../service/api/MiscApi'
 import { appStore } from '../store/AppStore'
 import { AppColors } from '../common/constants/Constants'
 import { CredentialPasswordDialog } from '../common/dialogs/Dialogs'

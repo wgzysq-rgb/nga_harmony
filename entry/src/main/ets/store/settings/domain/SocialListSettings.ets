@@ -1,8 +1,9 @@
-import { fetchForumFavorites } from '../../../service/NgaApi'
+import { fetchForumFavorites } from '../../../service/api/FavoriteApi'
 import { FilterListManager } from '../../../common/utils/FilterListManager'
 import { SettingsContext } from '../SettingsContext'
-import { FavBoard, SettingsState } from '../SettingsState'
-import type { BlacklistEntry } from '../SettingsState'
+import { SettingsState } from '../SettingsState'
+import { FavBoard } from '../../../model/SocialEntries'
+import type { BlacklistEntry } from '../../../model/SocialEntries'
 import { KEY_FAV_VERSION } from '../../../common/constants/AppStorageKeys'
 import { bumpAppStorageVersion } from '../../../common/utils/AppStorageVersion'
 

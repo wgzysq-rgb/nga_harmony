@@ -2,7 +2,7 @@ import { BBNode, BBNodeType } from '../../model/BBCodeNode'
 import { unescapeHtml } from '../../parser/_shared/HtmlEntityCodec'
 
 /**
- * 通用工具函数 - 从 React lib/utils.ts 迁移
+ * 通用工具函数
  */
 
 export function parseAlterinfoTs(alterinfo: string): number | null {
@@ -272,5 +272,3 @@ export function bbNodesToPlainText(nodes: BBNode[]): string {
   return unescapeHtml(result).replace(/\n{3,}/g, '\n\n').trim()
 }
 
-/** HTML 实体解码统一实现位于 parser/_shared/HtmlEntityCodec，此处 re-export 保持现有 import 入口稳定。 */
-export { unescapeHtml }

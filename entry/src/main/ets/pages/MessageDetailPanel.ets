@@ -1,12 +1,13 @@
 /**
- * 私信详情面板 - 从 MessageDetailPage 迁移, 统一 Panel 架构
+ * 私信详情面板
  */
 
 import { appStore } from '../store/AppStore'
-import { getMessageDetail, sendMessage } from '../service/NgaApi'
+import { getMessageDetail, sendMessage } from '../service/api/MessageApi'
 import type { MessageArticle } from '../model/Message'
 import { AppColors } from '../common/constants/Constants'
-import { formatTime, unescapeHtml } from '../common/utils/Utils'
+import { formatTime } from '../common/utils/Utils'
+import { unescapeHtml } from '../parser/_shared/HtmlEntityCodec'
 import { Avatar } from '../common/components/Avatar'
 import { MessageArticleDataSource } from '../common/datasource/LazyDataSource'
 import { LoadingStateView, ErrorStateView, EmptyStateView } from '../common/components/PageStateView'

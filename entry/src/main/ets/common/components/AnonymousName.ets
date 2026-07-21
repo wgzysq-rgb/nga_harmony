@@ -1,5 +1,5 @@
 import { AppColors } from '../constants/Constants'
-import { unescapeHtml } from '../utils/Utils'
+import { unescapeHtml } from '../../parser/_shared/HtmlEntityCodec'
 import { decodeAnonymousName } from '../../parser/AnonymousParser'
 
 @Component

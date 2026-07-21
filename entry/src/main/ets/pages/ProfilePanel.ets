@@ -1,9 +1,11 @@
 import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
-import { getNotifications, checkin } from '../service/NgaApi'
+import { getNotifications } from '../service/api/MessageApi'
+import { checkin } from '../service/api/FavoriteApi'
 import { ProfileData, ReputationData } from '../model/User'
 import { AppColors, IconColors, BreakpointType } from '../common/constants/Constants'
-import { formatTime, fmtNum, escHtml, unescapeHtml } from '../common/utils/Utils'
+import { formatTime, fmtNum, escHtml } from '../common/utils/Utils'
+import { unescapeHtml } from '../parser/_shared/HtmlEntityCodec'
 import { Avatar } from '../common/components/Avatar'
 import { AnonymousName } from '../common/components/AnonymousName'
 import { MakeNoteDialog } from '../common/dialogs/Dialogs'
@@ -44,9 +46,9 @@ export struct ProfilePanel {
       builder: MakeNoteDialog({
         userName: this.profile?.userName ?? '',
         uid: this.uid,
-        currentNote: appStore.getNote(this.uid),
+        currentNote: appStore.settingsStore.getNote(this.uid),
         onConfirm: (note: string, uid: string, userName: string): void => {
-          appStore.addOrUpdateNote(uid, userName, note)
+          appStore.settingsStore.addOrUpdateNote(uid, userName, note)
           appStore.showToast('备注已保存')
         }
       }),
@@ -276,8 +278,8 @@ export struct ProfilePanel {
                   .margin({ top: 4 })
               }
 
-              if (appStore.getNote(this.uid).length > 0) {
-                Text('备注: ' + appStore.getNote(this.uid))
+              if (appStore.settingsStore.getNote(this.uid).length > 0) {
+                Text('备注: ' + appStore.settingsStore.getNote(this.uid))
                   .fontSize(13)
                   .fontColor(AppColors.warning)
                   .margin({ top: 6 })
@@ -566,10 +568,10 @@ export struct ProfilePanel {
                   .margin({ left: 12 })
                   .onClick(() => {
                     if (appStore.settings.blacklist.some(e => e.userId === this.profile!.uid)) {
-                      appStore.removeBlacklist(this.profile!.uid)
+                      appStore.settingsStore.removeBlacklist(this.profile!.uid)
                       appStore.showToast('已取消屏蔽')
                     } else {
-                      appStore.addBlacklist({
+                      appStore.settingsStore.addBlacklist({
                         userId: this.profile!.uid,
                         nickName: this.profile!.userName || `User${this.profile!.uid}`
                       })

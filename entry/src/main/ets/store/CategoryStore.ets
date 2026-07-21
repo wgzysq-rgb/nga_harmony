@@ -1,4 +1,4 @@
-import { getForumCategories } from '../service/NgaApi'
+import { getForumCategories } from '../service/api/ForumApi'
 import { PreferencesStore } from '../common/infra/PreferencesStore'
 import { SerialQueue } from '../common/infra/SerialQueue'
 import { BaseStore } from './BaseStore'

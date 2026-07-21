@@ -1,14 +1,15 @@
 /**
- * 搜索面板 - 从 SearchPage 迁移, 统一 Panel 架构
+ * 搜索面板
  */
 
 import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
-import { getTopicList, createTopicListParams, searchForum } from '../service/NgaApi'
-import type { TopicListParams } from '../service/NgaApi'
+import { getTopicList, createTopicListParams, searchForum } from '../service/api/ForumApi'
+import type { TopicListParams } from '../service/api/ForumApi'
 import type { TopicListResult, SearchForumResult } from '../model/NgaApiResults'
 import { AppColors, FONT_COLORS, BreakpointType } from '../common/constants/Constants'
-import { formatTime, escHtml, unescapeHtml } from '../common/utils/Utils'
+import { formatTime, escHtml } from '../common/utils/Utils'
+import { unescapeHtml } from '../parser/_shared/HtmlEntityCodec'
 import { ThreadDataSource } from '../common/datasource/LazyDataSource'
 import { AnonymousName } from '../common/components/AnonymousName'
 import { preferences } from '@kit.ArkData'
@@ -141,7 +142,7 @@ export struct SearchPanel {
         params.page = String(page)
         if (this.currentTab === 1) params.searchpost = '1'
         if (this.currentTab === 3) { params.author = this.submitted } else { params.key = this.submitted }
-        const result: TopicListResult = await getTopicList(appStore.auth.token, params, appStore.getBlacklistIds(), appStore.getEnabledKeywords())
+        const result: TopicListResult = await getTopicList(appStore.auth.token, params, appStore.settingsStore.getBlacklistIds(), appStore.settingsStore.getEnabledKeywords())
         if (result.ok && result.data) {
           if (page === 1) {
             this.threads = result.data.threadPageList
@@ -333,8 +334,8 @@ export struct SearchPanel {
       Row() {
         Row() {
           AnonymousName({ author: String(thread['author'] ?? ''), isAnonymous: thread['isAnonymity'] as boolean, fontSize: 12 })
-          if (appStore.getNote(String(thread['authorId'] ?? '')).length > 0) {
-            Text('(' + appStore.getNote(String(thread['authorId'] ?? '')) + ')')
+          if (appStore.settingsStore.getNote(String(thread['authorId'] ?? '')).length > 0) {
+            Text('(' + appStore.settingsStore.getNote(String(thread['authorId'] ?? '')) + ')')
               .fontSize(11).fontColor(AppColors.warning).margin({ left: 3 })
           }
           Text(` · ${formatTime(Number(thread['postDate'] ?? 0))}`)

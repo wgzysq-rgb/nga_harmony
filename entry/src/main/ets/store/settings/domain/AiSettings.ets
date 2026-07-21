@@ -8,7 +8,6 @@
 import { SettingsContext } from '../SettingsContext'
 import { SettingsState } from '../SettingsState'
 import type { AiProviderProfile } from '../../../model/AiConfig'
-import { DEFAULT_AI_MAX_TOKENS, DEFAULT_AI_TEMPERATURE } from '../../../model/AiConfig'
 import { DEFAULT_SYSTEM_PROMPTS } from '../../../model/AiScenarioConfig'
 import { KEY_AI_CONFIG_VERSION } from '../../../common/constants/AppStorageKeys'
 import { bumpAppStorageVersion } from '../../../common/utils/AppStorageVersion'
@@ -18,22 +17,6 @@ function generateId(): string {
   return 'ai_' + Date.now() + '_' + Math.floor(Math.random() * 10000)
 }
 
-/**
- * 补齐历史持久化配置中缺失的 AI 字段默认值。
- *
- * @param profile - 从持久化数据读取出的配置
- * @returns 已补齐默认值的配置
- */
-function normalizeSavedProfile(profile: AiProviderProfile): AiProviderProfile {
-  profile.streaming = profile.streaming !== false
-  if (profile.temperature === undefined) {
-    profile.temperature = DEFAULT_AI_TEMPERATURE
-  }
-  if (profile.maxTokens === undefined) {
-    profile.maxTokens = DEFAULT_AI_MAX_TOKENS
-  }
-  return profile
-}
 
 /**
  * AI 设置域子 store。
@@ -138,7 +121,7 @@ export class AiSettings {
     if (saved.aiProfiles) {
       const profiles: AiProviderProfile[] = []
       for (let i = 0; i < saved.aiProfiles.length; i++) {
-        profiles.push(normalizeSavedProfile(saved.aiProfiles[i]))
+        profiles.push(saved.aiProfiles[i])
       }
       this.ctx.state.aiProfiles = profiles
     }

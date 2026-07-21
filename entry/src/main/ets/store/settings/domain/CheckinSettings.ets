@@ -1,4 +1,4 @@
-import { checkin } from '../../../service/NgaApi'
+import { checkin } from '../../../service/api/FavoriteApi'
 import { SettingsContext } from '../SettingsContext'
 import { SettingsState } from '../SettingsState'
 

@@ -6,7 +6,9 @@ import { taskpool } from '@kit.ArkTS'
 
 import { appStore } from '../store/AppStore'
 import { routerStore, Screen } from '../store/RouterStore'
-import { getThread, addFavorite, removeFavorite, votePost, getActiveDomain } from '../service/NgaApi'
+import { getThread } from '../service/api/ThreadApi'
+import { addFavorite, removeFavorite, votePost } from '../service/api/FavoriteApi'
+import { getActiveDomain } from '../service/api/MiscApi'
 import type { ThreadResult, PostReplyResult } from '../model/ThreadResult'
 import type { PostInfo } from '../model/PostInfo'
 import type { VoteResult } from '../model/NgaApiResults'
@@ -20,7 +22,8 @@ import { LoadingStateView, ErrorStateView } from '../common/components/PageState
 import { floatingLayerStore, FloatingPage } from '../store/FloatingLayerStore'
 import { replyManager, ReplyType } from '../common/managers/ReplyManager'
 import { withTimeout } from '../common/utils/TimeoutUtils'
-import { unescapeHtml, bbNodesToPlainText } from '../common/utils/Utils'
+import { bbNodesToPlainText } from '../common/utils/Utils'
+import { unescapeHtml } from '../parser/_shared/HtmlEntityCodec'
 import { TtsPlayer } from '../common/media/TtsPlayer'
 import { shareThread, sharePost } from '../common/utils/ShareUtils'
 import { openImageViewer as sharedOpenImageViewer, handleForumLink } from '../common/utils/LinkUtils'
@@ -232,11 +235,11 @@ export struct ThreadPanel {
     const gen: number = this.mgr.nextGeneration()
 
     try {
-      const noteMap: Record<string, string> = appStore.getNoteMap()
+      const noteMap: Record<string, string> = appStore.settingsStore.getNoteMap()
       const result: ThreadResult = await withTimeout<ThreadResult>(getThread(
         appStore.auth.token, this.threadTid, '',
         this.authorOnly ? this.threadAuthorId : '', String(targetPage),
-        appStore.getBlacklistIds(), appStore.getEnabledKeywords(),
+        appStore.settingsStore.getBlacklistIds(), appStore.settingsStore.getEnabledKeywords(),
         noteMap
       ), 15000)
 
@@ -343,7 +346,7 @@ export struct ThreadPanel {
     this.prefetchNextInProgress = true
     const gen: number = this.mgr.getGeneration()
     try {
-      const noteMap: Record<string, string> = appStore.getNoteMap()
+      const noteMap: Record<string, string> = appStore.settingsStore.getNoteMap()
       const promises: Promise<FetchPageResult | null>[] = []
       for (let i = 0; i < pagesToFetch.length; i++) {
         const page: number = pagesToFetch[i]
@@ -351,7 +354,7 @@ export struct ThreadPanel {
           withTimeout<ThreadResult>(getThread(
             appStore.auth.token, this.threadTid, '',
             this.authorOnly ? this.threadAuthorId : '', String(page),
-            appStore.getBlacklistIds(), appStore.getEnabledKeywords(),
+            appStore.settingsStore.getBlacklistIds(), appStore.settingsStore.getEnabledKeywords(),
             noteMap
           ), 10000).then((r: ThreadResult) => {
             const fpr: FetchPageResult = new FetchPageResult()
@@ -397,11 +400,11 @@ export struct ThreadPanel {
     const gen: number = this.mgr.getGeneration()
     let ok: boolean = false
     try {
-      const noteMap: Record<string, string> = appStore.getNoteMap()
+      const noteMap: Record<string, string> = appStore.settingsStore.getNoteMap()
       const result: ThreadResult = await withTimeout<ThreadResult>(getThread(
         appStore.auth.token, this.threadTid, '',
         this.authorOnly ? this.threadAuthorId : '', String(targetPage),
-        appStore.getBlacklistIds(), appStore.getEnabledKeywords(),
+        appStore.settingsStore.getBlacklistIds(), appStore.settingsStore.getEnabledKeywords(),
         noteMap
       ), 10000)
       if (gen !== this.mgr.getGeneration()) return

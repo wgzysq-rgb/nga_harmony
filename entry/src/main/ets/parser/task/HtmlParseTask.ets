@@ -1,4 +1,4 @@
-import { parseHtmlToRawJson } from '../HtmlThreadParser'
+import { parseHtmlToRawJson } from '../nga/html-thread/index'
 
 @Concurrent
 function parseHtmlTask(html: string): Object {

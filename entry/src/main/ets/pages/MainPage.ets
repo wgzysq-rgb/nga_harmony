@@ -12,7 +12,7 @@
 
 import { appStore } from '../store/AppStore'
 import { routerStore, RouterStoreClass } from '../store/RouterStore'
-import { verifyToken } from '../service/NgaApi'
+import { verifyToken } from '../service/api/AuthApi'
 
 import { floatingLayerStore, FloatingLayerStoreClass, FloatingPage } from '../store/FloatingLayerStore'
 import { AppColors } from '../common/constants/Constants'
@@ -160,7 +160,7 @@ struct MainPage {
     }
 
     appStore.ensureProfile(appStore.auth.uid)
-    appStore.ensureFavorites()
+    appStore.settingsStore.ensureFavorites()
     appStore.autoCheckinIfNeeded()
   }
 }

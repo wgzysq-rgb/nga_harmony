@@ -383,8 +383,8 @@ export struct AiSettingsPanel {
 
     if (this.expandedProfileId === NEW_ID) {
       profile.apiKey = this.editApiKeyInput.trim()
-      appStore.addAiProfile(profile)
-      appStore.setActiveAiProfile(profile.id)
+      appStore.settingsStore.addAiProfile(profile)
+      appStore.settingsStore.setActiveAiProfile(profile.id)
       appStore.showToast('已添加并切换到 ' + profile.name)
     } else {
       const old: AiProviderProfile | null = this.findProfile(this.expandedProfileId)
@@ -395,7 +395,7 @@ export struct AiSettingsPanel {
         profile.id = this.expandedProfileId
         profile.apiKey = this.editApiKeyInput.trim()
       }
-      appStore.updateAiProfile(profile)
+      appStore.settingsStore.updateAiProfile(profile)
       appStore.showToast('配置已更新')
     }
 
@@ -422,7 +422,7 @@ export struct AiSettingsPanel {
         destructive: true,
         icon: $r('app.media.icon_delete'),
         onConfirm: (): void => {
-          appStore.deleteAiProfile(id)
+          appStore.settingsStore.deleteAiProfile(id)
           this.syncProfiles()
           if (this.expandedProfileId === id) {
             this.doCollapse()
@@ -942,12 +942,12 @@ export struct AiSettingsPanel {
     profile.endpoint = this.editSearchEndpointInput.trim()
 
     if (this.expandedSearchProfileId === NEW_ID) {
-      appStore.addWebSearchProfile(profile)
-      appStore.setActiveWebSearchProfile(profile.id)
+      appStore.settingsStore.addWebSearchProfile(profile)
+      appStore.settingsStore.setActiveWebSearchProfile(profile.id)
       appStore.showToast('已添加并切换到 ' + profile.name)
     } else {
       profile.id = this.expandedSearchProfileId
-      appStore.updateWebSearchProfile(profile)
+      appStore.settingsStore.updateWebSearchProfile(profile)
       appStore.showToast('配置已更新')
     }
 
@@ -970,7 +970,7 @@ export struct AiSettingsPanel {
             destructive: true,
             icon: $r('app.media.icon_delete'),
             onConfirm: (): void => {
-              appStore.deleteWebSearchProfile(id)
+              appStore.settingsStore.deleteWebSearchProfile(id)
               this.syncSearchProfiles()
               if (this.expandedSearchProfileId === id) {
                 this.doCollapseSearchCard()
@@ -1139,7 +1139,7 @@ export struct AiSettingsPanel {
           .checked(this.isActiveSearchProfile(profile.id))
           .onChange((checked: boolean) => {
             if (checked) {
-              appStore.setActiveWebSearchProfile(profile.id)
+              appStore.settingsStore.setActiveWebSearchProfile(profile.id)
               this.syncSearchProfiles()
             }
           })
@@ -1465,7 +1465,7 @@ export struct AiSettingsPanel {
    */
   private doExpandScenario(scenario: string): void {
     this.expandedScenario = scenario
-    this.editScenarioPromptInput = appStore.getScenarioPrompt(scenario)
+    this.editScenarioPromptInput = appStore.settingsStore.getScenarioPrompt(scenario)
     this.showDataPreview = false
   }
 
@@ -1538,7 +1538,7 @@ export struct AiSettingsPanel {
       TextArea({ text: this.editScenarioPromptInput, placeholder: '在此输入系统提示词…' })
         .onChange((value: string): void => {
           this.editScenarioPromptInput = value
-          appStore.setScenarioPrompt(scenario, value)
+          appStore.settingsStore.setScenarioPrompt(scenario, value)
           this.scenarioPromptVersion++
         })
         .width('100%')
@@ -1556,8 +1556,8 @@ export struct AiSettingsPanel {
             .fontColor(AppColors.textTertiary)
             .padding({ left: 10, right: 10, top: 4, bottom: 4 })
             .onClick(() => {
-              appStore.resetScenarioPrompt(scenario)
-              this.editScenarioPromptInput = appStore.getScenarioPrompt(scenario)
+              appStore.settingsStore.resetScenarioPrompt(scenario)
+              this.editScenarioPromptInput = appStore.settingsStore.getScenarioPrompt(scenario)
               this.scenarioPromptVersion++
             })
         }
@@ -1674,7 +1674,7 @@ export struct AiSettingsPanel {
           .checked(this.isActiveProfile(profile.id))
           .onChange((checked: boolean) => {
             if (checked) {
-              appStore.setActiveAiProfile(profile.id)
+              appStore.settingsStore.setActiveAiProfile(profile.id)
               this.syncProfiles()
             }
           })

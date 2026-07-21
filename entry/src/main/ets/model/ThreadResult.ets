@@ -11,8 +11,7 @@ import type { PostInfo } from './PostInfo';
  *
  * 与 model/Thread.ets 中的 `ThreadPagination` interface 区分：后者为解析器构造的
  * 原始分页数据；与 model/Topic.ets 中的 `ThreadPageInfo` interface（主题列表项）
- * 区分；本类为 ThreadResult 业务结果上承载的实例化分页对象，字段定义与序列化
- * 兼容旧版，仅类名归一以消除同名冲突。
+ * 区分；本类为 ThreadResult 业务结果上承载的实例化分页对象。
  */
 export class ThreadPaging {
   page: number = 1;
