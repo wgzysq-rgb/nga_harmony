@@ -47,7 +47,6 @@ export class AuthStore extends BaseStore<AuthState> {
   async init(store: PreferencesStore, queue: SerialQueue): Promise<void> {
     this.setDeps(store, queue)
     await this.loadSessions()
-    await this.migrateAuthIfNeeded()
     await this.loadAuth()
   }
 
@@ -104,26 +103,6 @@ export class AuthStore extends BaseStore<AuthState> {
     this.state.initialized = true
   }
 
-  private async migrateAuthIfNeeded(): Promise<void> {
-    const oldToken = await this.store.getString('auth_token')
-    if (!oldToken) return
-    const uid = await this.store.getString('auth_uid')
-    const nickName = await this.store.getString('auth_nickName')
-    const avatarUrl = await this.store.getString('auth_avatarUrl')
-    const data = new PersistedAuth()
-    data.token = oldToken
-    data.uid = uid
-    data.nickName = nickName
-    data.avatarUrl = avatarUrl
-    await this.store.putJSON('auth', data, false)
-    await this.store.putString('auth_token', '', false)
-    await this.store.putString('auth_uid', '', false)
-    await this.store.putString('auth_nickName', '', false)
-    await this.store.putString('auth_avatarUrl', '', false)
-    await this.store.putString('auth_isAuth', '', false)
-    await this.store.flush()
-    logger.info('Auth migrated from old format')
-  }
 
   // ============== Session ==============
 
